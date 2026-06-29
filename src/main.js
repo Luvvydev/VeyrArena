@@ -2195,11 +2195,11 @@ function interactVillage() {
     return;
   }
   if (target.type === "power") {
-    renderPowerUps();
+    renderPowerUps("backVillage");
     return;
   }
   if (target.type === "collection") {
-    renderCollection();
+    renderCollection("backVillage");
     return;
   }
   if (target.type === "menu") {
@@ -3224,7 +3224,17 @@ function renderTopStrip(title, backAction) {
 }
 
 
-function renderCollection() {
+let collectionBackAction = "backMenu";
+let powerupBackAction = "backMenu";
+
+function resolveShopBackAction(requestedAction, currentScreenMode, lastAction) {
+  if (requestedAction) return requestedAction;
+  return mode === currentScreenMode ? lastAction : "backMenu";
+}
+
+function renderCollection(backAction) {
+  const resolvedBackAction = resolveShopBackAction(backAction, "collection", collectionBackAction);
+  collectionBackAction = resolvedBackAction;
   mode = "collection";
   const operativeCards = SHAPES.map(item => renderShopCard(item, "shape")).join("");
   const tintCards = COLORS.map(item => renderShopCard(item, "color")).join("");
@@ -3234,7 +3244,7 @@ function renderCollection() {
 
   openOverlay(`
     <div class="vsScreen framedScreen collectionScreen">
-      ${renderTopStrip("Collection", "backMenu")}
+      ${renderTopStrip("Collection", resolvedBackAction)}
       <div class="vsPanel collectionPanel">
         <h2>Operatives</h2>
         <div class="shopGrid operativeGrid">${operativeCards}</div>
@@ -3243,7 +3253,7 @@ function renderCollection() {
         <div class="vsDetailBar collectionDetailBar">
           <div class="selectedSpriteBox">${sprite ? `<img src="${sprite}" alt="">` : ""}</div>
           <div><b>${operative.name} · ${tint.name}</b></div>
-          <button class="vsButton green" data-action="backMenu">CONFIRM</button>
+          <button class="vsButton green" data-action="${resolvedBackAction}">CONFIRM</button>
         </div>
       </div>
     </div>
@@ -3254,12 +3264,14 @@ function renderUnlocks() {
   renderCollection();
 }
 
-function renderPowerUps() {
+function renderPowerUps(backAction) {
+  const resolvedBackAction = resolveShopBackAction(backAction, "powerups", powerupBackAction);
+  powerupBackAction = resolvedBackAction;
   mode = "powerups";
   const cards = POWERUPS.map(renderPowerCard).join("");
   openOverlay(`
     <div class="vsScreen framedScreen powerScreen">
-      ${renderTopStrip("Power Up", "backMenu")}
+      ${renderTopStrip("Power Up", resolvedBackAction)}
       <div class="vsPanel powerPanel">
         <h2>Power Up</h2>
         <button class="vsButton blue refundButton" data-action="refundPowerups">Refund PowerUps</button>
@@ -8334,6 +8346,7 @@ overlay.addEventListener("click", e => {
   const actions = {
     startTower: () => startTower(),
     openHub: () => renderVillageHub(),
+    backVillage: () => renderVillageHub(),
     openStory: () => renderStorySelect(),
     helpVillager: () => helpVillager(button.dataset.id),
     startStoryChapter: () => startStoryChapter(button.dataset.id),
