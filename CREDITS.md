@@ -147,3 +147,28 @@ License files were copied to:
 assets/licenses/Kenney_rpg_base_LICENSE.txt
 assets/licenses/Kenney_smoke_particles_LICENSE.txt
 ```
+
+## v4.8 village project and stump pass
+
+The following user supplied Kenney pack was imported into `/assets/town` for this prototype patch:
+
+- kenney_tiny-town(1).zip: small town props, tools, signs, barrels, logs, target, and project detail tiles used in the village hub.
+
+A license note was added at:
+
+```text
+assets/licenses/Kenney_tiny_town_LICENSE.txt
+```
+
+## v5.0 village activity audio pass
+
+The following user supplied audio files were cut into short local prototype clips and copied into `/assets/sfx`:
+
+- freesound_community-chopping-a-tree-with-hatchet-in-a-forest-close-up-68478(1).mp3 -> assets/sfx/town_chop.mp3
+- freesound_community-sampler-tree-falling2-88315(1).mp3 -> assets/sfx/town_tree_fall.mp3
+- freesound_community-mining-with-pick-axe-in-a-group-29590.mp3 -> assets/sfx/town_mine.mp3
+- audiopapkin-fishing-reel-302355.mp3 -> assets/sfx/town_fish_reel.mp3
+- spinopel-fishing-rod-whoosh-411640.mp3 -> assets/sfx/town_fish_cast.mp3
+- freesound_community-leaves-64875.mp3 -> assets/sfx/town_leaves.mp3
+
+Licenses should be checked before public release.

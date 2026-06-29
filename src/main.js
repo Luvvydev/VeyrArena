@@ -89,6 +89,29 @@ const ASSET_PATHS = {
     town_arch: "./assets/town/town_arch.png",
     town_lamp: "./assets/town/town_lamp.png",
     town_bridge: "./assets/town/town_bridge.png",
+    tiny_flower: "./assets/town/tiny_flower.png",
+    tiny_grass_detail: "./assets/town/tiny_grass_detail.png",
+    tiny_path_stone: "./assets/town/tiny_path_stone.png",
+    tiny_fence_h: "./assets/town/tiny_fence_h.png",
+    tiny_fence_v: "./assets/town/tiny_fence_v.png",
+    tiny_roof_red: "./assets/town/tiny_roof_red.png",
+    tiny_roof_grey: "./assets/town/tiny_roof_grey.png",
+    tiny_wall_wood: "./assets/town/tiny_wall_wood.png",
+    tiny_wall_blue: "./assets/town/tiny_wall_blue.png",
+    tiny_door_wood: "./assets/town/tiny_door_wood.png",
+    tiny_window_wood: "./assets/town/tiny_window_wood.png",
+    tiny_sign: "./assets/town/tiny_sign.png",
+    tiny_chest: "./assets/town/tiny_chest.png",
+    tiny_coin: "./assets/town/tiny_coin.png",
+    tiny_target: "./assets/town/tiny_target.png",
+    tiny_well: "./assets/town/tiny_well.png",
+    tiny_tool_pickaxe: "./assets/town/tiny_tool_pickaxe.png",
+    tiny_tool_shovel: "./assets/town/tiny_tool_shovel.png",
+    tiny_key: "./assets/town/tiny_key.png",
+    tiny_axe: "./assets/town/tiny_axe.png",
+    tiny_sword: "./assets/town/tiny_sword.png",
+    tiny_log: "./assets/town/tiny_log.png",
+    tiny_barrel: "./assets/town/tiny_barrel.png",
     smoke_white_00: "./assets/fx/smoke/white_00.png",
     smoke_white_04: "./assets/fx/smoke/white_04.png",
     smoke_white_08: "./assets/fx/smoke/white_08.png",
@@ -163,6 +186,12 @@ const ASSET_PATHS = {
     music_intro: "./assets/sfx/music_intro.mp3",
     defeat_outro: "./assets/sfx/defeat_outro.mp3",
     cache_upgrade: "./assets/sfx/cache_upgrade.mp3",
+    town_chop: "./assets/sfx/town_chop.mp3",
+    town_tree_fall: "./assets/sfx/town_tree_fall.mp3",
+    town_mine: "./assets/sfx/town_mine.mp3",
+    town_fish_cast: "./assets/sfx/town_fish_cast.mp3",
+    town_fish_reel: "./assets/sfx/town_fish_reel.mp3",
+    town_leaves: "./assets/sfx/town_leaves.mp3",
     footstep_platformer: "./assets/sfx/footstep_platformer.ogg",
     footstep_concrete_1: "./assets/sfx/footstep_concrete_1.mp3",
     footstep_concrete_2: "./assets/sfx/footstep_concrete_2.mp3",
@@ -419,6 +448,8 @@ let activeStoryMode = false;
 let activeStoryChapterId = "ledger";
 let pendingStoryFloor = 0;
 let currentStoryBriefing = null;
+let villagePendingRouteFloor = 0;
+let villageReturnChapterId = "";
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const rand = (min, max) => min + Math.random() * (max - min);
@@ -692,6 +723,24 @@ const DEFAULT_HUB_SAVE = {
     tavi: 0
   },
   rubbleCleared: {},
+  projects: {},
+  stumpsCleared: {},
+  stumpHits: {},
+  stumpDrops: {},
+  mineCleared: {},
+  farmPlots: {},
+  seeds: 2,
+  fish: 0,
+  ore: 0,
+  crops: 0,
+  farmHarvests: 0,
+  energy: 8,
+  towerDay: 0,
+  fishingDay: -1,
+  fishingUses: 0,
+  visitor: null,
+  activeTask: null,
+  taskCounter: 0,
   lastGain: "",
   lastHelp: ""
 };
@@ -1774,10 +1823,10 @@ const player = {
 
 let bots = [];
 
-const VILLAGE_WORLD = { w: 1280, h: 840 };
+const VILLAGE_WORLD = { w: 1680, h: 1120 };
 const villagePlayer = {
-  x: 640,
-  y: 624,
+  x: 840,
+  y: 745,
   r: 12,
   speed: 178,
   angle: -Math.PI / 2,
@@ -1785,55 +1834,161 @@ const villagePlayer = {
   interactCooldown: 0
 };
 let villageInteractTarget = null;
-let villageMessage = { speaker: "Maren", text: "Walk through the village. Press E near people, rubble, the shrine, or the tower gate.", t: 5 };
+let villageMessage = { speaker: "Maren", text: "Walk the village. Press E near people, buildings, rubble, the shrine, or the tower gate.", t: 5 };
 let villagePulse = 0;
 
+const VILLAGE_TOWER_GATE = { x: 840, y: 118 };
+const VILLAGE_SHRINE = { x: 840, y: 312 };
+const VILLAGE_WELL = { x: 656, y: 322 };
+
 const VILLAGE_VILLAGER_SPOTS = [
-  { id: "maren", x: 300, y: 472, hut: { x: 205, y: 334, w: 170, h: 122 }, color: "#7dffb2" },
-  { id: "rowan", x: 640, y: 486, hut: { x: 552, y: 350, w: 176, h: 118 }, color: "#ffd35a" },
-  { id: "tavi", x: 980, y: 472, hut: { x: 895, y: 334, w: 170, h: 122 }, color: "#7cc7ff" }
+  { id: "maren", x: 410, y: 572, hut: { x: 280, y: 388, w: 220, h: 150 }, color: "#7dffb2" },
+  { id: "rowan", x: 840, y: 612, hut: { x: 720, y: 428, w: 240, h: 158 }, color: "#ffd35a" },
+  { id: "tavi", x: 1270, y: 572, hut: { x: 1168, y: 388, w: 220, h: 150 }, color: "#7cc7ff" }
 ];
 
 const VILLAGE_RUBBLE = [
-  { id: "rubble_well", x: 522, y: 274, r: 24, label: "old stones" },
-  { id: "rubble_shrine", x: 758, y: 282, r: 21, label: "broken candles" },
-  { id: "rubble_maren", x: 160, y: 438, r: 22, label: "fallen wood" },
-  { id: "rubble_rowan", x: 760, y: 518, r: 20, label: "scrap pile" },
-  { id: "rubble_tavi", x: 1124, y: 438, r: 23, label: "dead lanterns" },
-  { id: "rubble_gate_left", x: 492, y: 140, r: 25, label: "gate rubble" },
-  { id: "rubble_gate_right", x: 788, y: 140, r: 25, label: "gate rubble" },
-  { id: "rubble_path", x: 640, y: 704, r: 22, label: "path debris" }
+  { id: "rubble_well", x: 606, y: 316, r: 24, label: "old stones" },
+  { id: "rubble_shrine", x: 990, y: 312, r: 22, label: "broken candles" },
+  { id: "rubble_maren", x: 226, y: 536, r: 23, label: "fallen wood" },
+  { id: "rubble_rowan", x: 1010, y: 606, r: 21, label: "scrap pile" },
+  { id: "rubble_tavi", x: 1468, y: 530, r: 24, label: "dead lanterns" },
+  { id: "rubble_gate_left", x: 690, y: 150, r: 25, label: "gate rubble" },
+  { id: "rubble_gate_right", x: 990, y: 150, r: 25, label: "gate rubble" },
+  { id: "rubble_path", x: 840, y: 724, r: 22, label: "path debris" },
+  { id: "rubble_garden", x: 308, y: 852, r: 24, label: "dead garden beds" },
+  { id: "rubble_watch", x: 1398, y: 786, r: 24, label: "watch post boards" },
+  { id: "rubble_kitchen", x: 912, y: 884, r: 22, label: "cold firepit" },
+  { id: "rubble_road", x: 780, y: 1012, r: 24, label: "road debris" }
 ];
+
+const VILLAGE_STUMPS = [
+  { id: "stump_west_pond", x: 112, y: 312, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_pond_south", x: 424, y: 326, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_gate_left", x: 612, y: 416, r: 20, hp: 4, supplies: 1, shards: 1 },
+  { id: "stump_gate_right", x: 1076, y: 416, r: 20, hp: 4, supplies: 1, shards: 1 },
+  { id: "stump_maren_outer", x: 156, y: 628, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_maren_south", x: 492, y: 678, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_rowan_south", x: 1014, y: 672, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_tavi_outer", x: 1510, y: 640, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_garden_left", x: 108, y: 902, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_garden_right", x: 458, y: 992, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_kitchen_left", x: 644, y: 930, r: 20, hp: 4, supplies: 1, shards: 1 },
+  { id: "stump_kitchen_right", x: 1032, y: 960, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_watch_north", x: 1354, y: 706, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_watch_south", x: 1522, y: 910, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_road_left", x: 596, y: 1060, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_road_right", x: 1076, y: 1060, r: 20, hp: 3, supplies: 1 }
+];
+
+let villageToolSwing = { t: 0, x: 0, y: 0, angle: 0 };
+
+const VILLAGE_MINE_NODES = [
+  { id: "mine_north", x: 1338, y: 246, r: 24, ore: 1, shards: 1 },
+  { id: "mine_east", x: 1530, y: 344, r: 24, ore: 1, shards: 0 },
+  { id: "mine_watch", x: 1486, y: 720, r: 24, ore: 2, shards: 1 }
+];
+
+const VILLAGE_FISHING_SPOTS = [
+  { id: "pond", x: 354, y: 228, r: 36, name: "pond" }
+];
+
+const VILLAGE_FARM_PLOTS = [
+  { id: "farm_1", x: 180, y: 820 },
+  { id: "farm_2", x: 230, y: 820 },
+  { id: "farm_3", x: 280, y: 820 },
+  { id: "farm_4", x: 330, y: 820 },
+  { id: "farm_5", x: 180, y: 870 },
+  { id: "farm_6", x: 230, y: 870 },
+  { id: "farm_7", x: 280, y: 870 },
+  { id: "farm_8", x: 330, y: 870 }
+];
+
+const VILLAGE_VISITOR_SPOT = { x: 1004, y: 1030 };
+const VILLAGE_VISITORS = {
+  seed: { name: "Seed Seller", title: "traveling shop", action: "buy seed pouch", text: "A stranger brought seeds from another village.", cost: { supplies: 2 }, reward: { seeds: 3, shards: 1 } },
+  miner: { name: "Ore Buyer", title: "road trader", action: "trade ore", text: "A trader wants clean ore for repair work.", cost: { ore: 2 }, reward: { shards: 5, supplies: 1 } },
+  fisher: { name: "Fish Cook", title: "camp cook", action: "trade fish", text: "A cook is buying fish for the road crew.", cost: { fish: 2 }, reward: { supplies: 4, shards: 1 } },
+  gift: { name: "Lost Pilgrim", title: "visitor", action: "accept gift", text: "A pilgrim came to thank the village for keeping the road lit.", cost: {}, reward: { supplies: 2, seeds: 1, shards: 1 } }
+};
+
+const VILLAGE_PROJECTS = [
+  {
+    id: "garden",
+    name: "Garden",
+    x: 260,
+    y: 835,
+    color: "#7dffb2",
+    max: 4,
+    action: "repair garden",
+    text: "Spend supplies to repair the garden. Each row helps every tower climb.",
+    reward: "The garden has another working row.",
+    bonus: "+3 max HP per rank. Ranks 2 and 4 add one extra supply from campaign floors."
+  },
+  {
+    id: "kitchen",
+    name: "Kitchen",
+    x: 840,
+    y: 885,
+    color: "#ffd35a",
+    max: 4,
+    action: "repair kitchen",
+    text: "Spend supplies to repair the kitchen. Meals turn into more utility before each fight.",
+    reward: "The kitchen can feed more people before each climb.",
+    bonus: "+1 starting smoke per kitchen rank."
+  },
+  {
+    id: "watchpost",
+    name: "Watch Post",
+    x: 1420,
+    y: 790,
+    color: "#7cc7ff",
+    max: 4,
+    action: "raise watch post",
+    text: "Spend supplies to raise the watch post. Scouts make Pulse more useful in the tower.",
+    reward: "The watch post can see farther into the tower.",
+    bonus: "+22 pulse range per watch post rank."
+  }
+];
+
+const VILLAGE_SERVICE_BUILDINGS = {
+  collection: { x: 470, y: 780, w: 190, h: 128, label: "Gear House", action: "open collection", color: "#c77dff" },
+  power: { x: 1030, y: 780, w: 190, h: 128, label: "Training Hall", action: "open power ups", color: "#7cc7ff" },
+  road: { x: 760, y: 980, w: 160, h: 108, label: "Road House", action: "main menu", color: "#ffd35a" }
+};
 
 const VILLAGE_OBSTACLES = [
   { x: 0, y: -80, w: VILLAGE_WORLD.w, h: 100 },
   { x: -80, y: 0, w: 100, h: VILLAGE_WORLD.h },
   { x: VILLAGE_WORLD.w - 20, y: 0, w: 100, h: VILLAGE_WORLD.h },
   { x: 0, y: VILLAGE_WORLD.h - 20, w: VILLAGE_WORLD.w, h: 100 },
-  { x: 508, y: 54, w: 264, h: 86 },
-  { x: 205, y: 356, w: 170, h: 80 },
-  { x: 552, y: 372, w: 176, h: 78 },
-  { x: 895, y: 356, w: 170, h: 80 },
-  { x: 76, y: 96, w: 124, h: 112 },
-  { x: 1088, y: 96, w: 118, h: 112 },
-  { x: 442, y: 268, w: 54, h: 54 },
-  { x: 775, y: 602, w: 160, h: 96 }
+  { x: 700, y: 44, w: 280, h: 110 },
+  { x: 746, y: 238, w: 188, h: 118 },
+  { x: 280, y: 430, w: 220, h: 92 },
+  { x: 720, y: 476, w: 240, h: 92 },
+  { x: 1168, y: 430, w: 220, h: 92 },
+  { x: 470, y: 818, w: 190, h: 72 },
+  { x: 1030, y: 818, w: 190, h: 72 },
+  { x: 760, y: 1018, w: 160, h: 56 },
+  { x: 156, y: 116, w: 160, h: 112 },
+  { x: 1368, y: 120, w: 154, h: 110 },
+  { x: 610, y: 300, w: 88, h: 58 }
 ];
 
-const VILLAGE_DECOR = Array.from({ length: 94 }, (_, i) => ({
-  x: 54 + ((i * 173) % 1170),
-  y: 82 + ((i * 91) % 715),
-  s: 0.55 + ((i * 37) % 75) / 100,
+const VILLAGE_DECOR = Array.from({ length: 170 }, (_, i) => ({
+  x: 54 + ((i * 173) % (VILLAGE_WORLD.w - 108)),
+  y: 82 + ((i * 91) % (VILLAGE_WORLD.h - 164)),
+  s: 0.5 + ((i * 37) % 82) / 100,
   a: ((i * 29) % 628) / 100,
-  kind: i % 11 === 0 ? "flower" : i % 7 === 0 ? "bush" : "grass"
+  kind: i % 13 === 0 ? "flower" : i % 7 === 0 ? "bush" : "grass"
 }));
 
 const VILLAGE_TREE_LINES = [
   [74, 120, "town_tree_green"], [130, 160, "town_tree_green"], [190, 120, "town_tree_blue"],
-  [1080, 118, "town_tree_green"], [1140, 162, "town_tree_green"], [1200, 122, "town_tree_blue"],
-  [70, 660, "town_tree_green"], [126, 720, "town_tree_gold"], [204, 746, "town_tree_green"],
-  [1050, 706, "town_tree_green"], [1130, 744, "town_tree_blue"], [1200, 666, "town_tree_green"],
-  [360, 92, "town_tree_gold"], [920, 92, "town_tree_gold"]
+  [348, 102, "town_tree_gold"], [1180, 102, "town_tree_gold"], [1490, 128, "town_tree_green"], [1560, 174, "town_tree_blue"],
+  [78, 820, "town_tree_green"], [132, 920, "town_tree_gold"], [220, 990, "town_tree_green"],
+  [1438, 984, "town_tree_blue"], [1530, 916, "town_tree_green"], [1598, 820, "town_tree_gold"],
+  [112, 1018, "town_tree_blue"], [1558, 1018, "town_tree_green"], [60, 620, "town_tree_green"], [1600, 620, "town_tree_green"]
 ];
 
 const SMOKE_WHITE_FRAMES = ["smoke_white_00", "smoke_white_04", "smoke_white_08", "smoke_white_12", "smoke_white_16", "smoke_white_20", "smoke_white_24"];
@@ -1862,7 +2017,37 @@ function loadSave() {
         },
         rubbleCleared: {
           ...(parsed.hub?.rubbleCleared || {})
-        }
+        },
+        projects: {
+          ...(parsed.hub?.projects || {})
+        },
+        stumpsCleared: {
+          ...(parsed.hub?.stumpsCleared || {})
+        },
+        stumpHits: {
+          ...(parsed.hub?.stumpHits || {})
+        },
+        stumpDrops: {
+          ...(parsed.hub?.stumpDrops || {})
+        },
+        mineCleared: {
+          ...(parsed.hub?.mineCleared || {})
+        },
+        farmPlots: {
+          ...(parsed.hub?.farmPlots || {})
+        },
+        seeds: Number(parsed.hub?.seeds ?? DEFAULT_HUB_SAVE.seeds) || 0,
+        fish: Number(parsed.hub?.fish) || 0,
+        ore: Number(parsed.hub?.ore) || 0,
+        crops: Number(parsed.hub?.crops) || 0,
+        farmHarvests: Number(parsed.hub?.farmHarvests) || 0,
+        energy: Number(parsed.hub?.energy ?? DEFAULT_HUB_SAVE.energy) || 0,
+        towerDay: Number(parsed.hub?.towerDay) || 0,
+        fishingDay: Number(parsed.hub?.fishingDay ?? -1),
+        fishingUses: Number(parsed.hub?.fishingUses) || 0,
+        visitor: parsed.hub?.visitor || null,
+        activeTask: parsed.hub?.activeTask || null,
+        taskCounter: Number(parsed.hub?.taskCounter) || 0
       },
       powerups: {
         ...structuredClone(DEFAULT_SAVE).powerups,
@@ -1924,7 +2109,37 @@ function ensureHubSave() {
     },
     rubbleCleared: {
       ...(save.hub?.rubbleCleared || {})
-    }
+    },
+    projects: {
+      ...(save.hub?.projects || {})
+    },
+    stumpsCleared: {
+      ...(save.hub?.stumpsCleared || {})
+    },
+    stumpHits: {
+      ...(save.hub?.stumpHits || {})
+    },
+    stumpDrops: {
+      ...(save.hub?.stumpDrops || {})
+    },
+    mineCleared: {
+      ...(save.hub?.mineCleared || {})
+    },
+    farmPlots: {
+      ...(save.hub?.farmPlots || {})
+    },
+    seeds: Number(save.hub?.seeds ?? DEFAULT_HUB_SAVE.seeds) || 0,
+    fish: Number(save.hub?.fish) || 0,
+    ore: Number(save.hub?.ore) || 0,
+    crops: Number(save.hub?.crops) || 0,
+    farmHarvests: Number(save.hub?.farmHarvests) || 0,
+    energy: Number(save.hub?.energy ?? DEFAULT_HUB_SAVE.energy) || 0,
+    towerDay: Number(save.hub?.towerDay) || 0,
+    fishingDay: Number(save.hub?.fishingDay ?? -1),
+    fishingUses: Number(save.hub?.fishingUses) || 0,
+    visitor: save.hub?.visitor || null,
+    activeTask: save.hub?.activeTask || null,
+    taskCounter: Number(save.hub?.taskCounter) || 0
   };
   return save.hub;
 }
@@ -1941,18 +2156,180 @@ function hubRubbleClearedCount() {
   return Object.values(ensureHubSave().rubbleCleared || {}).filter(Boolean).length;
 }
 
+function hubStumpClearedCount() {
+  return Object.values(ensureHubSave().stumpsCleared || {}).filter(Boolean).length;
+}
+
+function hubProjectRank(id) {
+  const project = VILLAGE_PROJECTS.find(item => item.id === id);
+  const raw = Number(ensureHubSave().projects?.[id]) || 0;
+  return clamp(raw, 0, project?.max ?? raw);
+}
+
+function hubProjectTotal() {
+  return Object.values(ensureHubSave().projects || {}).reduce((sum, value) => sum + (Number(value) || 0), 0);
+}
+
 function hubTotalHelp() {
   const hub = ensureHubSave();
   const villagerHelp = Object.values(hub.helped).reduce((sum, value) => sum + (Number(value) || 0), 0);
-  return villagerHelp + hubRubbleClearedCount();
+  const farmHelp = Math.min(Number(hub.farmHarvests) || 0, VILLAGE_FARM_PLOTS.length);
+  return villagerHelp + hubRubbleClearedCount() + hubStumpClearedCount() + hubProjectTotal() + farmHelp;
 }
 
 function hubHopeMax() {
-  return HUB_VILLAGERS.reduce((sum, villager) => sum + villager.max, 0) + VILLAGE_RUBBLE.length;
+  const villagerMax = HUB_VILLAGERS.reduce((sum, villager) => sum + villager.max, 0);
+  const projectMax = VILLAGE_PROJECTS.reduce((sum, project) => sum + project.max, 0);
+  return villagerMax + VILLAGE_RUBBLE.length + VILLAGE_STUMPS.length + projectMax + VILLAGE_FARM_PLOTS.length;
 }
 
 function hubHopePercent() {
   return Math.round((hubTotalHelp() / Math.max(1, hubHopeMax())) * 100);
+}
+
+function villageMaxEnergy() {
+  return 8 + Math.floor(hubProjectRank("garden") / 2);
+}
+
+function villageEnergy() {
+  const hub = ensureHubSave();
+  const max = villageMaxEnergy();
+  hub.energy = clamp(Number(hub.energy ?? max) || 0, 0, max);
+  return hub.energy;
+}
+
+function refillVillageEnergy(source = "after tower") {
+  const hub = ensureHubSave();
+  hub.towerDay = (Number(hub.towerDay) || 0) + 1;
+  hub.energy = villageMaxEnergy();
+  hub.fishingDay = hub.towerDay;
+  hub.fishingUses = 0;
+  assignVillageVisitor(source);
+  updateFarmGrowthAfterTower();
+  hub.lastGain = `Energy restored after the tower. Day ${hub.towerDay}.`;
+  saveGame();
+}
+
+function spendVillageEnergy(cost, label = "work") {
+  const hub = ensureHubSave();
+  const energy = villageEnergy();
+  if (energy < cost) {
+    playAssetSfx("ui_button_click", 0.16);
+    floatText.push({ x: villagePlayer.x - 36, y: villagePlayer.y - 46, text: "NO ENERGY", t: 1.0 });
+    setVillageMessage("Too tired", `You need ${cost} energy for ${label}. Go into the tower and finish a fight to recover energy.`, 3.0);
+    return false;
+  }
+  hub.energy = energy - cost;
+  saveGame();
+  return true;
+}
+
+function hubResource(name) {
+  return Number(ensureHubSave()[name]) || 0;
+}
+
+function addHubResource(name, amount) {
+  const hub = ensureHubSave();
+  hub[name] = Math.max(0, (Number(hub[name]) || 0) + amount);
+  return hub[name];
+}
+
+function villageFarmPlot(id) {
+  const hub = ensureHubSave();
+  return hub.farmPlots?.[id] || { state: "empty" };
+}
+
+function saveVillageFarmPlot(id, data) {
+  const hub = ensureHubSave();
+  hub.farmPlots[id] = data;
+}
+
+function updateFarmGrowthAfterTower() {
+  const hub = ensureHubSave();
+  for (const plot of VILLAGE_FARM_PLOTS) {
+    const state = hub.farmPlots?.[plot.id];
+    if (state?.state === "planted" && state.watered && hub.towerDay >= (state.readyDay || 999)) {
+      state.state = "ready";
+      hub.farmPlots[plot.id] = state;
+    }
+  }
+}
+
+function assignVillageVisitor(source = "tower") {
+  const hub = ensureHubSave();
+  const types = ["seed", "gift", "miner", "fisher"];
+  const type = types[(hub.towerDay + String(source).length) % types.length];
+  hub.visitor = { type, day: hub.towerDay, bought: false };
+}
+
+function activeVillageVisitor() {
+  const visitor = ensureHubSave().visitor;
+  if (!visitor || visitor.bought) return null;
+  const def = VILLAGE_VISITORS[visitor.type];
+  return def ? { ...def, type: visitor.type } : null;
+}
+
+function villageTaskText(task = ensureHubSave().activeTask) {
+  if (!task) return "No village task. Clear a tower floor to bring new work home.";
+  const progress = `${Math.min(task.progress || 0, task.need || 1)}/${task.need || 1}`;
+  return `${task.title} ${progress} · reward +${task.rewardSupplies || 1} supply, +${task.rewardShards || 1} shard`;
+}
+
+function assignVillageTaskAfterFloor(floor) {
+  const hub = ensureHubSave();
+  const options = [];
+  if (VILLAGE_STUMPS.some(stump => !villageStumpCleared(stump.id))) {
+    options.push({ type: "chop", title: "Chop wood for repairs", need: floor % 3 === 0 ? 2 : 1, rewardSupplies: 1, rewardShards: 1 });
+  }
+  if (VILLAGE_RUBBLE.some(rubble => !villageRubbleCleared(rubble.id))) {
+    options.push({ type: "rubble", title: "Clear a broken spot", need: 1, rewardSupplies: 1, rewardShards: 1 });
+  }
+  if (VILLAGE_PROJECTS.some(project => hubProjectRank(project.id) < project.max)) {
+    options.push({ type: "project", title: "Improve a village building", need: 1, rewardSupplies: 1, rewardShards: 1 });
+  }
+  options.push({ type: "farm", title: "Work the garden plots", need: 1, rewardSupplies: 1, rewardShards: 1 });
+  options.push({ type: "mine", title: "Mine stone by the east ridge", need: 1, rewardSupplies: 1, rewardShards: 1 });
+  options.push({ type: "fish", title: "Fish at the pond", need: 1, rewardSupplies: 1, rewardShards: 1 });
+  if (HUB_VILLAGERS.some(villager => hubVillagerRank(villager.id) < villager.max)) {
+    options.push({ type: "villager", title: "Help one villager", need: 1, rewardSupplies: 1, rewardShards: 1 });
+  }
+  if (!options.length) {
+    hub.activeTask = null;
+    return null;
+  }
+  hub.taskCounter = (Number(hub.taskCounter) || 0) + 1;
+  const task = { ...options[(hub.taskCounter + floor) % options.length], progress: 0, floor, id: `task_${Date.now()}_${floor}` };
+  hub.activeTask = task;
+  saveGame();
+  return task;
+}
+
+function advanceVillageTask(type, amount = 1) {
+  const hub = ensureHubSave();
+  const task = hub.activeTask;
+  if (!task || task.type !== type) return false;
+  task.progress = Math.min(task.need || 1, (Number(task.progress) || 0) + amount);
+  if (task.progress < (task.need || 1)) {
+    hub.activeTask = task;
+    saveGame();
+    return false;
+  }
+
+  const supplies = task.rewardSupplies || 1;
+  const shards = task.rewardShards || 1;
+  hub.supplies += supplies;
+  save.shards += shards;
+  hub.lastGain = `Village task complete. +${supplies} supply, +${shards} shard.`;
+  hub.activeTask = null;
+  saveGame();
+  villagePulse = 1;
+  playAssetSfx("cache_upgrade", 0.42);
+  playAssetSfx("bonus_chime", 0.34);
+  addParticles("reward", villagePlayer.x, villagePlayer.y - 12, -Math.PI / 2, 28);
+  floatText.push({ x: villagePlayer.x - 42, y: villagePlayer.y - 54, text: `TASK +${supplies} +${shards}`, t: 1.2 });
+  setVillageMessage("Task complete", `${task.title} is done. You earned ${supplies} supply and ${shards} shard.`, 3.2);
+  updateHud();
+  return true;
 }
 
 function hubHelpCost(villager) {
@@ -1971,11 +2348,34 @@ function hubBonusPulseRange() {
   return hubVillagerRank("tavi") * 12;
 }
 
+function hubProjectMaxHpBonus() {
+  return hubProjectRank("garden") * 3;
+}
+
+function hubProjectSmokeBonus() {
+  return hubProjectRank("kitchen");
+}
+
+function hubProjectPulseRangeBonus() {
+  return hubProjectRank("watchpost") * 22;
+}
+
+function hubProjectTowerText(id, rank = hubProjectRank(id)) {
+  if (id === "garden") {
+    const extra = Math.floor(rank / 2);
+    return `Tower bonus: +${rank * 3} max HP${extra ? ` and +${extra} supply from each campaign floor` : ""}.`;
+  }
+  if (id === "kitchen") return `Tower bonus: +${rank} starting smoke per floor.`;
+  if (id === "watchpost") return `Tower bonus: +${rank * 22} Pulse range.`;
+  return "Tower bonus active.";
+}
+
 function storySupplyRewardForFloor(floor) {
   if (!activeStoryMode) return 0;
   let amount = 1;
   if (activeRouteType === "cache") amount += 1;
   if (isBossFloor(floor)) amount += 2;
+  amount += Math.floor(hubProjectRank("garden") / 2);
   return amount;
 }
 
@@ -2007,7 +2407,6 @@ function helpVillager(id) {
 
   hub.supplies -= cost;
   hub.helped[id] = rank + 1;
-  hub.hope = hubTotalHelp();
   hub.lastHelp = `${villager.name} helped. ${villager.bonus}.`;
   hub.lastGain = "";
   saveGame();
@@ -2020,6 +2419,7 @@ function helpVillager(id) {
     floatText.push({ x: spot.x - 24, y: spot.y - 42, text: `+hope`, t: 0.95 });
   }
   setVillageMessage(villager.name, `${villager.name} can help more now. ${villager.bonus}.`);
+  advanceVillageTask("villager");
   if (mode !== "village") renderVillageHub();
 }
 
@@ -2056,6 +2456,7 @@ function startVillageHub() {
   gameOver = false;
   towerCleared = false;
   activeStoryMode = false;
+  villagePendingRouteFloor = 0;
   worldW = VILLAGE_WORLD.w;
   worldH = VILLAGE_WORLD.h;
   closeOverlay();
@@ -2067,6 +2468,52 @@ function startVillageHub() {
   villageMessage.t = Math.max(villageMessage.t, 2.4);
   lastTime = performance.now();
   updateHud();
+}
+
+function enterVillageBetweenStoryFloors(nextFloor, info = {}) {
+  mode = "village";
+  running = false;
+  gameOver = false;
+  refillVillageEnergy(`floor ${Math.max(1, nextFloor - 1)}`);
+  towerCleared = false;
+  activeStoryMode = true;
+  villagePendingRouteFloor = nextFloor;
+  villageReturnChapterId = activeStoryChapterId;
+  worldW = VILLAGE_WORLD.w;
+  worldH = VILLAGE_WORLD.h;
+  closeOverlay();
+  startMusic("music_menu");
+  ensureHubSave();
+  mouse.down = false;
+  villageInteractTarget = null;
+  const task = assignVillageTaskAfterFloor(currentFloor);
+  const supplies = info.suppliesFound ? ` You brought back ${info.suppliesFound} supplies.` : "";
+  const taskText = task ? ` New village task: ${villageTaskText(task)}.` : "";
+  setVillageMessage("Back from the tower", `Floor ${currentFloor} is clear.${supplies}${taskText} Go to the tower gate when you are ready for floor ${nextFloor}.`, 6.2);
+  villagePulse = 1;
+  lastTime = performance.now();
+  updateHud();
+}
+
+function returnToVillageFromOverlay() {
+  if (activeStoryMode && villagePendingRouteFloor > 0 && runStats) {
+    mode = "village";
+    running = false;
+    gameOver = false;
+    towerCleared = false;
+    worldW = VILLAGE_WORLD.w;
+    worldH = VILLAGE_WORLD.h;
+    closeOverlay();
+    startMusic("music_menu");
+    ensureHubSave();
+    mouse.down = false;
+    villageInteractTarget = null;
+    setVillageMessage("Village", `Finish any village task, then return to the tower gate for floor ${villagePendingRouteFloor}.`, 3.6);
+    lastTime = performance.now();
+    updateHud();
+    return;
+  }
+  renderVillageHub();
 }
 
 function setVillageMessage(speaker, text, t = 4.2) {
@@ -2091,6 +2538,10 @@ function villageBlocked(x, y, r) {
   for (const rubble of VILLAGE_RUBBLE) {
     if (villageRubbleCleared(rubble.id)) continue;
     if (Math.hypot(x - rubble.x, y - rubble.y) < r + rubble.r * 0.8) return true;
+  }
+  for (const stump of VILLAGE_STUMPS) {
+    if (villageStumpCleared(stump.id)) continue;
+    if (Math.hypot(x - stump.x, y - stump.y) < r + stump.r * 0.75) return true;
   }
   return false;
 }
@@ -2127,7 +2578,7 @@ function findVillageInteractTarget() {
     const villager = hubVillagerById(spot.id);
     if (!villager) continue;
     const distance = Math.hypot(villagePlayer.x - spot.x, villagePlayer.y - spot.y);
-    if (distance <= 78) consider({ type: "villager", id: spot.id, label: villager.name, action: `talk to ${villager.name}`, distance });
+    if (distance <= 82) consider({ type: "villager", id: spot.id, label: villager.name, action: `talk to ${villager.name}`, distance });
   }
 
   for (const rubble of VILLAGE_RUBBLE) {
@@ -2136,20 +2587,55 @@ function findVillageInteractTarget() {
     if (distance <= 66) consider({ type: "rubble", id: rubble.id, label: rubble.label, action: "clear rubble", distance });
   }
 
-  const towerDistance = Math.hypot(villagePlayer.x - 640, villagePlayer.y - 128);
-  if (towerDistance <= 112) consider({ type: "tower", label: "Tower gate", action: "choose campaign climb", distance: towerDistance });
+  for (const stump of VILLAGE_STUMPS) {
+    if (villageStumpCleared(stump.id)) continue;
+    const distance = Math.hypot(villagePlayer.x - stump.x, villagePlayer.y - stump.y);
+    if (distance <= 66) consider({ type: "stump", id: stump.id, label: "tree stump", action: villageStumpActionText(stump), distance });
+  }
 
-  const powerDistance = Math.hypot(villagePlayer.x - 855, villagePlayer.y - 650);
-  if (powerDistance <= 78) consider({ type: "power", label: "Power table", action: "open power ups", distance: powerDistance });
+  for (const plot of VILLAGE_FARM_PLOTS) {
+    const distance = Math.hypot(villagePlayer.x - plot.x, villagePlayer.y - plot.y);
+    if (distance <= 48) consider({ type: "farm", id: plot.id, label: "garden plot", action: villageFarmActionText(plot.id), distance });
+  }
 
-  const collectionDistance = Math.hypot(villagePlayer.x - 430, villagePlayer.y - 650);
-  if (collectionDistance <= 78) consider({ type: "collection", label: "Gear chest", action: "open collection", distance: collectionDistance });
+  for (const mine of VILLAGE_MINE_NODES) {
+    const distance = Math.hypot(villagePlayer.x - mine.x, villagePlayer.y - mine.y);
+    if (distance <= 66) consider({ type: "mine", id: mine.id, label: villageMineClearedToday(mine.id) ? "spent ore node" : "ore node", action: villageMineActionText(mine), distance });
+  }
 
-  const menuDistance = Math.hypot(villagePlayer.x - 118, villagePlayer.y - 745);
-  if (menuDistance <= 80) consider({ type: "menu", label: "Road sign", action: "main menu", distance: menuDistance });
+  for (const spot of VILLAGE_FISHING_SPOTS) {
+    const distance = Math.hypot(villagePlayer.x - spot.x, villagePlayer.y - spot.y);
+    if (distance <= 82) consider({ type: "fish", id: spot.id, label: "village pond", action: villageFishActionText(), distance });
+  }
 
-  const shrineDistance = Math.hypot(villagePlayer.x - 640, villagePlayer.y - 286);
-  if (shrineDistance <= 82) consider({ type: "shrine", label: "Mira shrine", action: "check village hope", distance: shrineDistance });
+  const visitor = activeVillageVisitor();
+  if (visitor) {
+    const distance = Math.hypot(villagePlayer.x - VILLAGE_VISITOR_SPOT.x, villagePlayer.y - VILLAGE_VISITOR_SPOT.y);
+    if (distance <= 82) consider({ type: "visitor", label: visitor.name, action: visitor.action, distance });
+  }
+
+  for (const project of VILLAGE_PROJECTS) {
+    const distance = Math.hypot(villagePlayer.x - project.x, villagePlayer.y - project.y);
+    if (distance <= 104) consider({ type: "project", id: project.id, label: `${project.name} · ${hubProjectTowerText(project.id)}`, action: hubProjectActionText(project), distance });
+  }
+
+  const towerDistance = Math.hypot(villagePlayer.x - VILLAGE_TOWER_GATE.x, villagePlayer.y - VILLAGE_TOWER_GATE.y);
+  if (towerDistance <= 126) consider({ type: "tower", label: "Tower gate", action: "choose campaign climb", distance: towerDistance });
+
+  const power = VILLAGE_SERVICE_BUILDINGS.power;
+  const powerDistance = Math.hypot(villagePlayer.x - (power.x + power.w / 2), villagePlayer.y - (power.y + power.h - 8));
+  if (powerDistance <= 88) consider({ type: "power", label: power.label, action: power.action, distance: powerDistance });
+
+  const collection = VILLAGE_SERVICE_BUILDINGS.collection;
+  const collectionDistance = Math.hypot(villagePlayer.x - (collection.x + collection.w / 2), villagePlayer.y - (collection.y + collection.h - 8));
+  if (collectionDistance <= 88) consider({ type: "collection", label: collection.label, action: collection.action, distance: collectionDistance });
+
+  const road = VILLAGE_SERVICE_BUILDINGS.road;
+  const menuDistance = Math.hypot(villagePlayer.x - (road.x + road.w / 2), villagePlayer.y - (road.y + road.h - 4));
+  if (menuDistance <= 82) consider({ type: "menu", label: road.label, action: road.action, distance: menuDistance });
+
+  const shrineDistance = Math.hypot(villagePlayer.x - VILLAGE_SHRINE.x, villagePlayer.y - VILLAGE_SHRINE.y);
+  if (shrineDistance <= 86) consider({ type: "shrine", label: "Mira shrine", action: "check village hope", distance: shrineDistance });
 
   return best;
 }
@@ -2160,7 +2646,6 @@ function clearVillageRubble(id) {
   if (!rubble || hub.rubbleCleared[id]) return;
   hub.rubbleCleared[id] = true;
   hub.supplies += 1;
-  hub.hope = hubTotalHelp();
   hub.lastGain = "+1 supply found while clearing the village.";
   hub.lastHelp = "";
   saveGame();
@@ -2171,14 +2656,364 @@ function clearVillageRubble(id) {
   addParticles("reward", rubble.x, rubble.y - 8, -Math.PI / 2, 12);
   floatText.push({ x: rubble.x - 28, y: rubble.y - 36, text: "+1 supply", t: 1.0 });
   setVillageMessage("Village", "You cleared rubble and found one supply. The place looks a little less dead.");
+  advanceVillageTask("rubble");
 }
+
+
+
+function villageMineClearedToday(id) {
+  const hub = ensureHubSave();
+  return hub.mineCleared?.[id] === hub.towerDay;
+}
+
+function villageMineActionText(mine) {
+  return villageMineClearedToday(mine.id) ? "mine is empty today" : "mine ore (1 energy)";
+}
+
+function mineVillageNode(id) {
+  const mine = VILLAGE_MINE_NODES.find(item => item.id === id);
+  if (!mine) return;
+  const hub = ensureHubSave();
+  if (villageMineClearedToday(id)) {
+    setVillageMessage("Ore node", "This spot is empty. New ore will loosen after another tower fight.", 2.5);
+    return;
+  }
+  if (!spendVillageEnergy(1, "mining")) return;
+  hub.mineCleared[id] = hub.towerDay;
+  addHubResource("ore", mine.ore || 1);
+  if (mine.shards) save.shards += mine.shards;
+  hub.lastGain = mine.shards ? "+1 ore and +1 shard from mining." : "+1 ore from mining.";
+  saveGame();
+  villagePulse = 1;
+  playAssetSfx("town_mine", 0.42);
+  playAssetSfx("bonus_chime", 0.16);
+  addParticles("dust", mine.x, mine.y, -Math.PI / 2, 18);
+  addParticles("reward", mine.x, mine.y - 8, -Math.PI / 2, 12);
+  floatText.push({ x: mine.x - 36, y: mine.y - 42, text: mine.shards ? "+ore  +shard" : "+ore", t: 1.0 });
+  setVillageMessage("Mining", mine.shards ? "You broke loose ore and found a shard inside the rock." : "You broke loose ore for repairs and trades.", 2.8);
+  advanceVillageTask("mine");
+}
+
+function villageFishActionText() {
+  const hub = ensureHubSave();
+  const uses = hub.fishingDay === hub.towerDay ? Number(hub.fishingUses) || 0 : 0;
+  return uses >= 3 ? "pond is quiet today" : "fish pond (1 energy)";
+}
+
+function fishVillagePond() {
+  const hub = ensureHubSave();
+  if (hub.fishingDay !== hub.towerDay) {
+    hub.fishingDay = hub.towerDay;
+    hub.fishingUses = 0;
+  }
+  if ((Number(hub.fishingUses) || 0) >= 3) {
+    setVillageMessage("Pond", "The fish stopped biting. Try again after another tower fight.", 2.5);
+    return;
+  }
+  if (!spendVillageEnergy(1, "fishing")) return;
+  hub.fishingUses = (Number(hub.fishingUses) || 0) + 1;
+  const lucky = villageHash(hub.towerDay, hub.fishingUses) > 0.58;
+  addHubResource("fish", 1);
+  if (lucky) save.shards += 1;
+  hub.lastGain = lucky ? "+1 fish and +1 shard from fishing." : "+1 fish from fishing.";
+  saveGame();
+  villagePulse = 1;
+  playAssetSfx("town_fish_cast", 0.42);
+  setTimeout(() => playAssetSfx("town_fish_reel", 0.28), 120);
+  addParticles("reward", VILLAGE_FISHING_SPOTS[0].x, VILLAGE_FISHING_SPOTS[0].y, -Math.PI / 2, 18);
+  floatText.push({ x: VILLAGE_FISHING_SPOTS[0].x - 34, y: VILLAGE_FISHING_SPOTS[0].y - 44, text: lucky ? "+fish  +shard" : "+fish", t: 1.0 });
+  setVillageMessage("Fishing", lucky ? "You caught a fish and pulled a shard from the mud." : "You caught a fish. A visitor may trade for it.", 2.8);
+  advanceVillageTask("fish");
+}
+
+function villageFarmActionText(id) {
+  const plot = villageFarmPlot(id);
+  const day = ensureHubSave().towerDay;
+  if (plot.state === "ready") return "harvest crop (1 energy)";
+  if (plot.state === "planted" && plot.watered && day < (plot.readyDay || 999)) return "crop growing";
+  if (plot.state === "planted" && !plot.watered) return "water crop (1 energy)";
+  return hubResource("seeds") > 0 ? "plant seed (1 energy)" : "need seeds";
+}
+
+function workVillageFarmPlot(id) {
+  const plotDef = VILLAGE_FARM_PLOTS.find(item => item.id === id);
+  if (!plotDef) return;
+  const hub = ensureHubSave();
+  const plot = villageFarmPlot(id);
+  const day = hub.towerDay;
+
+  if (plot.state === "ready") {
+    if (!spendVillageEnergy(1, "harvesting")) return;
+    saveVillageFarmPlot(id, { state: "empty" });
+    addHubResource("crops", 1);
+    hub.farmHarvests = (Number(hub.farmHarvests) || 0) + 1;
+    hub.supplies += 2;
+    save.shards += 1;
+    hub.lastGain = "+1 crop, +2 supplies, +1 shard.";
+    saveGame();
+    villagePulse = 1;
+    playAssetSfx("town_leaves", 0.28);
+    playAssetSfx("bonus_chime", 0.28);
+    addParticles("reward", plotDef.x, plotDef.y, -Math.PI / 2, 24);
+    floatText.push({ x: plotDef.x - 42, y: plotDef.y - 40, text: "+crop +2 supply", t: 1.1 });
+    setVillageMessage("Harvest", "The crop became supplies for the village and one shard for you.", 2.8);
+    advanceVillageTask("farm");
+    return;
+  }
+
+  if (plot.state === "planted" && plot.watered) {
+    setVillageMessage("Garden", "This crop needs one tower fight before it is ready. Leave it and come back after the next floor.", 2.8);
+    return;
+  }
+
+  if (plot.state === "planted" && !plot.watered) {
+    if (!spendVillageEnergy(1, "watering")) return;
+    saveVillageFarmPlot(id, { state: "planted", watered: true, plantedDay: plot.plantedDay ?? day, readyDay: day + 1 });
+    saveGame();
+    playAssetSfx("town_leaves", 0.22);
+    addParticles("reward", plotDef.x, plotDef.y, -Math.PI / 2, 10);
+    floatText.push({ x: plotDef.x - 28, y: plotDef.y - 36, text: "watered", t: 0.9 });
+    setVillageMessage("Garden", "Watered. It will grow after one tower fight.", 2.4);
+    advanceVillageTask("farm");
+    return;
+  }
+
+  if (hubResource("seeds") <= 0) {
+    setVillageMessage("Garden", "No seeds. A seed seller can visit after tower fights, and the tower sometimes pays out seeds.", 2.8);
+    playAssetSfx("ui_button_click", 0.16);
+    return;
+  }
+  if (!spendVillageEnergy(1, "planting")) return;
+  addHubResource("seeds", -1);
+  saveVillageFarmPlot(id, { state: "planted", watered: false, plantedDay: day, readyDay: day + 1 });
+  saveGame();
+  playAssetSfx("town_leaves", 0.24);
+  addParticles("dust", plotDef.x, plotDef.y, -Math.PI / 2, 8);
+  floatText.push({ x: plotDef.x - 24, y: plotDef.y - 36, text: "seed", t: 0.9 });
+  setVillageMessage("Garden", "Seed planted. Water it before your next climb if you want it to grow.", 2.8);
+  advanceVillageTask("farm");
+}
+
+function payVisitorCost(cost = {}) {
+  const hub = ensureHubSave();
+  for (const [key, value] of Object.entries(cost)) {
+    if ((Number(hub[key]) || 0) < value) return false;
+  }
+  for (const [key, value] of Object.entries(cost)) hub[key] = (Number(hub[key]) || 0) - value;
+  return true;
+}
+
+function applyVisitorReward(reward = {}) {
+  const hub = ensureHubSave();
+  for (const [key, value] of Object.entries(reward)) {
+    if (key === "shards") save.shards += value;
+    else hub[key] = (Number(hub[key]) || 0) + value;
+  }
+}
+
+function interactVillageVisitor() {
+  const hub = ensureHubSave();
+  const visitor = activeVillageVisitor();
+  if (!visitor) {
+    setVillageMessage("Road", "No visitor is here. Visitors usually arrive after tower fights.", 2.4);
+    return;
+  }
+  const costText = Object.entries(visitor.cost || {}).map(([k, v]) => `${v} ${k}`).join(", ") || "free";
+  if (!payVisitorCost(visitor.cost)) {
+    playAssetSfx("ui_button_click", 0.16);
+    setVillageMessage(visitor.name, `Need ${costText}. ${visitor.text}`, 3.0);
+    floatText.push({ x: VILLAGE_VISITOR_SPOT.x - 36, y: VILLAGE_VISITOR_SPOT.y - 48, text: "need trade", t: 1.0 });
+    return;
+  }
+  applyVisitorReward(visitor.reward);
+  hub.visitor.bought = true;
+  saveGame();
+  villagePulse = 1;
+  playAssetSfx("cache_upgrade", 0.34);
+  playAssetSfx("bonus_chime", 0.26);
+  addParticles("reward", VILLAGE_VISITOR_SPOT.x, VILLAGE_VISITOR_SPOT.y - 12, -Math.PI / 2, 26);
+  const rewardText = Object.entries(visitor.reward || {}).map(([k, v]) => `+${v} ${k}`).join("  ");
+  floatText.push({ x: VILLAGE_VISITOR_SPOT.x - 48, y: VILLAGE_VISITOR_SPOT.y - 54, text: rewardText, t: 1.2 });
+  setVillageMessage(visitor.name, `${visitor.text} Trade complete: ${rewardText}. Another visitor may arrive after your next tower fight.`, 3.4);
+}
+
+function villageStumpCleared(id) {
+  return Boolean(ensureHubSave().stumpsCleared?.[id]);
+}
+
+function villageStumpDropReady(id) {
+  return Boolean(ensureHubSave().stumpDrops?.[id]);
+}
+
+function collectVillageStumpDrops() {
+  const hub = ensureHubSave();
+  let collected = false;
+  for (const stump of VILLAGE_STUMPS) {
+    if (!hub.stumpDrops?.[stump.id]) continue;
+    const d = Math.hypot(villagePlayer.x - stump.x, villagePlayer.y - stump.y);
+    if (d > 34) continue;
+    delete hub.stumpDrops[stump.id];
+    hub.supplies += stump.supplies || 1;
+    if (stump.shards) save.shards += stump.shards;
+    hub.lastGain = stump.shards ? "Picked up wood, one supply, and one shard." : "Picked up wood and one supply.";
+    collected = true;
+    villagePulse = 1;
+    playAssetSfx("reward", 0.42);
+    playAssetSfx("bonus_chime", 0.26);
+    addParticles("reward", stump.x, stump.y - 10, -Math.PI / 2, 22);
+    floatText.push({ x: stump.x - 38, y: stump.y - 44, text: stump.shards ? "+1 supply  +1 shard" : "+1 supply", t: 1.0 });
+    setVillageMessage("Supplies picked up", stump.shards ? "You picked up the chopped wood and found a shard under it." : "You picked up the chopped wood for the village.", 2.6);
+    advanceVillageTask("chop");
+  }
+  if (collected) {
+    saveGame();
+    updateHud();
+  }
+}
+
+function villageStumpHitCount(id) {
+  return Number(ensureHubSave().stumpHits?.[id]) || 0;
+}
+
+function villageStumpActionText(stump) {
+  const hits = villageStumpHitCount(stump.id);
+  const left = Math.max(1, stump.hp - hits);
+  return `chop stump (${left} hit${left === 1 ? "" : "s"})`;
+}
+
+function chopVillageStump(id) {
+  const stump = VILLAGE_STUMPS.find(item => item.id === id);
+  if (!stump || villageStumpCleared(id)) return false;
+
+  if (!spendVillageEnergy(1, "chopping")) return false;
+
+  const hits = villageStumpHitCount(id) + 1;
+  const hub = ensureHubSave();
+  hub.stumpHits[id] = hits;
+  villageToolSwing = {
+    t: 0.18,
+    x: villagePlayer.x,
+    y: villagePlayer.y,
+    angle: Math.atan2(stump.y - villagePlayer.y, stump.x - villagePlayer.x)
+  };
+  addParticles("dust", stump.x, stump.y, -Math.PI / 2, 7);
+  playAssetSfx("town_chop", 0.42);
+
+  if (hits < stump.hp) {
+    saveGame();
+    const left = stump.hp - hits;
+    floatText.push({ x: stump.x - 24, y: stump.y - 34, text: `${left} left`, t: 0.62 });
+    setVillageMessage("Stump", `Chop it ${left} more time${left === 1 ? "" : "s"}. Tree stumps give supplies for village projects.` , 1.8);
+    return true;
+  }
+
+  hub.stumpsCleared[id] = true;
+  hub.stumpDrops[id] = true;
+  delete hub.stumpHits[id];
+  hub.lastGain = "Wood is ready to pick up.";
+  hub.lastHelp = "";
+  saveGame();
+  villagePulse = 1;
+  playAssetSfx("town_tree_fall", 0.38);
+  playAssetSfx("platformer_break", 0.18);
+  addParticles("dust", stump.x, stump.y, -Math.PI / 2, 18);
+  addParticles("reward", stump.x, stump.y - 8, -Math.PI / 2, 14);
+  floatText.push({ x: stump.x - 40, y: stump.y - 42, text: "PICK UP", t: 1.0 });
+  setVillageMessage("Stump chopped", "The stump broke into usable wood. Walk over the log pile to pick it up.", 2.6);
+  updateHud();
+  return true;
+}
+
+function swingVillageToolAt(x, y) {
+  let best = null;
+  for (const stump of VILLAGE_STUMPS) {
+    if (villageStumpCleared(stump.id)) continue;
+    const playerDistance = Math.hypot(villagePlayer.x - stump.x, villagePlayer.y - stump.y);
+    const clickDistance = Math.hypot(x - stump.x, y - stump.y);
+    if (playerDistance <= 74 && clickDistance <= 54) {
+      const score = playerDistance + clickDistance * 0.65;
+      if (!best || score < best.score) best = { stump, score };
+    }
+  }
+  if (best) return chopVillageStump(best.stump.id);
+
+  villageToolSwing = {
+    t: 0.14,
+    x: villagePlayer.x,
+    y: villagePlayer.y,
+    angle: Math.atan2(y - villagePlayer.y, x - villagePlayer.x)
+  };
+  playAssetSfx("ui_button_click", 0.12);
+  return false;
+}
+
+function hubProjectById(id) {
+  return VILLAGE_PROJECTS.find(project => project.id === id);
+}
+
+function hubProjectCost(project) {
+  return Math.min(4, hubProjectRank(project.id) + 1);
+}
+
+function hubProjectActionText(project) {
+  const rank = hubProjectRank(project.id);
+  if (rank >= project.max) return `check ${project.name}`;
+  const cost = hubProjectCost(project);
+  return ensureHubSave().supplies >= cost
+    ? `upgrade ${project.name} (${cost} supplies)`
+    : `need ${cost} supplies`;
+}
+
+function improveVillageProject(id) {
+  const project = hubProjectById(id);
+  if (!project) return;
+  const rank = hubProjectRank(id);
+  const hub = ensureHubSave();
+
+  if (rank >= project.max) {
+    playAssetSfx("select", 0.2);
+    floatText.push({ x: project.x - 30, y: project.y - 58, text: "finished", t: 0.9 });
+    setVillageMessage(project.name, `${project.name} is finished. ${hubProjectTowerText(id, rank)} This building is already helping every climb.`);
+    return;
+  }
+
+  const cost = Math.min(4, rank + 1);
+  if (hub.supplies < cost) {
+    playAssetSfx("ui_button_click", 0.16);
+    addParticles("dust", project.x, project.y + 8, -Math.PI / 2, 8);
+    floatText.push({ x: project.x - 38, y: project.y - 58, text: `need ${cost}`, t: 1.0 });
+    setVillageMessage(project.name, `Need ${cost} supplies. You have ${hub.supplies}. Chop stumps, clear rubble, or bring supplies back from the tower. Nothing was spent.`);
+    return;
+  }
+
+  hub.supplies -= cost;
+  const nextRank = rank + 1;
+  hub.projects[id] = nextRank;
+  save.shards += 1;
+  hub.lastHelp = `${project.name} rank ${nextRank}/${project.max}. ${hubProjectTowerText(id, nextRank)}`;
+  hub.lastGain = "";
+  saveGame();
+  villagePulse = 1;
+  playAssetSfx("bonus_chime", 0.36);
+  playAssetSfx("cache_upgrade", 0.28);
+  addParticles("reward", project.x, project.y - 24, -Math.PI / 2, 30);
+  addParticles("dust", project.x, project.y + 6, -Math.PI / 2, 12);
+  floatText.push({ x: project.x - 52, y: project.y - 66, text: `rank ${nextRank}/${project.max}`, t: 1.1 });
+  floatText.push({ x: project.x - 42, y: project.y - 46, text: "+1 hope  +1 shard", t: 1.2 });
+  setVillageMessage(project.name, `Spent ${cost} supplies. ${project.reward} Rank ${nextRank}/${project.max}. ${hubProjectTowerText(id, nextRank)}`);
+  advanceVillageTask("project");
+  updateHud();
+}
+
 
 function interactVillage() {
   if (mode !== "village") return;
+  if (villagePlayer.interactCooldown > 0) return;
+  villagePlayer.interactCooldown = 0.18;
   villageInteractTarget = findVillageInteractTarget();
   const target = villageInteractTarget;
   if (!target) {
-    setVillageMessage("Village", "Move close to a person, rubble, the shrine, or the tower gate.", 2.4);
+    setVillageMessage("Village", "Move close to a person, building, rubble, shrine, or the tower gate.", 2.4);
     return;
   }
 
@@ -2190,7 +3025,36 @@ function interactVillage() {
     clearVillageRubble(target.id);
     return;
   }
+  if (target.type === "stump") {
+    chopVillageStump(target.id);
+    return;
+  }
+  if (target.type === "project") {
+    improveVillageProject(target.id);
+    return;
+  }
+  if (target.type === "farm") {
+    workVillageFarmPlot(target.id);
+    return;
+  }
+  if (target.type === "mine") {
+    mineVillageNode(target.id);
+    return;
+  }
+  if (target.type === "fish") {
+    fishVillagePond();
+    return;
+  }
+  if (target.type === "visitor") {
+    interactVillageVisitor();
+    return;
+  }
   if (target.type === "tower") {
+    if (activeStoryMode && villagePendingRouteFloor > 0 && runStats) {
+      setVillageMessage("Tower gate", `Choose the route for floor ${villagePendingRouteFloor}.`, 1.2);
+      showRouteChoices(villagePendingRouteFloor);
+      return;
+    }
     renderStorySelect();
     return;
   }
@@ -2224,9 +3088,10 @@ function updateVillage(dt) {
     dx /= l;
     dy /= l;
     p.angle = Math.atan2(dy, dx);
-    moveVillagePlayer(dx * p.speed * dt, dy * p.speed * dt);
-    p.bob += dt * 9;
-    if (nowSec() - lastPlayerFootstepAt > 0.34) {
+    const runMult = (keys.has("shift") && villageEnergy() > 0) ? 1.55 : 1;
+    moveVillagePlayer(dx * p.speed * runMult * dt, dy * p.speed * runMult * dt);
+    p.bob += dt * 9 * runMult;
+    if (nowSec() - lastPlayerFootstepAt > (runMult > 1 ? 0.23 : 0.34)) {
       playAssetSfx(`footstep_nature_${1 + (footstepVariantCursor++ % 4)}`, 0.16, "footsteps");
       lastPlayerFootstepAt = nowSec();
     }
@@ -2234,8 +3099,11 @@ function updateVillage(dt) {
     p.bob *= Math.pow(0.05, dt);
   }
 
+  villagePlayer.interactCooldown = Math.max(0, villagePlayer.interactCooldown - dt);
+  villageToolSwing.t = Math.max(0, villageToolSwing.t - dt);
   villageMessage.t = Math.max(0, villageMessage.t - dt);
   villagePulse = Math.max(0, villagePulse - dt * 1.8);
+  collectVillageStumpDrops();
   villageInteractTarget = findVillageInteractTarget();
   camera.x = clamp(p.x - W / 2, 0, Math.max(0, VILLAGE_WORLD.w - W));
   camera.y = clamp(p.y - H / 2, 0, Math.max(0, VILLAGE_WORLD.h - H));
@@ -2258,9 +3126,14 @@ function drawVillage() {
   drawVillageHuts();
   drawVillageSupplies();
   drawVillageRubble();
+  drawVillageStumps();
+  drawVillageStumpDrops();
+  drawVillageActivitySites();
   drawVillageStations();
+  drawVillageVisitor();
   drawVillageVillagers();
   drawVillagePlayer();
+  drawVillageToolSwing();
   drawParticles();
   drawFloatText();
 
@@ -2363,14 +3236,16 @@ function drawVillageGround() {
 }
 
 function drawVillagePond() {
+  const px = 222;
+  const py = 190;
   ctx.save();
   ctx.beginPath();
-  ctx.ellipse(184, 210, 114, 70, -0.08, 0, Math.PI * 2);
+  ctx.ellipse(px, py, 132, 78, -0.08, 0, Math.PI * 2);
   ctx.clip();
   ctx.fillStyle = "#62cde2";
-  ctx.fillRect(60, 125, 248, 150);
-  for (let y = 128; y < 276; y += 32) {
-    for (let x = 58; x < 310; x += 32) {
+  ctx.fillRect(px - 150, py - 92, 300, 184);
+  for (let y = py - 96; y < py + 92; y += 32) {
+    for (let x = px - 150; x < px + 154; x += 32) {
       drawTownAssetRect(villageHash(x, y) > 0.5 ? "town_water_a" : "town_water_b", x, y, 34, 34, 0.96);
     }
   }
@@ -2378,69 +3253,81 @@ function drawVillagePond() {
   ctx.strokeStyle = "rgba(156,97,58,0.72)";
   ctx.lineWidth = 5;
   ctx.beginPath();
-  ctx.ellipse(184, 210, 114, 70, -0.08, 0, Math.PI * 2);
+  ctx.ellipse(px, py, 132, 78, -0.08, 0, Math.PI * 2);
   ctx.stroke();
   ctx.fillStyle = "rgba(255,255,255,0.22)";
   ctx.beginPath();
-  ctx.ellipse(158, 190, 34, 6, -0.2, 0, Math.PI * 2);
+  ctx.ellipse(px - 34, py - 18, 38, 6, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  drawTownAsset("town_bridge", 286, 220, 34, 0.1, 0.9);
+  drawTownAsset("town_bridge", px + 116, py + 20, 34, 0.1, 0.9);
+  drawTownAsset("town_bridge", px + 148, py + 18, 34, 0.1, 0.9);
 }
 
 function drawVillagePaths() {
+  const cx = VILLAGE_TOWER_GATE.x;
   ctx.save();
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  ctx.strokeStyle = "rgba(88,60,38,0.38)";
-  ctx.lineWidth = 82;
-  ctx.beginPath();
-  ctx.moveTo(640, 780);
-  ctx.bezierCurveTo(634, 635, 644, 470, 640, 302);
-  ctx.bezierCurveTo(640, 238, 640, 176, 640, 98);
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(137,96,58,0.74)";
-  ctx.lineWidth = 66;
-  ctx.stroke();
 
-  ctx.lineWidth = 50;
-  ctx.beginPath();
-  ctx.moveTo(250, 500);
-  ctx.bezierCurveTo(366, 418, 516, 350, 640, 320);
-  ctx.bezierCurveTo(774, 348, 910, 424, 1030, 500);
-  ctx.stroke();
+  const drawPathStroke = (width, color) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(cx, 1052);
+    ctx.bezierCurveTo(cx - 6, 880, cx + 12, 662, cx, 420);
+    ctx.bezierCurveTo(cx - 4, 326, cx, 230, cx, 112);
+    ctx.stroke();
 
-  ctx.globalAlpha = 0.22;
-  for (let y = 108; y < 784; y += 32) {
-    drawTownAsset("town_dirt_a", 622 + Math.sin(y * 0.04) * 8, y, 34, 0, 0.9);
-    drawTownAsset("town_dirt_b", 658 + Math.cos(y * 0.035) * 8, y + 8, 34, 0, 0.8);
+    ctx.beginPath();
+    ctx.moveTo(410, 570);
+    ctx.bezierCurveTo(510, 494, 684, 430, cx, 388);
+    ctx.bezierCurveTo(990, 430, 1148, 500, 1270, 570);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(560, 900);
+    ctx.bezierCurveTo(642, 825, 760, 770, cx, 740);
+    ctx.bezierCurveTo(942, 770, 1046, 825, 1120, 900);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(260, 835);
+    ctx.bezierCurveTo(440, 820, 650, 820, cx, 792);
+    ctx.bezierCurveTo(1050, 820, 1240, 800, 1420, 790);
+    ctx.stroke();
+  };
+
+  drawPathStroke(90, "rgba(88,60,38,0.36)");
+  drawPathStroke(70, "rgba(137,96,58,0.74)");
+
+  ctx.globalAlpha = 0.24;
+  for (let y = 126; y < 1056; y += 32) {
+    drawTownAsset("town_dirt_a", cx - 18 + Math.sin(y * 0.04) * 8, y, 34, 0, 0.9);
+    drawTownAsset("town_dirt_b", cx + 18 + Math.cos(y * 0.035) * 8, y + 8, 34, 0, 0.8);
   }
-  for (let i = 0; i < 22; i++) {
-    const t = i / 21;
-    const leftX = 250 + (640 - 250) * t;
-    const leftY = 500 + (320 - 500) * t - Math.sin(t * Math.PI) * 24;
-    const rightX = 640 + (1030 - 640) * t;
-    const rightY = 320 + (500 - 320) * t + Math.sin(t * Math.PI) * 24;
-    drawTownAsset(i % 2 ? "town_dirt_a" : "town_dirt_b", leftX, leftY, 34, 0, 0.85);
-    drawTownAsset(i % 2 ? "town_dirt_b" : "town_dirt_a", rightX, rightY, 34, 0, 0.85);
+  for (let i = 0; i < 28; i++) {
+    const t = i / 27;
+    drawTownAsset(i % 2 ? "town_dirt_a" : "town_dirt_b", 410 + (cx - 410) * t, 570 + (388 - 570) * t - Math.sin(t * Math.PI) * 26, 34, 0, 0.85);
+    drawTownAsset(i % 2 ? "town_dirt_b" : "town_dirt_a", cx + (1270 - cx) * t, 388 + (570 - 388) * t + Math.sin(t * Math.PI) * 26, 34, 0, 0.85);
   }
   ctx.globalAlpha = 1;
   ctx.strokeStyle = "rgba(255,219,123,0.11)";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(640, 780);
-  ctx.bezierCurveTo(634, 635, 644, 470, 640, 302);
-  ctx.bezierCurveTo(640, 238, 640, 176, 640, 98);
+  ctx.moveTo(cx, 1052);
+  ctx.bezierCurveTo(cx - 6, 880, cx + 12, 662, cx, 420);
+  ctx.bezierCurveTo(cx - 4, 326, cx, 230, cx, 112);
   ctx.stroke();
   ctx.restore();
 }
 
 function drawVillageWell() {
   ctx.save();
-  const x = 470;
-  const y = 292;
+  const x = VILLAGE_WELL.x;
+  const y = VILLAGE_WELL.y;
   ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath();
-  ctx.ellipse(x + 3, y + 28, 44, 12, 0, 0, Math.PI * 2);
+  ctx.ellipse(x + 3, y + 28, 48, 13, 0, 0, Math.PI * 2);
   ctx.fill();
   for (let i = -1; i <= 1; i++) drawTownAsset("town_stone_b", x + i * 22, y + 14, 28, 0, 0.9);
   ctx.fillStyle = "#0b111c";
@@ -2452,17 +3339,19 @@ function drawVillageWell() {
   ctx.strokeStyle = "rgba(255,211,90,0.45)";
   ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(x - 32, y + 4);
-  ctx.quadraticCurveTo(x, y - 34, x + 32, y + 4);
+  ctx.moveTo(x - 34, y + 4);
+  ctx.quadraticCurveTo(x, y - 36, x + 34, y + 4);
   ctx.stroke();
+  drawTownAsset("town_barrel_c", x + 58, y + 30, 28, 0, 0.9);
   ctx.restore();
 }
 
 function drawVillageFences() {
   ctx.save();
   const fenceRuns = [
-    [222, 300, 6, "h"], [850, 300, 6, "h"], [92, 300, 5, "h"], [1076, 300, 4, "h"],
-    [780, 602, 5, "h"], [780, 704, 5, "h"], [775, 626, 3, "v"], [937, 626, 3, "v"]
+    [150, 324, 7, "h"], [1110, 324, 8, "h"], [236, 646, 5, "h"], [1160, 646, 7, "h"],
+    [160, 930, 6, "h"], [1290, 928, 8, "h"], [155, 676, 4, "v"], [1508, 675, 4, "v"],
+    [210, 772, 4, "h"], [1345, 732, 5, "h"]
   ];
   for (const [x, y, count, dir] of fenceRuns) {
     for (let i = 0; i < count; i++) {
@@ -2481,13 +3370,13 @@ function drawVillageWallsAndTrees() {
   ctx.fillRect(0, VILLAGE_WORLD.h - 38, VILLAGE_WORLD.w, 38);
 
   for (let x = 44; x < VILLAGE_WORLD.w - 40; x += 46) {
-    if (x > 520 && x < 760) continue;
+    if (x > VILLAGE_TOWER_GATE.x - 150 && x < VILLAGE_TOWER_GATE.x + 150) continue;
     drawTownAsset("town_tree_small", x, 36 + (x % 3) * 5, 42, 0, 0.84);
   }
   for (const [x, y, key] of VILLAGE_TREE_LINES) drawVillageTree(x, y, key);
-  for (let i = 0; i < 9; i++) {
-    drawTownAsset("town_bush", 58 + i * 80, 792 + (i % 2) * 7, 28, 0, 0.75);
-    drawTownAsset("town_bush", 1220 - i * 80, 790 + (i % 2) * 7, 28, 0, 0.75);
+  for (let i = 0; i < 12; i++) {
+    drawTownAsset("town_bush", 58 + i * 82, VILLAGE_WORLD.h - 62 + (i % 2) * 7, 28, 0, 0.75);
+    drawTownAsset("town_bush", VILLAGE_WORLD.w - 64 - i * 82, VILLAGE_WORLD.h - 64 + (i % 2) * 7, 28, 0, 0.75);
   }
   ctx.restore();
 }
@@ -2517,7 +3406,7 @@ function drawVillageShrine() {
   const pulse = 1 + villagePulse * 0.4;
 
   ctx.save();
-  ctx.translate(640, 286);
+  ctx.translate(VILLAGE_SHRINE.x, VILLAGE_SHRINE.y);
   ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath();
   ctx.ellipse(0, 54, 136, 34, 0, 0, Math.PI * 2);
@@ -2583,7 +3472,7 @@ function drawVillageCandle(x, y, power = 1) {
 
 function drawVillageTowerGate() {
   ctx.save();
-  ctx.translate(640, 96);
+  ctx.translate(VILLAGE_TOWER_GATE.x, VILLAGE_TOWER_GATE.y);
   ctx.fillStyle = "rgba(0,0,0,0.36)";
   ctx.beginPath();
   ctx.ellipse(0, 62, 178, 34, 0, 0, Math.PI * 2);
@@ -2654,46 +3543,35 @@ function drawVillageCottage(h, color, role, rank, max) {
   drawTownAsset("town_window_a", h.x + 46, h.y + 74, 30, 0, 0.95);
   drawTownAsset("town_window_b", h.x + h.w - 46, h.y + 74, 30, 0, 0.95);
 
-  ctx.fillStyle = "rgba(3,5,12,0.76)";
-  ctx.fillRect(h.x + 22, h.y + h.h - 25, h.w - 44, 24);
-  ctx.fillStyle = color;
-  ctx.font = "900 11px ui-monospace, monospace";
-  ctx.fillText(role.toUpperCase(), h.x + 34, h.y + h.h - 9);
+  ctx.fillStyle = "rgba(3,5,12,0.46)";
+  ctx.beginPath();
+  ctx.roundRect(cx - 34, h.y + h.h - 20, 68, 13, 4);
+  ctx.fill();
   for (let i = 0; i < max; i++) {
-    ctx.fillStyle = i < rank ? color : "rgba(255,255,255,0.18)";
-    ctx.fillRect(h.x + h.w - 70 + i * 11, h.y + h.h - 17, 8, 8);
+    ctx.fillStyle = i < rank ? color : "rgba(255,255,255,0.2)";
+    ctx.fillRect(cx - 26 + i * 11, h.y + h.h - 16, 8, 6);
   }
   ctx.restore();
 }
 
 function drawVillageSupplies() {
   const hub = ensureHubSave();
-  const count = clamp(hub.supplies, 0, 14);
-  const x = 854;
-  const y = 650;
+  const count = clamp(hub.supplies, 0, 18);
+  const x = 1294;
+  const y = 870;
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.32)";
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath();
-  ctx.ellipse(x + 1, y + 48, 98, 22, 0, 0, Math.PI * 2);
+  ctx.ellipse(x + 12, y + 70, 112, 24, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "rgba(5,8,14,0.72)";
-  ctx.fillRect(x - 76, y - 28, 152, 88);
-  ctx.strokeStyle = "rgba(255,211,90,0.58)";
-  ctx.strokeRect(x - 76, y - 28, 152, 88);
-  ctx.fillStyle = "#ffd35a";
-  ctx.font = "900 13px ui-monospace, monospace";
-  ctx.textAlign = "center";
-  ctx.fillText("SUPPLIES", x, y - 6);
-  ctx.fillStyle = "#f5f1ff";
-  ctx.font = "900 30px ui-monospace, monospace";
-  ctx.fillText(String(hub.supplies), x + 48, y + 22);
-  for (let i = 0; i < Math.max(3, count); i++) {
-    const px = x - 52 + (i % 5) * 26;
-    const py = y + 42 - Math.floor(i / 5) * 23;
+
+  drawVillageSmallBuilding(x - 88, y - 40, 190, 126, "#ffd35a", "SUPPLY SHED", "Storage", "town_crate_big");
+  for (let i = 0; i < Math.max(4, count); i++) {
+    const px = x - 62 + (i % 6) * 25;
+    const py = y + 62 - Math.floor(i / 6) * 22;
     const key = i % 3 === 0 ? "town_crate_big" : i % 3 === 1 ? "town_barrel_a" : "town_crate_small";
-    drawTownAsset(key, px, py, 30, 0, i < count ? 1 : 0.26);
+    drawTownAsset(key, px, py, 28, 0, i < count ? 1 : 0.24);
   }
-  ctx.textAlign = "left";
   ctx.restore();
 }
 
@@ -2707,6 +3585,7 @@ function drawVillageRubble() {
     ctx.fill();
     drawTownAsset("town_stump", rubble.x - rubble.r * 0.26, rubble.y, rubble.r * 1.25, 0.1, 0.9);
     drawTownAsset("town_crate_small", rubble.x + rubble.r * 0.28, rubble.y + 4, rubble.r * 1.05, -0.15, 0.8);
+    drawTownAsset("town_stone_dark", rubble.x - rubble.r * 0.16, rubble.y + 12, rubble.r * 0.9, 0.2, 0.6);
     ctx.strokeStyle = "rgba(255,211,90,0.45)";
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
@@ -2717,31 +3596,379 @@ function drawVillageRubble() {
   }
 }
 
-function drawVillageStations() {
-  drawVillageStation(430, 650, "GEAR", "Collection", "#c77dff", "town_crate_big");
-  drawVillageStation(855, 650, "POWER", "Power Up", "#7cc7ff", "town_barrel_b");
-  drawVillageStation(118, 745, "ROAD", "Main Menu", "#ffd35a", "town_fence_h2");
+function drawVillageStumps() {
+  for (const stump of VILLAGE_STUMPS) {
+    const cleared = villageStumpCleared(stump.id);
+    const hits = villageStumpHitCount(stump.id);
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.24)";
+    ctx.beginPath();
+    ctx.ellipse(stump.x + 2, stump.y + 12, 22, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    if (cleared) {
+      if (!villageStumpDropReady(stump.id)) drawGrassTuft(stump.x + 6, stump.y + 8, 0.55, 0.32);
+      ctx.restore();
+      continue;
+    }
+    drawTownAsset("town_stump", stump.x, stump.y, 34, 0, 0.95);
+    if (hits > 0) {
+      ctx.strokeStyle = "rgba(255,211,90,0.65)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(stump.x - 10, stump.y - 8);
+      ctx.lineTo(stump.x + 10, stump.y + 7);
+      ctx.moveTo(stump.x + 8, stump.y - 9);
+      ctx.lineTo(stump.x - 8, stump.y + 8);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(3,5,12,0.68)";
+      ctx.fillRect(stump.x - 18, stump.y + 23, 36, 5);
+      ctx.fillStyle = "#ffd35a";
+      ctx.fillRect(stump.x - 18, stump.y + 23, 36 * clamp(hits / stump.hp, 0, 1), 5);
+    }
+    drawTownAsset("tiny_axe", stump.x + 18, stump.y - 18, 24, -0.7, 0.92);
+    ctx.restore();
+  }
 }
 
-function drawVillageStation(x, y, top, bottom, color, iconKey) {
+function drawVillageStumpDrops() {
+  const hub = ensureHubSave();
+  for (const stump of VILLAGE_STUMPS) {
+    if (!hub.stumpDrops?.[stump.id]) continue;
+    const bob = Math.sin(nowSec() * 5 + stump.x) * 2;
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.26)";
+    ctx.beginPath();
+    ctx.ellipse(stump.x + 2, stump.y + 14, 24, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,211,90,0.48)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(stump.x, stump.y + bob, 28 + Math.sin(nowSec() * 4) * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    drawTownAsset("tiny_log", stump.x - 8, stump.y + bob, 30, -0.25, 1) || drawTownAsset("town_stump", stump.x - 4, stump.y + bob, 25, 0, 0.85);
+    drawTownAsset("tiny_chest", stump.x + 13, stump.y + bob + 2, 22, 0.16, 0.9);
+    if (stump.shards) drawTownAsset("tiny_coin", stump.x + 2, stump.y + bob - 18, 18, 0, 0.95);
+    ctx.fillStyle = "#ffd35a";
+    ctx.font = "900 9px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("PICK UP", stump.x, stump.y - 28 + bob);
+    ctx.restore();
+  }
+}
+
+function drawVillageStations() {
+  drawVillageServiceBuildings();
+  drawVillageProjects();
+}
+
+function drawVillageServiceBuildings() {
+  const collection = VILLAGE_SERVICE_BUILDINGS.collection;
+  const power = VILLAGE_SERVICE_BUILDINGS.power;
+  const road = VILLAGE_SERVICE_BUILDINGS.road;
+  drawVillageSmallBuilding(collection.x, collection.y, collection.w, collection.h, collection.color, "GEAR", "Collection", "town_crate_big");
+  drawVillageSmallBuilding(power.x, power.y, power.w, power.h, power.color, "TRAINING", "Power Up", "town_barrel_b");
+  drawVillageSmallBuilding(road.x, road.y, road.w, road.h, road.color, "ROAD", "Main Menu", "town_fence_h2");
+}
+
+function drawVillageSmallBuilding(x, y, w, h, color, top, bottom, iconKey) {
+  const cx = x + w / 2;
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath();
-  ctx.ellipse(x, y + 40, 76, 18, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx + 8, y + h + 8, w * 0.48, 17, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "rgba(3,5,12,0.72)";
-  ctx.fillRect(x - 74, y - 36, 148, 80);
-  ctx.strokeStyle = color;
+  ctx.fillStyle = "#c9b27f";
+  ctx.fillRect(x + 18, y + 38, w - 36, h - 42);
+  ctx.strokeStyle = hexToRgba(color, 0.5);
   ctx.lineWidth = 3;
-  ctx.strokeRect(x - 74, y - 36, 148, 80);
-  drawTownAsset(iconKey, x, y - 4, 38, 0, 0.95);
+  ctx.strokeRect(x + 18, y + 38, w - 36, h - 42);
+  ctx.fillStyle = "#9d6735";
+  ctx.beginPath();
+  ctx.moveTo(x + 5, y + 48);
+  ctx.lineTo(cx, y - 16);
+  ctx.lineTo(x + w - 5, y + 48);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,211,90,0.45)";
+  ctx.stroke();
+  for (let i = -2; i <= 2; i++) drawTownAsset("town_roof_b", cx + i * 27, y + 34 - Math.abs(i) * 8, 34, 0, 0.86);
+  drawTownAsset("town_door_b", cx, y + h - 22, 42, 0, 0.98);
+  drawTownAsset("town_window_a", x + 46, y + 70, 28, 0, 0.95);
+  drawTownAsset("town_window_b", x + w - 46, y + 70, 28, 0, 0.95);
+  drawTownAsset(iconKey, cx, y + 56, 34, 0, 0.9);
+  if (bottom === "Collection") {
+    drawTownAsset("tiny_sword", cx - 28, y + 57, 22, -0.7, 0.95);
+    drawTownAsset("tiny_chest", cx + 28, y + 57, 24, 0, 0.95);
+  } else if (bottom === "Power Up") {
+    drawTownAsset("tiny_target", cx - 28, y + 57, 23, 0, 0.95);
+    drawTownAsset("tiny_axe", cx + 28, y + 57, 23, -0.5, 0.95);
+  } else if (bottom === "Main Menu") {
+    drawTownAsset("tiny_sign", cx, y + 56, 28, 0, 0.95);
+  }
+
+  ctx.fillStyle = "rgba(3,5,12,0.52)";
+  ctx.beginPath();
+  ctx.roundRect(cx - 58, y + h + 3, 116, 21, 4);
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba(color, 0.46);
+  ctx.stroke();
   ctx.fillStyle = color;
-  ctx.font = "900 13px ui-monospace, monospace";
+  ctx.font = "900 10px ui-monospace, monospace";
   ctx.textAlign = "center";
-  ctx.fillText(top, x, y + 18);
-  ctx.fillStyle = "#f5f1ff";
-  ctx.font = "800 12px ui-monospace, monospace";
-  ctx.fillText(bottom, x, y + 38);
+  ctx.fillText(bottom.toUpperCase(), cx, y + h + 17);
+  ctx.restore();
+}
+
+
+function drawVillageProjects() {
+  for (const project of VILLAGE_PROJECTS) {
+    const rank = hubProjectRank(project.id);
+    if (project.id === "garden") drawVillageGarden(project, rank);
+    else if (project.id === "kitchen") drawVillageKitchen(project, rank);
+    else drawVillageWatchPost(project, rank);
+  }
+}
+
+function drawVillageProjectLabel(project, rank) {
+  const max = Math.max(1, project.max);
+  ctx.save();
+  ctx.fillStyle = "rgba(3,5,12,0.48)";
+  ctx.beginPath();
+  ctx.roundRect(project.x - 54, project.y + 62, 108, 18, 5);
+  ctx.fill();
+  for (let i = 0; i < max; i++) {
+    ctx.fillStyle = i < rank ? project.color : "rgba(255,255,255,0.22)";
+    ctx.fillRect(project.x - 36 + i * 22, project.y + 68, 14, 5);
+  }
+  ctx.fillStyle = rank >= project.max ? project.color : "rgba(245,241,255,0.86)";
+  ctx.font = "900 9px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(rank >= project.max ? "MAX" : `${rank}/${max}`, project.x, project.y + 58);
+  ctx.restore();
+}
+
+function drawVillageGarden(project, rank) {
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.24)";
+  ctx.beginPath();
+  ctx.ellipse(project.x, project.y + 28, 150, 48, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  for (let i = -4; i <= 4; i++) {
+    drawTownAsset("town_fence_h", project.x + i * 31, project.y - 58, 34, 0, 0.9);
+    drawTownAsset("town_fence_h", project.x + i * 31, project.y + 62, 34, 0, 0.88);
+  }
+  for (let i = -1; i <= 1; i++) {
+    drawTownAsset("town_fence_v", project.x - 142, project.y - 30 + i * 34, 34, 0, 0.86);
+    drawTownAsset("town_fence_v", project.x + 142, project.y - 30 + i * 34, 34, 0, 0.86);
+  }
+
+  for (let row = 0; row < project.max; row++) {
+    const x = project.x - 78 + row * 52;
+    const restored = row < rank;
+    for (let j = -1; j <= 1; j++) drawTownAsset("town_dirt_b", x, project.y + j * 24, 34, 0, restored ? 0.96 : 0.55);
+    if (restored) {
+      for (let y = project.y - 28; y <= project.y + 34; y += 20) {
+        drawGrassTuft(x - 8, y, 0.8, 0);
+        drawTownAsset("town_flower", x + 8, y - 3, 14, 0, 0.86);
+      }
+    } else {
+      drawTownAsset("town_stump", x, project.y + 4, 24, 0, 0.7);
+      drawTownAsset("town_stone_dark", x + 14, project.y + 18, 18, 0, 0.42);
+    }
+  }
+
+  drawTownAsset("town_barrel_c", project.x + 118, project.y + 34, 28, 0, 0.95);
+  drawTownAsset("town_crate_small", project.x - 118, project.y + 34, 26, 0, 0.85);
+  drawTownAsset("tiny_tool_shovel", project.x - 122, project.y - 28, 24, -0.4, 0.92);
+  drawTownAsset("tiny_flower", project.x + 122, project.y - 25, 24, 0, 0.92);
+  if (rank > 0) drawTownAsset("tiny_grass_detail", project.x, project.y - 58, 30, 0, 0.82);
+  drawVillageProjectLabel(project, rank);
+  ctx.restore();
+}
+
+function drawVillageKitchen(project, rank) {
+  ctx.save();
+  const cx = project.x;
+  const glow = 0.13 + rank * 0.09;
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.beginPath();
+  ctx.ellipse(cx, project.y + 42, 124, 34, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#bda77b";
+  ctx.fillRect(cx - 82, project.y - 32, 164, 88);
+  ctx.strokeStyle = hexToRgba(project.color, 0.45 + rank * 0.08);
+  ctx.lineWidth = 3;
+  ctx.strokeRect(cx - 82, project.y - 32, 164, 88);
+  ctx.fillStyle = "#9d6735";
+  ctx.beginPath();
+  ctx.moveTo(cx - 104, project.y - 28);
+  ctx.lineTo(cx, project.y - 82);
+  ctx.lineTo(cx + 104, project.y - 28);
+  ctx.closePath();
+  ctx.fill();
+  for (let i = -2; i <= 2; i++) drawTownAsset("town_roof_b", cx + i * 29, project.y - 28 - Math.abs(i) * 8, 34, 0, 0.9);
+  drawTownAsset("town_door_b", cx, project.y + 34, 42, 0, 0.95);
+  drawTownAsset("town_window_a", cx - 50, project.y + 3, 28, 0, 0.9);
+  drawTownAsset("town_window_b", cx + 50, project.y + 3, 28, 0, 0.9);
+
+  for (let i = -2; i <= 2; i++) drawTownAsset("town_stone_b", cx + i * 22, project.y + 78, 26, 0, 0.92);
+  ctx.fillStyle = `rgba(255,116,66,${glow})`;
+  ctx.beginPath();
+  ctx.arc(cx, project.y + 68, 24 + rank * 4, 0, Math.PI * 2);
+  ctx.fill();
+  if (rank > 0) {
+    ctx.fillStyle = "#ffb35a";
+    ctx.beginPath();
+    ctx.moveTo(cx, project.y + 38 - Math.sin(nowSec() * 5) * 3);
+    ctx.quadraticCurveTo(cx - 14, project.y + 59, cx, project.y + 80);
+    ctx.quadraticCurveTo(cx + 14, project.y + 59, cx, project.y + 38 - Math.sin(nowSec() * 5) * 3);
+    ctx.fill();
+  }
+  drawTownAsset("town_crate_small", cx - 112, project.y + 58, 28, 0, 0.86);
+  drawTownAsset("town_barrel_a", cx + 112, project.y + 58, 28, 0, 0.86);
+  drawTownAsset("tiny_barrel", cx + 94, project.y + 18, 28, 0, 0.95);
+  drawTownAsset("tiny_log", cx - 92, project.y + 18, 28, 0.1, 0.9);
+  if (rank > 1) drawTownAsset("tiny_coin", cx, project.y + 5, 24, 0, 0.9);
+  drawVillageProjectLabel(project, rank);
+  ctx.restore();
+}
+
+function drawVillageWatchPost(project, rank) {
+  ctx.save();
+  const cx = project.x;
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  ctx.beginPath();
+  ctx.ellipse(cx, project.y + 48, 118, 30, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  for (let i = -1; i <= 1; i++) {
+    const x = cx + i * 38;
+    ctx.fillStyle = "#7d5638";
+    ctx.fillRect(x - 5, project.y - 34, 10, 96);
+    drawTownAsset("town_fence_v2", x, project.y + 28, 38, 0, 0.82);
+  }
+  ctx.fillStyle = "#b78b55";
+  ctx.fillRect(cx - 74, project.y - 46, 148, 36);
+  ctx.strokeStyle = hexToRgba(project.color, 0.42 + rank * 0.1);
+  ctx.lineWidth = 3;
+  ctx.strokeRect(cx - 74, project.y - 46, 148, 36);
+  ctx.fillStyle = "#9d6735";
+  ctx.beginPath();
+  ctx.moveTo(cx - 88, project.y - 48);
+  ctx.lineTo(cx, project.y - 96);
+  ctx.lineTo(cx + 88, project.y - 48);
+  ctx.closePath();
+  ctx.fill();
+  drawTownAsset("town_roof_peak", cx, project.y - 54, 62, 0, 0.92);
+  drawTownAsset("town_crate_big", cx, project.y + 48, 34, 0, 0.9);
+  for (let i = 0; i < rank; i++) {
+    drawTownAsset("town_lamp", cx - 58 + i * 38, project.y - 18 - (i % 2) * 10, 34, 0, 0.96);
+  }
+  ctx.strokeStyle = hexToRgba(project.color, 0.18 + rank * 0.08);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, project.y - 24, 78 + rank * 6, 0, Math.PI * 2);
+  ctx.stroke();
+  drawTownAsset("tiny_target", cx + 92, project.y - 20, 30, 0, 0.95);
+  drawTownAsset("tiny_tool_pickaxe", cx - 94, project.y + 26, 26, 0.5, 0.9);
+  drawVillageProjectLabel(project, rank);
+  ctx.restore();
+}
+
+
+function drawVillageActivitySites() {
+  drawVillageFarmPlots();
+  drawVillageMineNodes();
+  drawVillageFishingSpot();
+}
+
+function drawVillageFarmPlots() {
+  ctx.save();
+  for (const plot of VILLAGE_FARM_PLOTS) {
+    const state = villageFarmPlot(plot.id);
+    drawTownAsset("town_dirt_b", plot.x, plot.y, 42, 0, 0.94);
+    ctx.strokeStyle = "rgba(64,42,20,0.35)";
+    ctx.strokeRect(plot.x - 18, plot.y - 18, 36, 36);
+    if (state.state === "planted") {
+      const grown = state.watered ? 0.9 : 0.5;
+      drawGrassTuft(plot.x - 5, plot.y + 4, grown, 0);
+      drawGrassTuft(plot.x + 7, plot.y + 5, grown, 0.2);
+      if (state.watered) {
+        ctx.fillStyle = "rgba(124,199,255,0.18)";
+        ctx.fillRect(plot.x - 16, plot.y - 16, 32, 32);
+      }
+    } else if (state.state === "ready") {
+      drawTownAsset("tiny_flower", plot.x - 6, plot.y, 24, 0, 0.98);
+      drawTownAsset("tiny_flower", plot.x + 9, plot.y + 2, 20, 0, 0.98);
+      ctx.strokeStyle = "rgba(255,211,90,0.78)";
+      ctx.strokeRect(plot.x - 20, plot.y - 20, 40, 40);
+    }
+  }
+  ctx.restore();
+}
+
+function drawVillageMineNodes() {
+  const day = ensureHubSave().towerDay;
+  for (const mine of VILLAGE_MINE_NODES) {
+    const spent = ensureHubSave().mineCleared?.[mine.id] === day;
+    ctx.save();
+    ctx.globalAlpha = spent ? 0.42 : 1;
+    drawTownAsset("town_stone_dark", mine.x, mine.y, 42, 0, 0.95);
+    drawTownAsset("tiny_tool_pickaxe", mine.x + 22, mine.y - 14, 24, -0.55, 0.9);
+    if (!spent) {
+      ctx.strokeStyle = "rgba(255,211,90,0.42)";
+      ctx.beginPath();
+      ctx.arc(mine.x, mine.y, 30 + Math.sin(nowSec() * 2 + mine.x) * 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function drawVillageFishingSpot() {
+  const spot = VILLAGE_FISHING_SPOTS[0];
+  if (!spot) return;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,211,90,0.42)";
+  ctx.beginPath();
+  ctx.arc(spot.x, spot.y, 36 + Math.sin(nowSec() * 2.1) * 2, 0, Math.PI * 2);
+  ctx.stroke();
+  drawTownAsset("tiny_sign", spot.x + 44, spot.y + 18, 22, 0, 0.8);
+  ctx.fillStyle = "rgba(255,255,255,0.22)";
+  ctx.beginPath();
+  ctx.ellipse(spot.x - 20 + Math.sin(nowSec() * 1.7) * 12, spot.y - 4, 12, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawVillageVisitor() {
+  const visitor = activeVillageVisitor();
+  if (!visitor) return;
+  const x = VILLAGE_VISITOR_SPOT.x;
+  const y = VILLAGE_VISITOR_SPOT.y;
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.34)";
+  ctx.beginPath();
+  ctx.ellipse(x + 2, y + 18, 26, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  drawTownAsset("town_crate_big", x - 40, y + 12, 34, 0, 0.9);
+  drawTownAsset(visitor.type === "seed" ? "tiny_flower" : visitor.type === "miner" ? "tiny_tool_pickaxe" : visitor.type === "fisher" ? "tiny_key" : "tiny_coin", x - 40, y - 12, 24, 0, 0.95);
+  if (!drawImageAsset("rpg_soldier", x, y, 42, 42)) {
+    ctx.fillStyle = "#ffd35a";
+    ctx.beginPath();
+    ctx.arc(x, y, 14, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.strokeStyle = "rgba(255,211,90,0.65)";
+  ctx.beginPath();
+  ctx.arc(x, y, 34 + Math.sin(nowSec() * 2) * 2, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = "#ffd35a";
+  ctx.font = "900 10px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(visitor.name.toUpperCase(), x, y + 48);
   ctx.restore();
 }
 
@@ -2792,6 +4019,25 @@ function drawVillagePlayer() {
   ctx.restore();
 }
 
+function drawVillageToolSwing() {
+  if (villageToolSwing.t <= 0) return;
+  const p = villagePlayer;
+  const t = villageToolSwing.t / 0.18;
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(villageToolSwing.angle - 0.8 + (1 - t) * 1.4);
+  ctx.globalAlpha = clamp(t * 1.4, 0, 1);
+  drawTownAsset("tiny_axe", 28, -8, 32, 0, 1) || (() => {
+    ctx.strokeStyle = "rgba(255,211,90,0.85)";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(12, -12);
+    ctx.lineTo(36, 6);
+    ctx.stroke();
+  })();
+  ctx.restore();
+}
+
 function drawVillageScreenUi() {
   const hub = ensureHubSave();
   const hope = hubTotalHelp();
@@ -2799,15 +4045,15 @@ function drawVillageScreenUi() {
   const pct = clamp(hope / Math.max(1, maxHope), 0, 1);
   ctx.save();
   ctx.fillStyle = "rgba(3,5,12,0.56)";
-  ctx.fillRect(16, 16, 286, 74);
+  ctx.fillRect(16, 16, 318, 96);
   ctx.strokeStyle = "rgba(255,211,90,0.55)";
-  ctx.strokeRect(16, 16, 286, 74);
+  ctx.strokeRect(16, 16, 318, 96);
   ctx.fillStyle = "#f5f1ff";
   ctx.font = "900 18px ui-monospace, monospace";
   ctx.fillText("Mira's Village", 32, 42);
   ctx.fillStyle = "rgba(217,222,234,0.72)";
   ctx.font = "800 11px ui-monospace, monospace";
-  ctx.fillText("WASD move  ·  E interact  ·  Esc menu", 32, 62);
+  ctx.fillText("WASD move  ·  Shift run  ·  E interact  ·  Esc pause", 32, 62);
   ctx.fillStyle = "rgba(255,255,255,0.12)";
   ctx.fillRect(32, 74, 220, 7);
   ctx.fillStyle = "#7dffb2";
@@ -2815,6 +4061,15 @@ function drawVillageScreenUi() {
   ctx.fillStyle = "#ffd35a";
   ctx.font = "900 13px ui-monospace, monospace";
   ctx.fillText(`${hope}/${maxHope}`, 258, 82);
+  const energy = villageEnergy();
+  const maxEnergy = villageMaxEnergy();
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  ctx.fillRect(32, 94, 152, 7);
+  ctx.fillStyle = "#52e4ff";
+  ctx.fillRect(32, 94, 152 * (energy / Math.max(1, maxEnergy)), 7);
+  ctx.fillStyle = "#52e4ff";
+  ctx.font = "900 10px ui-monospace, monospace";
+  ctx.fillText(`ENERGY ${energy}/${maxEnergy}`, 192, 101);
 
   ctx.fillStyle = "rgba(3,5,12,0.58)";
   ctx.fillRect(W - 174, 16, 158, 64);
@@ -2828,6 +4083,26 @@ function drawVillageScreenUi() {
   ctx.textAlign = "right";
   ctx.fillText(String(hub.supplies), W - 32, 57);
   ctx.textAlign = "left";
+  ctx.fillStyle = "rgba(217,222,234,0.78)";
+  ctx.font = "900 9px ui-monospace, monospace";
+  ctx.fillText(`Seeds ${hub.seeds}  Ore ${hub.ore}  Fish ${hub.fish}`, W - 164, 72);
+
+  const task = hub.activeTask;
+  if (task) {
+    ctx.fillStyle = "rgba(3,5,12,0.62)";
+    ctx.fillRect(318, 16, 394, 64);
+    ctx.strokeStyle = "rgba(125,255,178,0.5)";
+    ctx.strokeRect(318, 16, 394, 64);
+    ctx.fillStyle = "#7dffb2";
+    ctx.font = "900 11px ui-monospace, monospace";
+    ctx.fillText("VILLAGE TASK", 336, 36);
+    ctx.fillStyle = "#f5f1ff";
+    ctx.font = "900 13px ui-monospace, monospace";
+    ctx.fillText(task.title.toUpperCase(), 336, 55);
+    ctx.fillStyle = "#ffd35a";
+    ctx.font = "900 12px ui-monospace, monospace";
+    ctx.fillText(`${Math.min(task.progress || 0, task.need || 1)}/${task.need || 1}  +${task.rewardSupplies || 1} supply  +${task.rewardShards || 1} shard`, 336, 72);
+  }
 
   const target = villageInteractTarget;
   if (target) {
@@ -2952,6 +4227,32 @@ function showEndRunConfirm() {
   `;
 }
 
+function showVillagePauseOverlay() {
+  mode = "villagePaused";
+  overlay.style.display = "grid";
+  overlay.className = "overlayScreen pauseMenu";
+  document.body.dataset.screen = "game";
+  titleCard.innerHTML = `
+    <div class="pauseCard">
+      <div class="pauseTag">VILLAGE PAUSED</div>
+      <h2>Paused</h2>
+      <p>The village is frozen. Resume, open the main menu, or quit from the main menu.</p>
+      <div class="pauseActions">
+        <button class="vsButton green pauseResume" data-action="resumeVillage">RESUME</button>
+        <button class="vsButton blue" data-action="backMenu">MAIN MENU</button>
+      </div>
+      <small>Esc pauses in town now. It no longer throws you to the main menu.</small>
+    </div>
+  `;
+}
+
+function resumeVillage() {
+  if (mode !== "villagePaused") return;
+  mode = "village";
+  closeOverlay();
+  lastTime = performance.now();
+}
+
 function pauseRunAudio() {
   if (!musicAudio) return;
   try {
@@ -3027,6 +4328,7 @@ function renderMenu() {
   gameOver = false;
   towerCleared = false;
   activeStoryMode = false;
+  villagePendingRouteFloor = 0;
   updateHud();
   startMusic("music_menu");
 
@@ -4204,12 +5506,13 @@ function startTower(options = {}) {
   activeRouteType = "standard";
   nextRouteType = "standard";
   lastRouteChoice = null;
+  villagePendingRouteFloor = 0;
 
   runStats = {
-    maxHpBonus: powerRank("maxHealth") * 10 + hubBonusMaxHp(),
+    maxHpBonus: powerRank("maxHealth") * 10 + hubBonusMaxHp() + hubProjectMaxHpBonus(),
     ammoBonus: 0,
     pulseCdMult: Math.max(0.55, 1 - powerRank("cooldown") * 0.08),
-    pulseRange: 420 + powerRank("area") * 30 + hubBonusPulseRange(),
+    pulseRange: 420 + powerRank("area") * 30 + hubBonusPulseRange() + hubProjectPulseRangeBonus(),
     echoDuration: 2.6 + powerRank("traceMemory") * 0.35,
     reloadMult: Math.max(0.55, 1 - powerRank("reload") * 0.07),
     damageMult: (1 + powerRank("might") * 0.05) * hubBonusDamageMult(),
@@ -4218,7 +5521,7 @@ function startTower(options = {}) {
     suspicionBleed: 0,
     reflexBuffer: 0,
     threatRead: 0,
-    smokeBonus: powerRank("smokeKit"),
+    smokeBonus: powerRank("smokeKit") + hubProjectSmokeBonus(),
     heatMult: 1,
     dashCdMult: 1,
     bossAbility: null,
@@ -4238,6 +5541,9 @@ function startTower(options = {}) {
   logs.length = 0;
   if (activeStoryMode) addLog(`${storyChapterById(activeStoryChapterId).name} ascent started.`);
   else addLog("Tower run started.");
+  if (hubProjectRank("garden")) addLog(`Garden ready: +${hubProjectRank("garden") * 3} max HP.`);
+  if (hubProjectRank("kitchen")) addLog(`Kitchen meal: +${hubProjectRank("kitchen")} smoke per floor.`);
+  if (hubProjectRank("watchpost")) addLog(`Watch Post: +${hubProjectRank("watchpost") * 22} Pulse range.`);
   startFloor(1);
 }
 
@@ -6136,7 +7442,7 @@ function showFloorClearCelebration(info) {
           <span>${info.suppliesFound ? `+${info.suppliesFound} village supplies found` : info.hpBonus > 0 ? `Survival bonus: +${info.hpBonus}` : "No survival bonus"}</span>
         </div>
         <div class="menuActions">
-          <button class="vsButton green jackpotButton" data-action="claimFloorReward">${info.towerClear ? "CLAIM TOWER" : "CLAIM AND CHOOSE ROUTE"}</button>
+          <button class="vsButton green jackpotButton" data-action="claimFloorReward">${info.towerClear ? "CLAIM TOWER" : activeStoryMode ? "CLAIM REWARD" : "CLAIM AND CHOOSE ROUTE"}</button>
         </div>
       </div>
     </div>
@@ -6271,7 +7577,12 @@ function chooseReward(index) {
     addLog(`${reward.data.bossAbility ? "Boss ability" : "Upgrade"} acquired: ${reward.data.name}.`);
   }
 
+  const floorInfo = pendingFloorReward || {};
   pendingFloorReward = null;
+  if (activeStoryMode && currentFloor < 8) {
+    enterVillageBetweenStoryFloors(currentFloor + 1, floorInfo);
+    return;
+  }
   showRouteChoices(currentFloor + 1);
 }
 
@@ -6317,7 +7628,7 @@ function showRouteChoices(nextFloor) {
 
   openOverlay(`
     <div class="vsScreen framedScreen routeChoiceScreen">
-      ${renderTopStrip(`Floor ${nextFloor} Route`, "backMenu")}
+      ${renderTopStrip(`Floor ${nextFloor} Route`, activeStoryMode && villagePendingRouteFloor === nextFloor ? "backVillage" : "backMenu")}
       <div class="vsPanel levelPanel routePanel">
         <h2>Choose Next Floor</h2>
         <p class="panelLead">${activeStoryMode ? "Choose the next floor. Some paths are safer, some have supplies, and some lead to a boss." : "Choose the next floor. Safe fight, supply room, or hard fight."}</p>
@@ -6375,6 +7686,7 @@ function buildRouteChoices(nextFloor) {
 function chooseRoute(kind) {
   const valid = new Set(["standard", "cache", "rival", "boss"]);
   nextRouteType = valid.has(kind) ? kind : "standard";
+  villagePendingRouteFloor = 0;
   lastRouteChoice = nextRouteType;
   addLog(`Path selected: ${nextRouteType}.`);
   startFloor(currentFloor + 1);
@@ -6389,6 +7701,8 @@ function endTower(won, killer = "") {
   message = won ? "Tower clear." : `Killed by ${killer}.`;
 
   stopMusic();
+
+  if (activeStoryMode) refillVillageEnergy(won ? "chapter clear" : "run failed");
 
   if (won) {
     save.bestFloor = Math.max(save.bestFloor, currentFloor);
@@ -6407,12 +7721,27 @@ function endTower(won, killer = "") {
     playAssetSfx("voice_game_over", 0.18);
   }
 
+  const nextChapter = activeStoryMode
+    ? STORY_CHAPTERS.find(chapter => !save.completedChapters.includes(chapter.id))
+    : null;
+  const storyClearText = nextChapter
+    ? `Chapter cleared. The village has proof Mira is alive. Next clue: ${nextChapter.name}.`
+    : "Chapter cleared. Mira's door is open, and the village is waiting.";
+  const topBackAction = activeStoryMode ? "backVillage" : "backMenu";
+  const primaryAction = won && activeStoryMode ? "backVillage" : "startTower";
+  const primaryText = won && activeStoryMode ? "RETURN TO VILLAGE" : "START NEW TOWER";
+  const secondaryAction = activeStoryMode ? "backVillage" : "backMenu";
+  const secondaryText = activeStoryMode ? "VILLAGE" : "MAIN MENU";
+  const jackpot = won && activeStoryMode ? `<div class="slotHeader">CHAPTER COMPLETE</div><div class="chapterCliffhanger">${nextChapter ? `Someone in the village says ${nextChapter.handler} found the next lead.` : "Mira is close enough to hear footsteps outside her door."}</div>` : "";
+
   openOverlay(`
-    <div class="vsScreen framedScreen resultScreen">
-      ${renderTopStrip(won ? "Tower Clear" : "Run Failed", "backMenu")}
+    <div class="vsScreen framedScreen resultScreen ${won && activeStoryMode ? "storyCompleteScreen" : ""}">
+      ${won && activeStoryMode ? `<div class="confettiLayer">${makeConfettiLayer(96)}</div>` : ""}
+      ${renderTopStrip(won ? "Tower Clear" : "Run Failed", topBackAction)}
       <div class="vsPanel resultPanel">
+        ${jackpot}
         <h2>${won ? "Tower clear" : "Run failed"}</h2>
-        <p class="panelLead">${won && activeStoryMode ? "Chapter cleared. Supplies were sent back to the village. Mira is one door closer." : won ? "You cleared the current tower. Next step is tighter arenas and better bosses." : "You died. Floors already cleared stayed saved. Try another route when you are ready."}</p>
+        <p class="panelLead">${won && activeStoryMode ? storyClearText : won ? "You cleared the current tower. Next step is tighter arenas and better bosses." : "You died. Floors already cleared stayed saved. Try another route when you are ready."}</p>
         <div class="menuStats">
           <div><span>Reached</span><b>Floor ${currentFloor}</b></div>
           <div><span>Best</span><b>${save.bestFloor}</b></div>
@@ -6420,8 +7749,8 @@ function endTower(won, killer = "") {
           <div><span>Upgrades</span><b>${runStats.upgrades.length}</b></div>
         </div>
         <div class="menuActions">
-          <button class="vsButton blue" data-action="startTower">START NEW TOWER</button>
-          <button class="vsButton red" data-action="backMenu">MAIN MENU</button>
+          <button class="vsButton green" data-action="${primaryAction}">${primaryText}</button>
+          <button class="vsButton blue" data-action="${secondaryAction}">${secondaryText}</button>
         </div>
       </div>
     </div>
@@ -6956,7 +8285,7 @@ function botAimAndShoot(bot, seesPlayer) {
     const p = closestPointOnLine(player, bot, end);
     const d = Math.hypot(player.x - p.x, player.y - p.y);
     const dodgeRadius = playerDodgeRadius();
-    if (d < dodgeRadius && hasLineOfSight(bot, player)) {
+    if (d < dodgeRadius && hasVisualLineOfSight(bot, player)) {
       const dmg = rand(botWeapon.damage[0], botWeapon.damage[1]) * (bot.role === "boss" ? 0.58 : bot.role === "duelist" ? 0.48 : 0.42) + currentFloor * 0.55;
       addImpact("bot", p.x, p.y, ang, { ...botWeapon, id: "enemy", hitStop: 0.012, shake: 1, color: bot.color || "#ff5c7a" });
       damagePlayer(dmg, bot.name);
@@ -7039,7 +8368,7 @@ function updateHud() {
   const reload = player.reload > 0 ? `${player.reload.toFixed(1)}s` : "none";
   const hitRate = player.shots ? Math.round((player.hits / player.shots) * 100) + "%" : "n/a";
   const alive = bots.filter(b => b.alive).length;
-  const floorLabel = mode === "menu" ? "menu" : mode === "village" ? "village" : mode === "countdown" ? `${currentFloor} / 8 matchmaking` : mode === "pauseRequest" ? `${currentFloor} / 8 pause request` : mode === "paused" ? `${currentFloor} / 8 paused` : `${currentFloor} / 8`;
+  const floorLabel = mode === "menu" ? "menu" : mode === "village" ? "village" : mode === "villagePaused" ? "village paused" : mode === "countdown" ? `${currentFloor} / 8 matchmaking` : mode === "pauseRequest" ? `${currentFloor} / 8 pause request` : mode === "paused" ? `${currentFloor} / 8 paused` : `${currentFloor} / 8`;
   const stageLabel = activeStage ? activeStage.name : "none";
   const upgrades = runStats?.upgrades?.length ? runStats.upgrades.join(", ") : "none";
 
@@ -7064,7 +8393,7 @@ function updateHud() {
 }
 
 function draw() {
-  if (mode === "village") {
+  if (mode === "village" || mode === "villagePaused") {
     drawVillage();
     return;
   }
@@ -8210,6 +9539,13 @@ function loop(t) {
     return;
   }
 
+  if (mode === "villagePaused") {
+    updateHud();
+    draw();
+    requestAnimationFrame(loop);
+    return;
+  }
+
   if (hitStop > 0) {
     hitStop = Math.max(0, hitStop - rawDt);
   }
@@ -8258,14 +9594,15 @@ window.addEventListener("keydown", e => {
   const key = e.key.toLowerCase();
   if (key === "p" || key === "escape") {
     e.preventDefault();
-    if (mode === "village") renderMenu();
+    if (mode === "village") showVillagePauseOverlay();
+    else if (mode === "villagePaused") resumeVillage();
     else if (mode === "running") requestFightPause();
     else if (mode === "paused") resumeFight();
     else if (mode === "pauseRequest") showPauseOverlay(false);
     return;
   }
   if (mode === "village") {
-    if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) keys.add(key);
+    if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"].includes(key)) keys.add(key);
     if (key === "e" || key === "enter" || key === " " || key === "spacebar") {
       e.preventDefault();
       interactVillage();
@@ -8324,6 +9661,11 @@ canvas.addEventListener("mousemove", e => {
 
 canvas.addEventListener("mousedown", e => {
   resumeAudio();
+  if (e.button === 0 && mode === "village") {
+    const p = canvasPos(e);
+    swingVillageToolAt(p.x, p.y);
+    return;
+  }
   if (e.button === 0 && mode === "running" && !gameOver) {
     mouse.down = true;
     player.fireBuffer = Math.max(player.fireBuffer, 0.16);
@@ -8346,7 +9688,7 @@ overlay.addEventListener("click", e => {
   const actions = {
     startTower: () => startTower(),
     openHub: () => renderVillageHub(),
-    backVillage: () => renderVillageHub(),
+    backVillage: () => returnToVillageFromOverlay(),
     openStory: () => renderStorySelect(),
     helpVillager: () => helpVillager(button.dataset.id),
     startStoryChapter: () => startStoryChapter(button.dataset.id),
@@ -8384,6 +9726,7 @@ overlay.addEventListener("click", e => {
     buy: () => buyUnlock(button.dataset.type, button.dataset.id),
     equip: () => equipUnlock(button.dataset.type, button.dataset.id),
     resumeFight: () => resumeFight(),
+    resumeVillage: () => resumeVillage(),
     confirmEndRun: () => showEndRunConfirm(),
     abandonRun: () => abandonRun()
   };
