@@ -133,3 +133,17 @@ The following files were provided by the user and copied into `/assets/sfx` for 
 - u_98a917e4i7-boss-fight-ahh-music-490611.mp3 -> assets/sfx/music_boss.mp3
 - phatphrogstudio-defeat-outros-game-sounds-collection-477823.mp3 -> assets/sfx/defeat_outro.mp3
 - cartoon-music-game-sfx-cartoon-game-upgrade-494470.mp3 -> assets/sfx/cache_upgrade.mp3
+
+## v4.6 village and smoke asset pass
+
+The following user supplied Kenney packs were imported into `/assets` for this prototype patch:
+
+- kenney_rpg-base.zip: village grass, dirt, water, trees, fences, crates, barrels, windows, doors, roof, and stone pieces.
+- kenney_smoke-particles.zip: white puff and black smoke animation frames for smoke grenade visuals.
+
+License files were copied to:
+
+```text
+assets/licenses/Kenney_rpg_base_LICENSE.txt
+assets/licenses/Kenney_smoke_particles_LICENSE.txt
+```

@@ -51,6 +51,59 @@ const ASSET_PATHS = {
     wall_forest: "./assets/textures/wall_forest.png",
     wall_dungeon: "./assets/textures/wall_dungeon.png",
 
+    town_grass_a: "./assets/town/town_grass_a.png",
+    town_grass_b: "./assets/town/town_grass_b.png",
+    town_dirt_a: "./assets/town/town_dirt_a.png",
+    town_dirt_b: "./assets/town/town_dirt_b.png",
+    town_water_a: "./assets/town/town_water_a.png",
+    town_water_b: "./assets/town/town_water_b.png",
+    town_stone_a: "./assets/town/town_stone_a.png",
+    town_stone_b: "./assets/town/town_stone_b.png",
+    town_stone_dark: "./assets/town/town_stone_dark.png",
+    town_roof_a: "./assets/town/town_roof_a.png",
+    town_roof_b: "./assets/town/town_roof_b.png",
+    town_roof_peak: "./assets/town/town_roof_peak.png",
+    town_wall_a: "./assets/town/town_wall_a.png",
+    town_wall_b: "./assets/town/town_wall_b.png",
+    town_wall_c: "./assets/town/town_wall_c.png",
+    town_window_a: "./assets/town/town_window_a.png",
+    town_window_b: "./assets/town/town_window_b.png",
+    town_door_a: "./assets/town/town_door_a.png",
+    town_door_b: "./assets/town/town_door_b.png",
+    town_tree_green: "./assets/town/town_tree_green.png",
+    town_tree_gold: "./assets/town/town_tree_gold.png",
+    town_tree_blue: "./assets/town/town_tree_blue.png",
+    town_tree_small: "./assets/town/town_tree_small.png",
+    town_bush: "./assets/town/town_bush.png",
+    town_flower: "./assets/town/town_flower.png",
+    town_stump: "./assets/town/town_stump.png",
+    town_fence_h: "./assets/town/town_fence_h.png",
+    town_fence_v: "./assets/town/town_fence_v.png",
+    town_fence_h2: "./assets/town/town_fence_h2.png",
+    town_fence_v2: "./assets/town/town_fence_v2.png",
+    town_crate_big: "./assets/town/town_crate_big.png",
+    town_crate_small: "./assets/town/town_crate_small.png",
+    town_barrel_a: "./assets/town/town_barrel_a.png",
+    town_barrel_b: "./assets/town/town_barrel_b.png",
+    town_barrel_c: "./assets/town/town_barrel_c.png",
+    town_arch: "./assets/town/town_arch.png",
+    town_lamp: "./assets/town/town_lamp.png",
+    town_bridge: "./assets/town/town_bridge.png",
+    smoke_white_00: "./assets/fx/smoke/white_00.png",
+    smoke_white_04: "./assets/fx/smoke/white_04.png",
+    smoke_white_08: "./assets/fx/smoke/white_08.png",
+    smoke_white_12: "./assets/fx/smoke/white_12.png",
+    smoke_white_16: "./assets/fx/smoke/white_16.png",
+    smoke_white_20: "./assets/fx/smoke/white_20.png",
+    smoke_white_24: "./assets/fx/smoke/white_24.png",
+    smoke_black_00: "./assets/fx/smoke/black_00.png",
+    smoke_black_04: "./assets/fx/smoke/black_04.png",
+    smoke_black_08: "./assets/fx/smoke/black_08.png",
+    smoke_black_12: "./assets/fx/smoke/black_12.png",
+    smoke_black_16: "./assets/fx/smoke/black_16.png",
+    smoke_black_20: "./assets/fx/smoke/black_20.png",
+    smoke_black_24: "./assets/fx/smoke/black_24.png",
+
     fx_crosshair: "./assets/fx/crosshair.png",
     fx_hit: "./assets/fx/hit.png",
     fx_burst: "./assets/fx/burst.png",
@@ -597,6 +650,53 @@ const WEAPONS = [
 
 const WEAPON_BY_ID = Object.fromEntries(WEAPONS.map(weapon => [weapon.id, weapon]));
 
+const HUB_VILLAGERS = [
+  {
+    id: "maren",
+    name: "Maren",
+    role: "Healer",
+    sprite: "rpg_soldier",
+    max: 5,
+    help: "Maren treats the people waking up sick after Mira was taken.",
+    need: "blankets, medicine, clean water",
+    bonus: "+4 max HP per help rank"
+  },
+  {
+    id: "rowan",
+    name: "Rowan",
+    role: "Smith",
+    sprite: "player_vanguard",
+    max: 5,
+    help: "Rowan repairs weapons and keeps your gear from falling apart.",
+    need: "tools, springs, old steel",
+    bonus: "+3% weapon damage per help rank"
+  },
+  {
+    id: "tavi",
+    name: "Tavi",
+    role: "Lookout",
+    sprite: "player_phantom",
+    max: 5,
+    help: "Tavi watches the tower lights and marks safer doors before each climb.",
+    need: "maps, batteries, radio parts",
+    bonus: "+12 pulse range per help rank"
+  }
+];
+
+const DEFAULT_HUB_SAVE = {
+  supplies: 0,
+  hope: 0,
+  helped: {
+    maren: 0,
+    rowan: 0,
+    tavi: 0
+  },
+  rubbleCleared: {},
+  lastGain: "",
+  lastHelp: ""
+};
+
+
 const DEFAULT_SAVE = {
   shards: 0,
   bestFloor: 0,
@@ -625,6 +725,7 @@ const DEFAULT_SAVE = {
     bossRead: 0
   },
   storyFlags: {},
+  hub: structuredClone(DEFAULT_HUB_SAVE),
   settings: {
     master: 0.75,
     sfx: 0.7,
@@ -660,134 +761,128 @@ const COLORS = [
   { id: "gold", name: "Gold", value: "#ffd35a", cost: 46, req: 8 }
 ];
 
+
+
 const STORY_CHAPTERS = [
   {
     "id": "ledger",
     "contractNo": "01",
-    "name": "The First Door",
-    "subtitle": "Find Mira",
-    "handler": "Radio guide",
-    "target": "The first lock",
-    "objective": "Win eight floors and open the first door to the upper tower.",
-    "payout": "+12 shards, first clue",
-    "risk": "Basic guards, locked doors, and a boss at the gate.",
+    "name": "The Village Curse",
+    "subtitle": "Bring back proof",
+    "handler": "Village guide",
+    "target": "First locked stairs",
+    "objective": "Clear eight floors and bring back proof that Mira is alive.",
+    "payout": "+12 shards, village supplies",
+    "risk": "Basic guards, locked doors, and one boss at the stairs.",
     "art": "story_intake",
     "accent": "#52e4ff",
-    "stageIds": [
-      "graybox",
-      "blue_halls",
-      "amber_cross"
-    ],
+    "stageIds": ["graybox", "blue_halls", "amber_cross"],
     "unlockAt": 0,
-    "log": "Story chapter started.",
-    "summary": "Mira was taken into Veyr Tower. You climb because she is alive somewhere above you.",
+    "log": "Village chapter started.",
+    "summary": "Mira protected the village. The tower took her. The curse started the same night.",
     "briefingSlides": [
       {
         "speaker": "GUIDE",
-        "title": "Where she is",
-        "text": "Mira was taken into Veyr Tower before dawn. The lower doors are locked. The first way up is simple. Clear the floors, beat the guard, and make the tower open."
+        "title": "Mira is gone",
+        "text": "Mira kept the village safe for as long as anyone here can remember. People prayed to her because the tower left us alone while she was here. Last night the tower doors opened and men dragged her inside."
       },
       {
         "speaker": "RUNNER",
-        "title": "Why I am here",
-        "text": "She helped me when I was too weak to help myself. Now she is trapped upstairs. I am going in, floor by floor, until I reach her."
+        "title": "Why I am going",
+        "text": "The wells turned black this morning. The lanterns died before sunset. The children heard Mira calling from the hill. I am going into the tower because someone has to bring her back."
       },
       {
         "speaker": "GUIDE",
-        "title": "The climb",
-        "text": "Every chapter sends you through eight fights. Some floors are quiet. Some have a boss waiting. Take supplies when you can and keep moving up."
+        "title": "What to bring home",
+        "text": "Clear the lower floors first. Bring back supplies when you find them. Maren, Rowan, and Tavi can use anything you recover to help you survive the next climb."
       }
     ],
     "lines": {
       "1": {
         "speaker": "GUIDE",
-        "title": "Floor one",
-        "text": "You are inside. Mira is above the first locked door. Clear this floor and the tower has to wake up."
+        "title": "First floor",
+        "text": "You are inside the lower tower. The village is behind you and Mira is somewhere above you. Clear the room and look for anything useful."
       },
       "2": {
         "speaker": "RUNNER",
         "title": "After the first fight",
-        "text": "One floor down. Tell me where the next door is."
+        "text": "I found dry food and clean bandages in a side box. Maren can use this if I make it back."
       },
       "4": {
         "speaker": "GUIDE",
         "title": "First sign",
-        "text": "I found a camera log from last night. Mira was taken through this section alive. She was walking, and two guards were with her."
+        "text": "I found a camera still from last night. Mira was alive when they took her past this floor. She was standing on her own."
       },
       "6": {
         "speaker": "RUNNER",
-        "title": "Keep moving",
-        "text": "Then I am close enough to matter. Open the next floor."
+        "title": "Keep going",
+        "text": "Then I keep climbing. Tell the village she was alive when she passed here."
       },
       "8": {
         "speaker": "GUIDE",
-        "title": "The first door",
-        "text": "The first boss is behind this door. Beat him and the stairs open."
+        "title": "Stair guard",
+        "text": "The first guard is behind this door. Beat him and the lower stairs open."
       }
     }
   },
   {
     "id": "iron",
     "contractNo": "02",
-    "name": "The Guard Floor",
-    "subtitle": "Beat Vanta",
-    "handler": "Radio guide",
-    "target": "Vanta, gate guard",
-    "objective": "Beat Vanta and reach the next set of stairs.",
-    "payout": "+16 shards, stair key",
-    "risk": "A stronger boss with better aim and more smoke.",
+    "name": "Medicine Run",
+    "subtitle": "Help Maren",
+    "handler": "Maren",
+    "target": "Old clinic floor",
+    "objective": "Find medicine and open the next stair door.",
+    "payout": "+16 shards, medicine crates",
+    "risk": "Tighter rooms and a stronger stair guard.",
     "art": "story_dust",
     "accent": "#ffb86b",
-    "stageIds": [
-      "amber_cross",
-      "forest_wire",
-      "graybox"
-    ],
+    "stageIds": ["amber_cross", "forest_wire", "graybox"],
     "unlockAt": 2,
-    "log": "Guard floor started.",
-    "summary": "Vanta guards the stairs. He has stopped other people who tried to rescue someone.",
+    "log": "Medicine run started.",
+    "summary": "People in the village are getting sick. Maren needs medicine from the tower storage rooms.",
     "briefingSlides": [
       {
-        "speaker": "GUIDE",
-        "title": "The guard",
-        "text": "The next stairs belong to Vanta. He is stronger than the guards below him, and he likes to wait behind cover."
+        "speaker": "MAREN",
+        "title": "People are sick",
+        "text": "The curse is making people weak. They wake up cold, even beside the fire. The tower used to keep medicine in the lower storage rooms."
       },
       {
         "speaker": "RUNNER",
-        "title": "No choice",
-        "text": "Mira went this way. I only need the stairs behind him."
+        "title": "What I need",
+        "text": "I will bring back what I can carry. Keep everyone alive until I return."
       },
       {
         "speaker": "GUIDE",
-        "title": "Mira update",
-        "text": "I found a short video from upstairs. Mira is alive. She looked tired, and she was trying to keep her hands steady."
+        "title": "Second climb",
+        "text": "The next floors are tighter. Guards wait behind cover. Use smoke when you need to cross open ground."
       }
     ],
     "lines": {
       "1": {
         "speaker": "GUIDE",
-        "title": "Second section",
-        "text": "These floors are tighter. Vanta controls the door at the end. Take corners slowly."
+        "title": "Storage level",
+        "text": "This section used to feed the tower workers. Search boxes after the fight. Medicine will be marked with a red strip."
       },
       "3": {
-        "speaker": "GUIDE",
-        "title": "Camera room",
-        "text": "He can see parts of this floor from the guard room. Assume he knows you are coming."
+        "speaker": "RUNNER",
+        "title": "Found a crate",
+        "text": "I found one crate with clean seals. It is heavy, so I am marking it for the way back."
       },
       "5": {
-        "speaker": "RUNNER",
-        "title": "Mira",
-        "text": "Keep watching the cameras. If she appears again, tell me right away."
+        "speaker": "MAREN",
+        "title": "Hold steady",
+        "text": "The children are sleeping now. The fever comes and goes. Keep moving if you can hear me."
       },
       "7": {
-        "speaker": "VANTA",
-        "title": "Gate guard",
-        "text": "Mira came through here asking for you. She said you would follow. I told her most people stop after the first door."
+        "speaker": "STAIR GUARD",
+        "title": "Before the stairs",
+        "text": "Your village sent another one. They always send someone when the fires start going out."
       },
       "8": {
         "speaker": "GUIDE",
-        "title": "Vanta's room",
-        "text": "He is behind the next door. Beat him and the stairs open."
+        "title": "Boss door",
+        "text": "The guard is in the next room. Win this and Maren gets the medicine."
       }
     }
   },
@@ -795,37 +890,33 @@ const STORY_CHAPTERS = [
     "id": "whiteout",
     "contractNo": "03",
     "name": "The Snow Yard",
-    "subtitle": "Follow the trail",
-    "handler": "Radio guide",
-    "target": "The cold yard",
-    "objective": "Cross the snow yard and find where Mira was moved.",
-    "payout": "+18 shards, torn scarf",
+    "subtitle": "Follow Mira's trail",
+    "handler": "Tavi",
+    "target": "Cold outer yard",
+    "objective": "Follow the trail and find where Mira was moved.",
+    "payout": "+18 shards, torn cloth",
     "risk": "Bad vision, quiet enemies, and hidden movement.",
     "art": "story_cold",
     "accent": "#dff7ff",
-    "stageIds": [
-      "whiteout",
-      "blue_halls",
-      "graybox"
-    ],
+    "stageIds": ["whiteout", "blue_halls", "graybox"],
     "unlockAt": 3,
     "log": "Snow yard started.",
-    "summary": "Mira left a trail in the snow yard. Someone there knows where she was moved.",
+    "summary": "Snow blew through the broken tower wall. Mira left a trail there.",
     "briefingSlides": [
       {
-        "speaker": "GUIDE",
-        "title": "Snow yard",
-        "text": "The next section is outside the warm part of the tower. Snow has blown through broken walls. Footprints show that Mira was moved through here."
+        "speaker": "TAVI",
+        "title": "Tracks in the snow",
+        "text": "I watched the tower lights last night. They moved Mira across the outside yard. Snow covered most of the trail, but some marks should still be there."
       },
       {
         "speaker": "RUNNER",
         "title": "Her trail",
-        "text": "If she left anything behind, I want it. If someone took it from her, I want them."
+        "text": "If she left cloth, blood, or a mark on the wall, I want to see it."
       },
       {
         "speaker": "GUIDE",
-        "title": "How to survive",
-        "text": "Use pulse when the room goes quiet. The enemies here wait longer before they shoot."
+        "title": "Bad sight lines",
+        "text": "The snow makes rooms harder to read. Pulse before you cross open space. Some enemies wait longer before they shoot."
       }
     ],
     "lines": {
@@ -837,191 +928,178 @@ const STORY_CHAPTERS = [
       "2": {
         "speaker": "RUNNER",
         "title": "Tracks",
-        "text": "I see footprints near the wall. One set is smaller than the others."
+        "text": "I see smaller footprints near the wall. They are half covered, but they point toward the next door."
       },
       "4": {
-        "speaker": "GUIDE",
-        "title": "A clue",
-        "text": "I found torn cloth on the camera feed. It matches Mira's jacket."
+        "speaker": "TAVI",
+        "title": "Torn cloth",
+        "text": "The cloth you found matches Mira's cloak. Bring it back if you can. The village needs proof she passed this way."
       },
       "6": {
         "speaker": "RUNNER",
-        "title": "Close",
-        "text": "Then she came through here alive. Keep the route open."
+        "title": "Still alive",
+        "text": "She left signs because she knew someone would look. I am still looking."
       },
       "8": {
-        "speaker": "COLD GUARD",
-        "title": "Snow hunter",
-        "text": "She was cold when they brought her past me. She still asked whether you had made it inside."
+        "speaker": "SNOW GUARD",
+        "title": "Yard boss",
+        "text": "She was cold when they brought her past me. She still asked whether anyone from the village had come."
       }
     }
   },
   {
     "id": "deadwing",
     "contractNo": "04",
-    "name": "The Broken Wing",
-    "subtitle": "Search the old rooms",
-    "handler": "Radio guide",
-    "target": "Graves, wing boss",
-    "objective": "Search the broken wing and find the key path to the top.",
-    "payout": "+20 shards, old key",
+    "name": "The Old Wing",
+    "subtitle": "Find tools for Rowan",
+    "handler": "Rowan",
+    "target": "Broken workshop",
+    "objective": "Search the old rooms and bring back tools.",
+    "payout": "+20 shards, repair tools",
     "risk": "Broken rooms, ambushes, and enemies behind you.",
     "art": "story_deadwing",
     "accent": "#c77dff",
-    "stageIds": [
-      "undercrypt",
-      "violet_split",
-      "forest_wire"
-    ],
+    "stageIds": ["undercrypt", "violet_split", "forest_wire"],
     "unlockAt": 4,
-    "log": "Broken wing started.",
-    "summary": "The broken wing holds old rescue gear and a hidden path upward.",
+    "log": "Old wing started.",
+    "summary": "The old wing has tools and metal Rowan can use to make your weapons safer.",
     "briefingSlides": [
       {
-        "speaker": "GUIDE",
-        "title": "Broken wing",
-        "text": "This part of the tower was closed years ago. Guards still use it because the cameras fail and people get lost."
+        "speaker": "ROWAN",
+        "title": "Bad weapons fail",
+        "text": "Your gun is going to break if you keep dragging it through the tower. The old wing has tools, springs, and decent steel. Bring me what you find."
       },
       {
         "speaker": "RUNNER",
-        "title": "Search everything",
-        "text": "Mira may have passed through here. I want every room checked."
+        "title": "Search rooms",
+        "text": "I will check lockers, wall boxes, and workshops. If it helps me reach Mira, I am taking it."
       },
       {
         "speaker": "GUIDE",
-        "title": "Graves",
-        "text": "Graves runs this section. He sends weaker fighters in from behind while he waits for you to panic."
+        "title": "Old wing",
+        "text": "The cameras fail in this section. Watch your back. Some guards enter after the fight starts."
       }
     ],
     "lines": {
       "1": {
         "speaker": "GUIDE",
         "title": "Wing entry",
-        "text": "The cameras are bad in this wing. Stay near cover and listen for doors opening behind you."
+        "text": "The old wing is unstable. Stay near cover and listen for doors opening behind you."
       },
       "3": {
         "speaker": "RUNNER",
-        "title": "Old rooms",
-        "text": "Search the walls, lockers, and side rooms. Mira could have left something small."
+        "title": "Tool box",
+        "text": "I found a tool box under a bench. Rowan will know what half of this is."
       },
       "5": {
-        "speaker": "GRAVES",
-        "title": "Wing boss",
-        "text": "Mira counted doors when she came through here. I heard her through the wall. She sounded braver than you look."
+        "speaker": "OLD GUARD",
+        "title": "Locked shop",
+        "text": "Other people came through here to save someone. Most of them left gear behind."
       },
       "7": {
-        "speaker": "GUIDE",
-        "title": "Key room",
-        "text": "There is an old key room past the next fight. Clear it and we get a cleaner route to the top."
+        "speaker": "ROWAN",
+        "title": "Take the steel",
+        "text": "If you see blue stamped steel, take it. I can use that for a better barrel brace."
       },
       "8": {
-        "speaker": "GRAVES",
-        "title": "Boss room",
-        "text": "People come here to save someone. Most of them leave something behind for me."
+        "speaker": "GUIDE",
+        "title": "Workshop boss",
+        "text": "The boss is holding the workshop door. Win this and Rowan gets enough tools to help."
       }
     }
   },
   {
     "id": "broadcast",
     "contractNo": "05",
-    "name": "The Camera Floor",
-    "subtitle": "Make them show her",
-    "handler": "Radio guide",
-    "target": "The broadcast room",
-    "objective": "Take over the camera room and find Mira's cell.",
+    "name": "The Map Room",
+    "subtitle": "Find Mira's door",
+    "handler": "Tavi",
+    "target": "Camera map",
+    "objective": "Open the map room and find Mira's cell number.",
     "payout": "+24 shards, cell number",
     "risk": "Crowd hazards, poison, and boss pressure.",
     "art": "story_broadcast",
     "accent": "#ff304f",
-    "stageIds": [
-      "red_lock",
-      "amber_cross",
-      "violet_split"
-    ],
+    "stageIds": ["red_lock", "amber_cross", "violet_split"],
     "unlockAt": 5,
-    "log": "Camera floor started.",
-    "summary": "The tower is showing your climb to viewers. The camera room can reveal where Mira is held.",
+    "log": "Map room started.",
+    "summary": "The tower cameras can show where Mira is held if you reach the map room.",
     "briefingSlides": [
       {
-        "speaker": "PRODUCER",
-        "title": "The show",
-        "text": "The tower is broadcasting your climb now. They put Mira's face on the screen because people pay more when they know why you are fighting."
+        "speaker": "TAVI",
+        "title": "A way to find her",
+        "text": "The tower has a camera map. If you reach it, I can look for Mira's door from the village radio."
       },
       {
         "speaker": "RUNNER",
         "title": "Use the cameras",
-        "text": "If they are showing her, they know where she is. Put the cameras on her door."
+        "text": "If the tower can watch her, we can find her. Keep the line open."
       },
       {
         "speaker": "GUIDE",
-        "title": "The plan",
-        "text": "Clear this section and I can force the camera map open. We only need one clear picture of her cell."
+        "title": "Hard floor",
+        "text": "The guards know why you are here now. They will try to slow you down before you reach the map room."
       }
     ],
     "lines": {
       "1": {
-        "speaker": "PRODUCER",
-        "title": "Smile for them",
-        "text": "The viewers like you more now that they have seen Mira. Try to keep your face toward the cameras when you bleed."
+        "speaker": "GUIDE",
+        "title": "Camera floor",
+        "text": "You are near the tower cameras. Clear rooms fast and look for a locked wall screen."
       },
       "2": {
         "speaker": "RUNNER",
-        "title": "Cell door",
-        "text": "Show me her door. I will give your viewers the rest."
+        "title": "Her door",
+        "text": "I need a room number, a hallway mark, anything that tells us where she is."
       },
       "4": {
-        "speaker": "GUIDE",
-        "title": "Camera map",
-        "text": "I have three possible rooms. One has fresh food outside it. One has a chair against the door. One has her jacket on the floor."
+        "speaker": "TAVI",
+        "title": "Three rooms",
+        "text": "I see three possible doors. One has food outside it. One has a chair against the handle. One has blue cloth on the floor."
       },
       "6": {
-        "speaker": "VENOM",
-        "title": "Paid guard",
-        "text": "They paid me to slow you down. The longer you take, the more scared she gets upstairs."
+        "speaker": "PAID GUARD",
+        "title": "Delay",
+        "text": "They told me to keep you here. The longer you stay downstairs, the weaker your village gets."
       },
       "8": {
         "speaker": "GUIDE",
-        "title": "Camera room",
-        "text": "Win this fight and I can lock the camera map open long enough to find her cell."
+        "title": "Map room",
+        "text": "Win this fight and Tavi can keep the camera map open long enough to find Mira's cell."
       }
     }
   },
   {
     "id": "core",
     "contractNo": "06",
-    "name": "The Top Room",
-    "subtitle": "Save Mira",
-    "handler": "Radio guide",
-    "target": "The final boss",
-    "objective": "Reach Mira's cell, beat the final guard, and get her out.",
+    "name": "Mira's Door",
+    "subtitle": "Bring her home",
+    "handler": "Village guide",
+    "target": "Final cell door",
+    "objective": "Reach Mira's cell, beat the final guard, and bring her home.",
     "payout": "+30 shards, rescue",
     "risk": "Final boss, locked cell, and changing doors.",
     "art": "story_core",
     "accent": "#7cc7ff",
-    "stageIds": [
-      "blue_halls",
-      "undercrypt",
-      "whiteout",
-      "red_lock"
-    ],
+    "stageIds": ["blue_halls", "undercrypt", "whiteout", "red_lock"],
     "unlockAt": 7,
-    "log": "Top room started.",
-    "summary": "Mira is in a cell near the top. One last boss stands between you and her.",
+    "log": "Mira's door started.",
+    "summary": "Mira is near the top. The village has one more chance to get her back.",
     "briefingSlides": [
       {
-        "speaker": "GUIDE",
+        "speaker": "TAVI",
         "title": "I found her",
-        "text": "I found Mira's cell. It is near the top, behind the blue doors. She is alive."
+        "text": "The camera map showed Mira's door. She is near the top, behind blue doors. She was sitting up when the camera passed."
+      },
+      {
+        "speaker": "MAREN",
+        "title": "The village is fading",
+        "text": "People are trying to stay awake because the dreams are worse now. Bring her home if you can."
       },
       {
         "speaker": "RUNNER",
         "title": "Last climb",
-        "text": "Open the way. I am done stopping for guards, games, and speeches."
-      },
-      {
-        "speaker": "GUIDE",
-        "title": "Final warning",
-        "text": "The last boss is waiting near her cell. He may be a real climber pulled into the tower, or he may be one of Veyr's killers. Treat him like a person who wants to live."
+        "text": "I know where she is now. I am going to her door."
       }
     ],
     "lines": {
@@ -1038,7 +1116,7 @@ const STORY_CHAPTERS = [
       "5": {
         "speaker": "FINAL GUARD",
         "title": "Near the cell",
-        "text": "Mira asked if you were still alive. I told her I would know soon."
+        "text": "Mira asked if the village was still alive. I told her I would know soon."
       },
       "7": {
         "speaker": "GUIDE",
@@ -1046,9 +1124,9 @@ const STORY_CHAPTERS = [
         "text": "This is the last door before her cell. Take what you need and go through."
       },
       "8": {
-        "speaker": "VEYR",
-        "title": "Tower voice",
-        "text": "The cell is locked until the final fight is over. The girl is watching from the room above you."
+        "speaker": "TOWER VOICE",
+        "title": "Mira's door",
+        "text": "The cell opens after the final fight. She can hear you from the room above."
       }
     }
   }
@@ -1696,6 +1774,71 @@ const player = {
 
 let bots = [];
 
+const VILLAGE_WORLD = { w: 1280, h: 840 };
+const villagePlayer = {
+  x: 640,
+  y: 624,
+  r: 12,
+  speed: 178,
+  angle: -Math.PI / 2,
+  bob: 0,
+  interactCooldown: 0
+};
+let villageInteractTarget = null;
+let villageMessage = { speaker: "Maren", text: "Walk through the village. Press E near people, rubble, the shrine, or the tower gate.", t: 5 };
+let villagePulse = 0;
+
+const VILLAGE_VILLAGER_SPOTS = [
+  { id: "maren", x: 300, y: 472, hut: { x: 205, y: 334, w: 170, h: 122 }, color: "#7dffb2" },
+  { id: "rowan", x: 640, y: 486, hut: { x: 552, y: 350, w: 176, h: 118 }, color: "#ffd35a" },
+  { id: "tavi", x: 980, y: 472, hut: { x: 895, y: 334, w: 170, h: 122 }, color: "#7cc7ff" }
+];
+
+const VILLAGE_RUBBLE = [
+  { id: "rubble_well", x: 522, y: 274, r: 24, label: "old stones" },
+  { id: "rubble_shrine", x: 758, y: 282, r: 21, label: "broken candles" },
+  { id: "rubble_maren", x: 160, y: 438, r: 22, label: "fallen wood" },
+  { id: "rubble_rowan", x: 760, y: 518, r: 20, label: "scrap pile" },
+  { id: "rubble_tavi", x: 1124, y: 438, r: 23, label: "dead lanterns" },
+  { id: "rubble_gate_left", x: 492, y: 140, r: 25, label: "gate rubble" },
+  { id: "rubble_gate_right", x: 788, y: 140, r: 25, label: "gate rubble" },
+  { id: "rubble_path", x: 640, y: 704, r: 22, label: "path debris" }
+];
+
+const VILLAGE_OBSTACLES = [
+  { x: 0, y: -80, w: VILLAGE_WORLD.w, h: 100 },
+  { x: -80, y: 0, w: 100, h: VILLAGE_WORLD.h },
+  { x: VILLAGE_WORLD.w - 20, y: 0, w: 100, h: VILLAGE_WORLD.h },
+  { x: 0, y: VILLAGE_WORLD.h - 20, w: VILLAGE_WORLD.w, h: 100 },
+  { x: 508, y: 54, w: 264, h: 86 },
+  { x: 205, y: 356, w: 170, h: 80 },
+  { x: 552, y: 372, w: 176, h: 78 },
+  { x: 895, y: 356, w: 170, h: 80 },
+  { x: 76, y: 96, w: 124, h: 112 },
+  { x: 1088, y: 96, w: 118, h: 112 },
+  { x: 442, y: 268, w: 54, h: 54 },
+  { x: 775, y: 602, w: 160, h: 96 }
+];
+
+const VILLAGE_DECOR = Array.from({ length: 94 }, (_, i) => ({
+  x: 54 + ((i * 173) % 1170),
+  y: 82 + ((i * 91) % 715),
+  s: 0.55 + ((i * 37) % 75) / 100,
+  a: ((i * 29) % 628) / 100,
+  kind: i % 11 === 0 ? "flower" : i % 7 === 0 ? "bush" : "grass"
+}));
+
+const VILLAGE_TREE_LINES = [
+  [74, 120, "town_tree_green"], [130, 160, "town_tree_green"], [190, 120, "town_tree_blue"],
+  [1080, 118, "town_tree_green"], [1140, 162, "town_tree_green"], [1200, 122, "town_tree_blue"],
+  [70, 660, "town_tree_green"], [126, 720, "town_tree_gold"], [204, 746, "town_tree_green"],
+  [1050, 706, "town_tree_green"], [1130, 744, "town_tree_blue"], [1200, 666, "town_tree_green"],
+  [360, 92, "town_tree_gold"], [920, 92, "town_tree_gold"]
+];
+
+const SMOKE_WHITE_FRAMES = ["smoke_white_00", "smoke_white_04", "smoke_white_08", "smoke_white_12", "smoke_white_16", "smoke_white_20", "smoke_white_24"];
+const SMOKE_BLACK_FRAMES = ["smoke_black_00", "smoke_black_04", "smoke_black_08", "smoke_black_12", "smoke_black_16", "smoke_black_20", "smoke_black_24"];
+
 function loadSave() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -1709,6 +1852,17 @@ function loadSave() {
       completedChapters: Array.isArray(parsed.completedChapters) ? parsed.completedChapters : [],
       storyFlags: {
         ...(parsed.storyFlags || {})
+      },
+      hub: {
+        ...structuredClone(DEFAULT_HUB_SAVE),
+        ...(parsed.hub || {}),
+        helped: {
+          ...structuredClone(DEFAULT_HUB_SAVE).helped,
+          ...(parsed.hub?.helped || {})
+        },
+        rubbleCleared: {
+          ...(parsed.hub?.rubbleCleared || {})
+        }
       },
       powerups: {
         ...structuredClone(DEFAULT_SAVE).powerups,
@@ -1757,6 +1911,969 @@ function resetSave() {
   saveGame();
   renderMenu();
   addLog("Save reset.");
+}
+
+
+function ensureHubSave() {
+  save.hub = {
+    ...structuredClone(DEFAULT_HUB_SAVE),
+    ...(save.hub || {}),
+    helped: {
+      ...structuredClone(DEFAULT_HUB_SAVE).helped,
+      ...(save.hub?.helped || {})
+    },
+    rubbleCleared: {
+      ...(save.hub?.rubbleCleared || {})
+    }
+  };
+  return save.hub;
+}
+
+function hubVillagerById(id) {
+  return HUB_VILLAGERS.find(villager => villager.id === id);
+}
+
+function hubVillagerRank(id) {
+  return ensureHubSave().helped[id] || 0;
+}
+
+function hubRubbleClearedCount() {
+  return Object.values(ensureHubSave().rubbleCleared || {}).filter(Boolean).length;
+}
+
+function hubTotalHelp() {
+  const hub = ensureHubSave();
+  const villagerHelp = Object.values(hub.helped).reduce((sum, value) => sum + (Number(value) || 0), 0);
+  return villagerHelp + hubRubbleClearedCount();
+}
+
+function hubHopeMax() {
+  return HUB_VILLAGERS.reduce((sum, villager) => sum + villager.max, 0) + VILLAGE_RUBBLE.length;
+}
+
+function hubHopePercent() {
+  return Math.round((hubTotalHelp() / Math.max(1, hubHopeMax())) * 100);
+}
+
+function hubHelpCost(villager) {
+  return Math.min(5, hubVillagerRank(villager.id) + 1);
+}
+
+function hubBonusMaxHp() {
+  return hubVillagerRank("maren") * 4;
+}
+
+function hubBonusDamageMult() {
+  return 1 + hubVillagerRank("rowan") * 0.03;
+}
+
+function hubBonusPulseRange() {
+  return hubVillagerRank("tavi") * 12;
+}
+
+function storySupplyRewardForFloor(floor) {
+  if (!activeStoryMode) return 0;
+  let amount = 1;
+  if (activeRouteType === "cache") amount += 1;
+  if (isBossFloor(floor)) amount += 2;
+  return amount;
+}
+
+function addVillageSupplies(amount, source = "from the tower") {
+  if (!amount) return 0;
+  const hub = ensureHubSave();
+  hub.supplies += amount;
+  hub.lastGain = `+${amount} supplies ${source}.`;
+  return amount;
+}
+
+function helpVillager(id) {
+  const villager = hubVillagerById(id);
+  if (!villager) return;
+  const hub = ensureHubSave();
+  const rank = hub.helped[id] || 0;
+  if (rank >= villager.max) {
+    setVillageMessage(villager.name, `${villager.name} has everything for now.`);
+    return;
+  }
+  const cost = Math.min(5, rank + 1);
+  if (hub.supplies < cost) {
+    hub.lastHelp = `Need ${cost} supplies to help ${villager.name}.`;
+    saveGame();
+    setVillageMessage(villager.name, `I need ${cost} supplies before I can do more here.`);
+    if (mode !== "village") renderVillageHub();
+    return;
+  }
+
+  hub.supplies -= cost;
+  hub.helped[id] = rank + 1;
+  hub.hope = hubTotalHelp();
+  hub.lastHelp = `${villager.name} helped. ${villager.bonus}.`;
+  hub.lastGain = "";
+  saveGame();
+  playAssetSfx("bonus_chime", 0.38);
+  playAssetSfx("cache_upgrade", 0.28);
+  villagePulse = 1;
+  const spot = VILLAGE_VILLAGER_SPOTS.find(item => item.id === id);
+  if (spot) {
+    addParticles("reward", spot.x, spot.y - 20, -Math.PI / 2, 22);
+    floatText.push({ x: spot.x - 24, y: spot.y - 42, text: `+hope`, t: 0.95 });
+  }
+  setVillageMessage(villager.name, `${villager.name} can help more now. ${villager.bonus}.`);
+  if (mode !== "village") renderVillageHub();
+}
+
+function hubVillagerCard(villager) {
+  const rank = hubVillagerRank(villager.id);
+  const maxed = rank >= villager.max;
+  const cost = hubHelpCost(villager);
+  const hub = ensureHubSave();
+  const canHelp = !maxed && hub.supplies >= cost;
+  const pips = Array.from({ length: villager.max }, (_, i) => `<span class="hubPip ${i < rank ? "filled" : ""}"></span>`).join("");
+  const sprite = ASSET_PATHS.images[villager.sprite] || "";
+  return `
+    <button class="hubVillagerCard ${canHelp ? "canHelp" : ""} ${maxed ? "maxed" : ""}" data-action="helpVillager" data-id="${villager.id}" ${maxed ? "disabled" : ""}>
+      <span class="hubVillagerSprite">${sprite ? `<img src="${sprite}" alt="">` : ""}</span>
+      <span class="hubVillagerInfo">
+        <small>${villager.role}</small>
+        <b>${villager.name}</b>
+        <em>${villager.help}</em>
+        <strong>Needs: ${villager.need}</strong>
+        <span class="hubPipRow">${pips}</span>
+      </span>
+      <span class="hubHelpButton">${maxed ? "HELPED" : canHelp ? `GIVE ${cost}` : `NEED ${cost}`}</span>
+    </button>
+  `;
+}
+
+function renderVillageHub() {
+  startVillageHub();
+}
+
+function startVillageHub() {
+  mode = "village";
+  running = false;
+  gameOver = false;
+  towerCleared = false;
+  activeStoryMode = false;
+  worldW = VILLAGE_WORLD.w;
+  worldH = VILLAGE_WORLD.h;
+  closeOverlay();
+  startMusic("music_menu");
+  ensureHubSave();
+  player.hp = player.maxHp;
+  mouse.down = false;
+  villageInteractTarget = null;
+  villageMessage.t = Math.max(villageMessage.t, 2.4);
+  lastTime = performance.now();
+  updateHud();
+}
+
+function setVillageMessage(speaker, text, t = 4.2) {
+  villageMessage = { speaker, text, t };
+}
+
+function villageRubbleCleared(id) {
+  return Boolean(ensureHubSave().rubbleCleared?.[id]);
+}
+
+function villageCircleRectBlocked(x, y, r, rect) {
+  const nx = clamp(x, rect.x, rect.x + rect.w);
+  const ny = clamp(y, rect.y, rect.y + rect.h);
+  return Math.hypot(x - nx, y - ny) < r;
+}
+
+function villageBlocked(x, y, r) {
+  if (x < r || y < r || x > VILLAGE_WORLD.w - r || y > VILLAGE_WORLD.h - r) return true;
+  for (const rect of VILLAGE_OBSTACLES) {
+    if (villageCircleRectBlocked(x, y, r, rect)) return true;
+  }
+  for (const rubble of VILLAGE_RUBBLE) {
+    if (villageRubbleCleared(rubble.id)) continue;
+    if (Math.hypot(x - rubble.x, y - rubble.y) < r + rubble.r * 0.8) return true;
+  }
+  return false;
+}
+
+function moveVillagePlayer(dx, dy) {
+  const p = villagePlayer;
+  const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / 5));
+  const sx = dx / steps;
+  const sy = dy / steps;
+  for (let i = 0; i < steps; i++) {
+    const nx = p.x + sx;
+    if (!villageBlocked(nx, p.y, p.r)) p.x = nx;
+    const ny = p.y + sy;
+    if (!villageBlocked(p.x, ny, p.r)) p.y = ny;
+  }
+}
+
+function pointNearVillagePlayer(x, y, range = 62) {
+  return Math.hypot(villagePlayer.x - x, villagePlayer.y - y) <= range;
+}
+
+function villageRectCenter(rect) {
+  return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
+}
+
+function findVillageInteractTarget() {
+  let best = null;
+  const consider = target => {
+    if (!target) return;
+    if (!best || target.distance < best.distance) best = target;
+  };
+
+  for (const spot of VILLAGE_VILLAGER_SPOTS) {
+    const villager = hubVillagerById(spot.id);
+    if (!villager) continue;
+    const distance = Math.hypot(villagePlayer.x - spot.x, villagePlayer.y - spot.y);
+    if (distance <= 78) consider({ type: "villager", id: spot.id, label: villager.name, action: `talk to ${villager.name}`, distance });
+  }
+
+  for (const rubble of VILLAGE_RUBBLE) {
+    if (villageRubbleCleared(rubble.id)) continue;
+    const distance = Math.hypot(villagePlayer.x - rubble.x, villagePlayer.y - rubble.y);
+    if (distance <= 66) consider({ type: "rubble", id: rubble.id, label: rubble.label, action: "clear rubble", distance });
+  }
+
+  const towerDistance = Math.hypot(villagePlayer.x - 640, villagePlayer.y - 128);
+  if (towerDistance <= 112) consider({ type: "tower", label: "Tower gate", action: "choose campaign climb", distance: towerDistance });
+
+  const powerDistance = Math.hypot(villagePlayer.x - 855, villagePlayer.y - 650);
+  if (powerDistance <= 78) consider({ type: "power", label: "Power table", action: "open power ups", distance: powerDistance });
+
+  const collectionDistance = Math.hypot(villagePlayer.x - 430, villagePlayer.y - 650);
+  if (collectionDistance <= 78) consider({ type: "collection", label: "Gear chest", action: "open collection", distance: collectionDistance });
+
+  const menuDistance = Math.hypot(villagePlayer.x - 118, villagePlayer.y - 745);
+  if (menuDistance <= 80) consider({ type: "menu", label: "Road sign", action: "main menu", distance: menuDistance });
+
+  const shrineDistance = Math.hypot(villagePlayer.x - 640, villagePlayer.y - 286);
+  if (shrineDistance <= 82) consider({ type: "shrine", label: "Mira shrine", action: "check village hope", distance: shrineDistance });
+
+  return best;
+}
+
+function clearVillageRubble(id) {
+  const hub = ensureHubSave();
+  const rubble = VILLAGE_RUBBLE.find(item => item.id === id);
+  if (!rubble || hub.rubbleCleared[id]) return;
+  hub.rubbleCleared[id] = true;
+  hub.supplies += 1;
+  hub.hope = hubTotalHelp();
+  hub.lastGain = "+1 supply found while clearing the village.";
+  hub.lastHelp = "";
+  saveGame();
+  villagePulse = 1;
+  playAssetSfx("reward", 0.34);
+  playAssetSfx("bonus_chime", 0.24);
+  addParticles("dust", rubble.x, rubble.y, -Math.PI / 2, 18);
+  addParticles("reward", rubble.x, rubble.y - 8, -Math.PI / 2, 12);
+  floatText.push({ x: rubble.x - 28, y: rubble.y - 36, text: "+1 supply", t: 1.0 });
+  setVillageMessage("Village", "You cleared rubble and found one supply. The place looks a little less dead.");
+}
+
+function interactVillage() {
+  if (mode !== "village") return;
+  villageInteractTarget = findVillageInteractTarget();
+  const target = villageInteractTarget;
+  if (!target) {
+    setVillageMessage("Village", "Move close to a person, rubble, the shrine, or the tower gate.", 2.4);
+    return;
+  }
+
+  if (target.type === "villager") {
+    helpVillager(target.id);
+    return;
+  }
+  if (target.type === "rubble") {
+    clearVillageRubble(target.id);
+    return;
+  }
+  if (target.type === "tower") {
+    renderStorySelect();
+    return;
+  }
+  if (target.type === "power") {
+    renderPowerUps();
+    return;
+  }
+  if (target.type === "collection") {
+    renderCollection();
+    return;
+  }
+  if (target.type === "menu") {
+    renderMenu();
+    return;
+   }
+  if (target.type === "shrine") {
+    setVillageMessage("Mira shrine", `Hope is ${hubTotalHelp()} of ${hubHopeMax()}. Bring supplies home and help people before the next climb.`);
+  }
+}
+
+function updateVillage(dt) {
+  const p = villagePlayer;
+  let dx = 0;
+  let dy = 0;
+  if (keys.has("w") || keys.has("arrowup")) dy -= 1;
+  if (keys.has("s") || keys.has("arrowdown")) dy += 1;
+  if (keys.has("a") || keys.has("arrowleft")) dx -= 1;
+  if (keys.has("d") || keys.has("arrowright")) dx += 1;
+  if (dx || dy) {
+    const l = Math.hypot(dx, dy) || 1;
+    dx /= l;
+    dy /= l;
+    p.angle = Math.atan2(dy, dx);
+    moveVillagePlayer(dx * p.speed * dt, dy * p.speed * dt);
+    p.bob += dt * 9;
+    if (nowSec() - lastPlayerFootstepAt > 0.34) {
+      playAssetSfx(`footstep_nature_${1 + (footstepVariantCursor++ % 4)}`, 0.16, "footsteps");
+      lastPlayerFootstepAt = nowSec();
+    }
+  } else {
+    p.bob *= Math.pow(0.05, dt);
+  }
+
+  villageMessage.t = Math.max(0, villageMessage.t - dt);
+  villagePulse = Math.max(0, villagePulse - dt * 1.8);
+  villageInteractTarget = findVillageInteractTarget();
+  camera.x = clamp(p.x - W / 2, 0, Math.max(0, VILLAGE_WORLD.w - W));
+  camera.y = clamp(p.y - H / 2, 0, Math.max(0, VILLAGE_WORLD.h - H));
+}
+
+function drawVillage() {
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(-camera.x, -camera.y);
+
+  drawVillageGround();
+  drawVillagePond();
+  drawVillagePaths();
+  drawVillageWell();
+  drawVillageFences();
+  drawVillageWallsAndTrees();
+  drawVillageShrine();
+  drawVillageTowerGate();
+  drawVillageHuts();
+  drawVillageSupplies();
+  drawVillageRubble();
+  drawVillageStations();
+  drawVillageVillagers();
+  drawVillagePlayer();
+  drawParticles();
+  drawFloatText();
+
+  ctx.restore();
+  drawVillageScreenUi();
+  drawScreenFlash();
+}
+
+function drawTownAsset(key, x, y, size = 32, angle = 0, alpha = 1) {
+  const img = imageAsset(key);
+  if (!img) return false;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, -size / 2, -size / 2, size, size);
+  ctx.restore();
+  return true;
+}
+
+function drawTownAssetRect(key, x, y, w, h, alpha = 1) {
+  const img = imageAsset(key);
+  if (!img) return false;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, x, y, w, h);
+  ctx.restore();
+  return true;
+}
+
+function villageHash(x, y) {
+  const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+function drawGrassTuft(x, y, s = 1, angle = 0) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.scale(s, s);
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "rgba(42, 92, 48, 0.72)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-5, 5);
+  ctx.lineTo(-2, -3);
+  ctx.moveTo(0, 6);
+  ctx.lineTo(2, -5);
+  ctx.moveTo(5, 5);
+  ctx.lineTo(4, -2);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(72, 129, 55, 0.45)";
+  ctx.beginPath();
+  ctx.ellipse(0, 7, 8, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawVillageGround() {
+  ctx.fillStyle = "#4d8e3f";
+  ctx.fillRect(0, 0, VILLAGE_WORLD.w, VILLAGE_WORLD.h);
+
+  for (let y = 0; y < VILLAGE_WORLD.h; y += 32) {
+    for (let x = 0; x < VILLAGE_WORLD.w; x += 32) {
+      const h = villageHash(x, y);
+      const key = h > 0.58 ? "town_grass_b" : "town_grass_a";
+      if (!drawTownAssetRect(key, x, y, 34, 34, 0.92)) {
+        ctx.fillStyle = h > 0.58 ? "#5d9d45" : "#559540";
+        ctx.fillRect(x, y, 32, 32);
+      }
+    }
+  }
+
+  const g = ctx.createRadialGradient(640, 332, 60, 640, 332, 720);
+  g.addColorStop(0, "rgba(228,218,131,0.13)");
+  g.addColorStop(0.55, "rgba(31,52,43,0.08)");
+  g.addColorStop(1, "rgba(3,5,12,0.48)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, VILLAGE_WORLD.w, VILLAGE_WORLD.h);
+
+  ctx.fillStyle = "rgba(72,26,70,0.25)";
+  ctx.beginPath();
+  ctx.ellipse(62, 768, 210, 78, -0.18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(1190, 52, 210, 74, 0.25, 0, Math.PI * 2);
+  ctx.fill();
+
+  for (const item of VILLAGE_DECOR) {
+    if (item.kind === "flower") {
+      drawTownAsset("town_flower", item.x, item.y, 18 * item.s, item.a, 0.9);
+    } else if (item.kind === "bush") {
+      drawTownAsset("town_bush", item.x, item.y, 24 * item.s, item.a, 0.8) || drawGrassTuft(item.x, item.y, item.s, item.a);
+    } else {
+      drawGrassTuft(item.x, item.y, item.s, item.a);
+    }
+  }
+}
+
+function drawVillagePond() {
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(184, 210, 114, 70, -0.08, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = "#62cde2";
+  ctx.fillRect(60, 125, 248, 150);
+  for (let y = 128; y < 276; y += 32) {
+    for (let x = 58; x < 310; x += 32) {
+      drawTownAssetRect(villageHash(x, y) > 0.5 ? "town_water_a" : "town_water_b", x, y, 34, 34, 0.96);
+    }
+  }
+  ctx.restore();
+  ctx.strokeStyle = "rgba(156,97,58,0.72)";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.ellipse(184, 210, 114, 70, -0.08, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.22)";
+  ctx.beginPath();
+  ctx.ellipse(158, 190, 34, 6, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  drawTownAsset("town_bridge", 286, 220, 34, 0.1, 0.9);
+}
+
+function drawVillagePaths() {
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "rgba(88,60,38,0.38)";
+  ctx.lineWidth = 82;
+  ctx.beginPath();
+  ctx.moveTo(640, 780);
+  ctx.bezierCurveTo(634, 635, 644, 470, 640, 302);
+  ctx.bezierCurveTo(640, 238, 640, 176, 640, 98);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(137,96,58,0.74)";
+  ctx.lineWidth = 66;
+  ctx.stroke();
+
+  ctx.lineWidth = 50;
+  ctx.beginPath();
+  ctx.moveTo(250, 500);
+  ctx.bezierCurveTo(366, 418, 516, 350, 640, 320);
+  ctx.bezierCurveTo(774, 348, 910, 424, 1030, 500);
+  ctx.stroke();
+
+  ctx.globalAlpha = 0.22;
+  for (let y = 108; y < 784; y += 32) {
+    drawTownAsset("town_dirt_a", 622 + Math.sin(y * 0.04) * 8, y, 34, 0, 0.9);
+    drawTownAsset("town_dirt_b", 658 + Math.cos(y * 0.035) * 8, y + 8, 34, 0, 0.8);
+  }
+  for (let i = 0; i < 22; i++) {
+    const t = i / 21;
+    const leftX = 250 + (640 - 250) * t;
+    const leftY = 500 + (320 - 500) * t - Math.sin(t * Math.PI) * 24;
+    const rightX = 640 + (1030 - 640) * t;
+    const rightY = 320 + (500 - 320) * t + Math.sin(t * Math.PI) * 24;
+    drawTownAsset(i % 2 ? "town_dirt_a" : "town_dirt_b", leftX, leftY, 34, 0, 0.85);
+    drawTownAsset(i % 2 ? "town_dirt_b" : "town_dirt_a", rightX, rightY, 34, 0, 0.85);
+  }
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = "rgba(255,219,123,0.11)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(640, 780);
+  ctx.bezierCurveTo(634, 635, 644, 470, 640, 302);
+  ctx.bezierCurveTo(640, 238, 640, 176, 640, 98);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawVillageWell() {
+  ctx.save();
+  const x = 470;
+  const y = 292;
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.beginPath();
+  ctx.ellipse(x + 3, y + 28, 44, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  for (let i = -1; i <= 1; i++) drawTownAsset("town_stone_b", x + i * 22, y + 14, 28, 0, 0.9);
+  ctx.fillStyle = "#0b111c";
+  ctx.beginPath();
+  ctx.ellipse(x, y + 12, 34, 13, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(124,199,255,0.45)";
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,211,90,0.45)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(x - 32, y + 4);
+  ctx.quadraticCurveTo(x, y - 34, x + 32, y + 4);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawVillageFences() {
+  ctx.save();
+  const fenceRuns = [
+    [222, 300, 6, "h"], [850, 300, 6, "h"], [92, 300, 5, "h"], [1076, 300, 4, "h"],
+    [780, 602, 5, "h"], [780, 704, 5, "h"], [775, 626, 3, "v"], [937, 626, 3, "v"]
+  ];
+  for (const [x, y, count, dir] of fenceRuns) {
+    for (let i = 0; i < count; i++) {
+      drawTownAsset(dir === "h" ? "town_fence_h" : "town_fence_v", x + (dir === "h" ? i * 30 : 0), y + (dir === "v" ? i * 30 : 0), 34, 0, 0.95);
+    }
+  }
+  ctx.restore();
+}
+
+function drawVillageWallsAndTrees() {
+  ctx.save();
+  ctx.fillStyle = "rgba(4,8,12,0.46)";
+  ctx.fillRect(0, 0, VILLAGE_WORLD.w, 48);
+  ctx.fillRect(0, 0, 38, VILLAGE_WORLD.h);
+  ctx.fillRect(VILLAGE_WORLD.w - 38, 0, 38, VILLAGE_WORLD.h);
+  ctx.fillRect(0, VILLAGE_WORLD.h - 38, VILLAGE_WORLD.w, 38);
+
+  for (let x = 44; x < VILLAGE_WORLD.w - 40; x += 46) {
+    if (x > 520 && x < 760) continue;
+    drawTownAsset("town_tree_small", x, 36 + (x % 3) * 5, 42, 0, 0.84);
+  }
+  for (const [x, y, key] of VILLAGE_TREE_LINES) drawVillageTree(x, y, key);
+  for (let i = 0; i < 9; i++) {
+    drawTownAsset("town_bush", 58 + i * 80, 792 + (i % 2) * 7, 28, 0, 0.75);
+    drawTownAsset("town_bush", 1220 - i * 80, 790 + (i % 2) * 7, 28, 0, 0.75);
+  }
+  ctx.restore();
+}
+
+function drawVillageTree(x, y, key = "town_tree_green") {
+  ctx.fillStyle = "rgba(5,8,11,0.34)";
+  ctx.beginPath();
+  ctx.ellipse(x + 4, y + 28, 34, 11, 0, 0, Math.PI * 2);
+  ctx.fill();
+  if (!drawTownAsset(key, x, y, 72, 0, 0.98)) {
+    ctx.fillStyle = "#28301f";
+    ctx.fillRect(x - 7, y + 8, 14, 34);
+    ctx.fillStyle = "#235033";
+    ctx.beginPath();
+    ctx.moveTo(x, y - 52);
+    ctx.lineTo(x - 42, y + 22);
+    ctx.lineTo(x + 42, y + 22);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function drawVillageShrine() {
+  const hope = hubTotalHelp();
+  const max = hubHopeMax();
+  const pct = clamp(hope / Math.max(1, max), 0, 1);
+  const pulse = 1 + villagePulse * 0.4;
+
+  ctx.save();
+  ctx.translate(640, 286);
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.beginPath();
+  ctx.ellipse(0, 54, 136, 34, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(91,88,82,0.88)";
+  ctx.beginPath();
+  ctx.arc(0, 0, 96, 0, Math.PI * 2);
+  ctx.fill();
+  for (let i = 0; i < 12; i++) {
+    const a = i * Math.PI / 6;
+    drawTownAsset("town_stone_a", Math.cos(a) * 86, Math.sin(a) * 86, 28, a, 0.75);
+  }
+
+  const glow = ctx.createRadialGradient(0, -12, 5, 0, -12, 126 + villagePulse * 34);
+  glow.addColorStop(0, `rgba(124,199,255,${0.14 + pct * 0.24})`);
+  glow.addColorStop(1, "rgba(124,199,255,0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(0, -12, 126, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,211,90,0.88)";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(0, 0, 102 * pulse, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
+  ctx.stroke();
+
+  ctx.fillStyle = "#0b111c";
+  ctx.fillRect(-28, -44, 56, 92);
+  ctx.strokeStyle = "rgba(124,199,255,0.58)";
+  ctx.strokeRect(-28, -44, 56, 92);
+  drawTownAsset("town_arch", 0, 8, 74, 0, 0.75);
+  drawVillageCandle(-52, 44, pct);
+  drawVillageCandle(52, 44, pct);
+  drawVillageCandle(-74, 22, pct * 0.7);
+  drawVillageCandle(74, 22, pct * 0.7);
+
+  ctx.fillStyle = "#d9deea";
+  ctx.textAlign = "center";
+  ctx.font = "900 12px ui-monospace, monospace";
+  ctx.fillText("MIRA", 0, 72);
+  ctx.fillStyle = "rgba(217,222,234,0.64)";
+  ctx.font = "700 10px ui-monospace, monospace";
+  ctx.fillText(`${hope}/${max} HOPE`, 0, 88);
+  ctx.restore();
+}
+
+function drawVillageCandle(x, y, power = 1) {
+  ctx.fillStyle = "#eadfb6";
+  ctx.fillRect(x - 3, y - 10, 6, 15);
+  ctx.fillStyle = `rgba(255,211,90,${0.2 + power * 0.55})`;
+  ctx.beginPath();
+  ctx.arc(x, y - 15, 12 + power * 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffd35a";
+  ctx.beginPath();
+  ctx.moveTo(x, y - 24);
+  ctx.quadraticCurveTo(x - 5, y - 16, x, y - 12);
+  ctx.quadraticCurveTo(x + 5, y - 16, x, y - 24);
+  ctx.fill();
+}
+
+function drawVillageTowerGate() {
+  ctx.save();
+  ctx.translate(640, 96);
+  ctx.fillStyle = "rgba(0,0,0,0.36)";
+  ctx.beginPath();
+  ctx.ellipse(0, 62, 178, 34, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#1b2230";
+  ctx.fillRect(-146, -34, 292, 86);
+  ctx.strokeStyle = "#ffd35a";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(-146, -34, 292, 86);
+
+  for (let i = -4; i <= 4; i++) drawTownAsset("town_stone_dark", i * 32, -2, 34, 0, 0.8);
+  for (let i = -4; i <= 4; i++) drawTownAsset("town_stone_b", i * 32, 34, 34, 0, 0.7);
+  const g = ctx.createRadialGradient(0, 20, 18, 0, 20, 132);
+  g.addColorStop(0, "rgba(124,199,255,0.38)");
+  g.addColorStop(0.68, "rgba(48,69,98,0.22)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.ellipse(0, 22, 126, 50, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  drawTownAsset("town_arch", -78, 26, 62, 0, 0.95);
+  drawTownAsset("town_arch", 78, 26, 62, 0, 0.95);
+  ctx.fillStyle = "#f5f1ff";
+  ctx.textAlign = "center";
+  ctx.font = "900 24px ui-monospace, monospace";
+  ctx.fillText("TOWER GATE", 0, 8);
+  ctx.fillStyle = "rgba(217,222,234,0.66)";
+  ctx.font = "900 12px ui-monospace, monospace";
+  ctx.fillText("E: choose campaign climb", 0, 42);
+  ctx.restore();
+}
+
+function drawVillageHuts() {
+  for (const spot of VILLAGE_VILLAGER_SPOTS) {
+    const rank = hubVillagerRank(spot.id);
+    const villager = hubVillagerById(spot.id);
+    drawVillageCottage(spot.hut, spot.color, villager.role, rank, villager.max);
+  }
+}
+
+function drawVillageCottage(h, color, role, rank, max) {
+  const cx = h.x + h.w / 2;
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  ctx.beginPath();
+  ctx.ellipse(cx + 8, h.y + h.h + 10, h.w * 0.54, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#c9b27f";
+  ctx.fillRect(h.x + 18, h.y + 42, h.w - 36, h.h - 44);
+  ctx.strokeStyle = hexToRgba(color, 0.58);
+  ctx.lineWidth = 3;
+  ctx.strokeRect(h.x + 18, h.y + 42, h.w - 36, h.h - 44);
+
+  ctx.fillStyle = "#9d6735";
+  ctx.beginPath();
+  ctx.moveTo(h.x + 4, h.y + 52);
+  ctx.lineTo(cx, h.y - 12);
+  ctx.lineTo(h.x + h.w - 4, h.y + 52);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,211,90,0.48)";
+  ctx.stroke();
+  for (let i = -2; i <= 2; i++) drawTownAsset("town_roof_a", cx + i * 28, h.y + 40 - Math.abs(i) * 8, 34, 0, 0.85);
+
+  drawTownAsset("town_door_a", cx, h.y + h.h - 22, 42, 0, 0.98);
+  drawTownAsset("town_window_a", h.x + 46, h.y + 74, 30, 0, 0.95);
+  drawTownAsset("town_window_b", h.x + h.w - 46, h.y + 74, 30, 0, 0.95);
+
+  ctx.fillStyle = "rgba(3,5,12,0.76)";
+  ctx.fillRect(h.x + 22, h.y + h.h - 25, h.w - 44, 24);
+  ctx.fillStyle = color;
+  ctx.font = "900 11px ui-monospace, monospace";
+  ctx.fillText(role.toUpperCase(), h.x + 34, h.y + h.h - 9);
+  for (let i = 0; i < max; i++) {
+    ctx.fillStyle = i < rank ? color : "rgba(255,255,255,0.18)";
+    ctx.fillRect(h.x + h.w - 70 + i * 11, h.y + h.h - 17, 8, 8);
+  }
+  ctx.restore();
+}
+
+function drawVillageSupplies() {
+  const hub = ensureHubSave();
+  const count = clamp(hub.supplies, 0, 14);
+  const x = 854;
+  const y = 650;
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.32)";
+  ctx.beginPath();
+  ctx.ellipse(x + 1, y + 48, 98, 22, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(5,8,14,0.72)";
+  ctx.fillRect(x - 76, y - 28, 152, 88);
+  ctx.strokeStyle = "rgba(255,211,90,0.58)";
+  ctx.strokeRect(x - 76, y - 28, 152, 88);
+  ctx.fillStyle = "#ffd35a";
+  ctx.font = "900 13px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("SUPPLIES", x, y - 6);
+  ctx.fillStyle = "#f5f1ff";
+  ctx.font = "900 30px ui-monospace, monospace";
+  ctx.fillText(String(hub.supplies), x + 48, y + 22);
+  for (let i = 0; i < Math.max(3, count); i++) {
+    const px = x - 52 + (i % 5) * 26;
+    const py = y + 42 - Math.floor(i / 5) * 23;
+    const key = i % 3 === 0 ? "town_crate_big" : i % 3 === 1 ? "town_barrel_a" : "town_crate_small";
+    drawTownAsset(key, px, py, 30, 0, i < count ? 1 : 0.26);
+  }
+  ctx.textAlign = "left";
+  ctx.restore();
+}
+
+function drawVillageRubble() {
+  for (const rubble of VILLAGE_RUBBLE) {
+    if (villageRubbleCleared(rubble.id)) continue;
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.beginPath();
+    ctx.ellipse(rubble.x + 3, rubble.y + rubble.r * 0.65, rubble.r * 1.15, rubble.r * 0.34, 0, 0, Math.PI * 2);
+    ctx.fill();
+    drawTownAsset("town_stump", rubble.x - rubble.r * 0.26, rubble.y, rubble.r * 1.25, 0.1, 0.9);
+    drawTownAsset("town_crate_small", rubble.x + rubble.r * 0.28, rubble.y + 4, rubble.r * 1.05, -0.15, 0.8);
+    ctx.strokeStyle = "rgba(255,211,90,0.45)";
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.arc(rubble.x, rubble.y, rubble.r + 12 + Math.sin(nowSec() * 2 + rubble.x) * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+}
+
+function drawVillageStations() {
+  drawVillageStation(430, 650, "GEAR", "Collection", "#c77dff", "town_crate_big");
+  drawVillageStation(855, 650, "POWER", "Power Up", "#7cc7ff", "town_barrel_b");
+  drawVillageStation(118, 745, "ROAD", "Main Menu", "#ffd35a", "town_fence_h2");
+}
+
+function drawVillageStation(x, y, top, bottom, color, iconKey) {
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  ctx.beginPath();
+  ctx.ellipse(x, y + 40, 76, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(3,5,12,0.72)";
+  ctx.fillRect(x - 74, y - 36, 148, 80);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(x - 74, y - 36, 148, 80);
+  drawTownAsset(iconKey, x, y - 4, 38, 0, 0.95);
+  ctx.fillStyle = color;
+  ctx.font = "900 13px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(top, x, y + 18);
+  ctx.fillStyle = "#f5f1ff";
+  ctx.font = "800 12px ui-monospace, monospace";
+  ctx.fillText(bottom, x, y + 38);
+  ctx.restore();
+}
+
+function drawVillageVillagers() {
+  for (const spot of VILLAGE_VILLAGER_SPOTS) {
+    const villager = hubVillagerById(spot.id);
+    const rank = hubVillagerRank(spot.id);
+    const size = 48 + Math.min(rank, 5) * 2;
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.34)";
+    ctx.beginPath();
+    ctx.ellipse(spot.x + 2, spot.y + 18, 26, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = hexToRgba(spot.color, 0.48 + Math.min(0.3, rank * 0.05));
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(spot.x, spot.y, 31 + Math.sin(nowSec() * 1.8 + spot.x) * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    if (!drawImageAsset(villager.sprite, spot.x, spot.y, size, size)) {
+      ctx.fillStyle = spot.color;
+      ctx.beginPath();
+      ctx.arc(spot.x, spot.y, 18, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#f5f1ff";
+    ctx.font = "900 13px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(villager.name, spot.x, spot.y + 44);
+    ctx.restore();
+  }
+}
+
+function drawVillagePlayer() {
+  const p = villagePlayer;
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.36)";
+  ctx.beginPath();
+  ctx.ellipse(p.x + 2, p.y + 16, 20, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  const bob = Math.sin(p.bob) * 3;
+  const sprite = shapeById(save.selectedShape).sprite;
+  if (!drawImageAsset(sprite, p.x, p.y + bob, 44, 44)) {
+    ctx.fillStyle = colorById(save.selectedColor).value;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y + bob, 14, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawVillageScreenUi() {
+  const hub = ensureHubSave();
+  const hope = hubTotalHelp();
+  const maxHope = hubHopeMax();
+  const pct = clamp(hope / Math.max(1, maxHope), 0, 1);
+  ctx.save();
+  ctx.fillStyle = "rgba(3,5,12,0.56)";
+  ctx.fillRect(16, 16, 286, 74);
+  ctx.strokeStyle = "rgba(255,211,90,0.55)";
+  ctx.strokeRect(16, 16, 286, 74);
+  ctx.fillStyle = "#f5f1ff";
+  ctx.font = "900 18px ui-monospace, monospace";
+  ctx.fillText("Mira's Village", 32, 42);
+  ctx.fillStyle = "rgba(217,222,234,0.72)";
+  ctx.font = "800 11px ui-monospace, monospace";
+  ctx.fillText("WASD move  ·  E interact  ·  Esc menu", 32, 62);
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  ctx.fillRect(32, 74, 220, 7);
+  ctx.fillStyle = "#7dffb2";
+  ctx.fillRect(32, 74, 220 * pct, 7);
+  ctx.fillStyle = "#ffd35a";
+  ctx.font = "900 13px ui-monospace, monospace";
+  ctx.fillText(`${hope}/${maxHope}`, 258, 82);
+
+  ctx.fillStyle = "rgba(3,5,12,0.58)";
+  ctx.fillRect(W - 174, 16, 158, 64);
+  ctx.strokeStyle = "rgba(255,211,90,0.55)";
+  ctx.strokeRect(W - 174, 16, 158, 64);
+  ctx.fillStyle = "#ffd35a";
+  ctx.font = "900 11px ui-monospace, monospace";
+  ctx.fillText("SUPPLIES", W - 154, 36);
+  ctx.fillStyle = "#f5f1ff";
+  ctx.font = "900 30px ui-monospace, monospace";
+  ctx.textAlign = "right";
+  ctx.fillText(String(hub.supplies), W - 32, 57);
+  ctx.textAlign = "left";
+
+  const target = villageInteractTarget;
+  if (target) {
+    ctx.fillStyle = "rgba(3,5,12,0.76)";
+    ctx.fillRect(W / 2 - 190, H - 74, 380, 50);
+    ctx.strokeStyle = "rgba(255,211,90,0.8)";
+    ctx.strokeRect(W / 2 - 190, H - 74, 380, 50);
+    ctx.fillStyle = "#ffd35a";
+    ctx.font = "900 13px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(`E  ${target.action.toUpperCase()}`, W / 2, H - 50);
+    ctx.fillStyle = "rgba(217,222,234,0.75)";
+    ctx.font = "800 10px ui-monospace, monospace";
+    ctx.fillText(target.label, W / 2, H - 32);
+    ctx.textAlign = "left";
+  }
+
+  if (villageMessage.t > 0) {
+    ctx.fillStyle = "rgba(3,5,12,0.78)";
+    ctx.fillRect(24, H - 130, 540, 82);
+    ctx.strokeStyle = "rgba(124,199,255,0.58)";
+    ctx.strokeRect(24, H - 130, 540, 82);
+    ctx.fillStyle = "#7cc7ff";
+    ctx.font = "900 12px ui-monospace, monospace";
+    ctx.fillText(villageMessage.speaker.toUpperCase(), 42, H - 104);
+    ctx.fillStyle = "#f5f1ff";
+    ctx.font = "800 14px ui-monospace, monospace";
+    wrapCanvasText(villageMessage.text, 42, H - 80, 494, 18);
+  }
+  ctx.restore();
+}
+
+function wrapCanvasText(text, x, y, maxWidth, lineHeight) {
+  const words = String(text).split(/\s+/);
+  let line = "";
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      ctx.fillText(line, x, y);
+      line = word;
+      y += lineHeight;
+    } else {
+      line = test;
+    }
+  }
+  if (line) ctx.fillText(line, x, y);
 }
 
 function angleTo(a, b) {
@@ -1937,7 +3054,7 @@ function renderMenu() {
       </div>
 
       <div class="vsMainCluster storyMainCluster">
-        <button class="vsButton green giant startButton" data-action="openStory">CAMPAIGN</button>
+        <button class="vsButton green giant startButton" data-action="openHub">VILLAGE</button>
         <button class="vsButton blue giant" data-action="startTower">TOWER RUN</button>
         <button class="vsButton blue giant" data-action="openCollection">COLLECTION</button>
         <button class="vsButton blue giant" data-action="openPowerUps">POWER UP</button>
@@ -1962,10 +3079,10 @@ function renderStorySelect() {
         <b>${chapter.name}</b>
         <p>${chapter.summary}</p>
         <div class="contractFacts">
-          <div><em>Guide</em><strong>${chapter.handler}</strong></div>
-          <div><em>Enemy</em><strong>${chapter.target}</strong></div>
+          <div><em>Helper</em><strong>${chapter.handler}</strong></div>
+          <div><em>Place</em><strong>${chapter.target}</strong></div>
           <div><em>Goal</em><strong>${chapter.objective}</strong></div>
-          <div><em>Reward</em><strong>${chapter.payout}</strong></div>
+          <div><em>Find</em><strong>${chapter.payout}</strong></div>
         </div>
       </button>
     `;
@@ -1975,10 +3092,10 @@ function renderStorySelect() {
 
   openOverlay(`
     <div class="vsScreen framedScreen storySelectScreen campaignSelectScreen">
-      ${renderTopStrip("Campaign", "backMenu")}
+      ${renderTopStrip("Tower Chapters", "openHub")}
       <div class="vsPanel storyPanel campaignPanel">
-        <h2>Story Chapters</h2>
-        <p class="campaignLead">Mira was taken into Veyr Tower. Clear chapters, beat bosses, find her cell, and get her out.</p>
+        <h2>Tower Chapters</h2>
+        <p class="campaignLead">Pick a climb from the village. Each clear floor brings back supplies. Each chapter moves you closer to Mira.</p>
         <div class="storyChapterGrid campaignChapterGrid">${cards}</div>
         <h3>Story Notes</h3>
         <div class="archiveGrid">${archives}</div>
@@ -1989,14 +3106,14 @@ function renderStorySelect() {
 
 function storyArchiveRows() {
   const rows = [
-    { req: 1, title: "Mira", text: "Mira was taken into the tower before dawn. She is still alive upstairs." },
-    { req: 2, title: "The first door", text: "The lower stairs open after eight cleared floors." },
-    { req: 3, title: "Vanta", text: "Vanta guards the next stairs and has stopped other rescue attempts." },
-    { req: 4, title: "Snow yard", text: "Mira left footprints and torn cloth in the cold yard." },
-    { req: 5, title: "Broken wing", text: "The old rooms hold clues from people who climbed before you." },
-    { req: 6, title: "Camera floor", text: "The tower is showing the climb to viewers, and the cameras can reveal her cell." },
+    { req: 1, title: "Mira", text: "Mira protected the village before the tower took her." },
+    { req: 2, title: "Supplies", text: "Campaign floors can bring back supplies for the village." },
+    { req: 3, title: "Maren", text: "Maren can turn medicine and clean water into more health." },
+    { req: 4, title: "Rowan", text: "Rowan can turn tools and steel into better weapon damage." },
+    { req: 5, title: "Tavi", text: "Tavi can turn maps and radio parts into better pulse range." },
+    { req: 6, title: "Map room", text: "The camera map can reveal Mira's cell." },
     { req: 7, title: "Top room", text: "Mira's cell is near the top behind blue doors." },
-    { req: 8, title: "Final door", text: "One last boss stands near her cell." }
+    { req: 8, title: "Final door", text: "One last guard stands near Mira's door." }
   ];
 
   return rows.map(row => {
@@ -3077,13 +4194,13 @@ function startTower(options = {}) {
   lastRouteChoice = null;
 
   runStats = {
-    maxHpBonus: powerRank("maxHealth") * 10,
+    maxHpBonus: powerRank("maxHealth") * 10 + hubBonusMaxHp(),
     ammoBonus: 0,
     pulseCdMult: Math.max(0.55, 1 - powerRank("cooldown") * 0.08),
-    pulseRange: 420 + powerRank("area") * 30,
+    pulseRange: 420 + powerRank("area") * 30 + hubBonusPulseRange(),
     echoDuration: 2.6 + powerRank("traceMemory") * 0.35,
     reloadMult: Math.max(0.55, 1 - powerRank("reload") * 0.07),
-    damageMult: 1 + powerRank("might") * 0.05,
+    damageMult: (1 + powerRank("might") * 0.05) * hubBonusDamageMult(),
     moveMult: 1 + powerRank("speed") * 0.04,
     sneakNoiseMult: Math.max(0.55, 1 - powerRank("noiseDiscipline") * 0.07),
     suspicionBleed: 0,
@@ -4934,14 +6051,17 @@ function clearFloor() {
   const reward = currentFloor + routeBonus + Math.max(0, Math.floor((player.hp / player.maxHp) * 2)) + powerRank("luck") + powerRank("contractPay");
   runStats.clearStreak += 1;
   if (runStats.bossAbility && !runStats.bossAbility.pending) expireBossAbility(`${runStats.bossAbility.name} faded after the floor.`);
+  const suppliesFound = storySupplyRewardForFloor(currentFloor);
   save.shards += reward;
   save.bestFloor = Math.max(save.bestFloor, currentFloor);
   save.totalClears += 1;
+  if (suppliesFound) addVillageSupplies(suppliesFound, "found on this floor");
   saveGame();
 
   pendingFloorReward = {
     floor: currentFloor,
     reward,
+    suppliesFound,
     hpBonus: Math.max(0, Math.floor((player.hp / player.maxHp) * 2)),
     cacheFloor: isWeaponCacheFloor(currentFloor),
     towerClear: currentFloor >= 8
@@ -5001,7 +6121,7 @@ function showFloorClearCelebration(info) {
         <p class="panelLead">${subText} ${info.cacheFloor ? "Cache floors can change the whole run." : "Pick one reward and keep climbing."}</p>
         <div class="celebrationPayout">
           <b>+${info.reward} shards banked</b>
-          <span>${info.hpBonus > 0 ? `Survival bonus: +${info.hpBonus}` : "No survival bonus"}</span>
+          <span>${info.suppliesFound ? `+${info.suppliesFound} village supplies found` : info.hpBonus > 0 ? `Survival bonus: +${info.hpBonus}` : "No survival bonus"}</span>
         </div>
         <div class="menuActions">
           <button class="vsButton green jackpotButton" data-action="claimFloorReward">${info.towerClear ? "CLAIM TOWER" : "CLAIM AND CHOOSE ROUTE"}</button>
@@ -5264,6 +6384,7 @@ function endTower(won, killer = "") {
     if (activeStoryMode) {
       save.storyClears = (save.storyClears || 0) + 1;
       if (!save.completedChapters.includes(activeStoryChapterId)) save.completedChapters.push(activeStoryChapterId);
+      addVillageSupplies(3, "brought home from the chapter");
     }
     saveGame();
     playAssetSfx("voice_you_win", 0.36);
@@ -5279,7 +6400,7 @@ function endTower(won, killer = "") {
       ${renderTopStrip(won ? "Tower Clear" : "Run Failed", "backMenu")}
       <div class="vsPanel resultPanel">
         <h2>${won ? "Tower clear" : "Run failed"}</h2>
-        <p class="panelLead">${won && activeStoryMode ? "Chapter cleared. Mira is one door closer." : won ? "You cleared the current tower. Next step is tighter arenas and better bosses." : "You died. Review the angle, route, weapon, and timing."}</p>
+        <p class="panelLead">${won && activeStoryMode ? "Chapter cleared. Supplies were sent back to the village. Mira is one door closer." : won ? "You cleared the current tower. Next step is tighter arenas and better bosses." : "You died. Floors already cleared stayed saved. Try another route when you are ready."}</p>
         <div class="menuStats">
           <div><span>Reached</span><b>Floor ${currentFloor}</b></div>
           <div><span>Best</span><b>${save.bestFloor}</b></div>
@@ -5906,7 +7027,7 @@ function updateHud() {
   const reload = player.reload > 0 ? `${player.reload.toFixed(1)}s` : "none";
   const hitRate = player.shots ? Math.round((player.hits / player.shots) * 100) + "%" : "n/a";
   const alive = bots.filter(b => b.alive).length;
-  const floorLabel = mode === "menu" ? "menu" : mode === "countdown" ? `${currentFloor} / 8 matchmaking` : mode === "pauseRequest" ? `${currentFloor} / 8 pause request` : mode === "paused" ? `${currentFloor} / 8 paused` : `${currentFloor} / 8`;
+  const floorLabel = mode === "menu" ? "menu" : mode === "village" ? "village" : mode === "countdown" ? `${currentFloor} / 8 matchmaking` : mode === "pauseRequest" ? `${currentFloor} / 8 pause request` : mode === "paused" ? `${currentFloor} / 8 paused` : `${currentFloor} / 8`;
   const stageLabel = activeStage ? activeStage.name : "none";
   const upgrades = runStats?.upgrades?.length ? runStats.upgrades.join(", ") : "none";
 
@@ -5931,6 +7052,11 @@ function updateHud() {
 }
 
 function draw() {
+  if (mode === "village") {
+    drawVillage();
+    return;
+  }
+
   const palette = activeStage?.palette || STAGES[0].palette;
   ctx.clearRect(0, 0, W, H);
   updateCamera();
@@ -6178,33 +7304,41 @@ function drawSmokes() {
     const breathe = Math.sin(t * 2.2 + smoke.wobble) * 5;
     const r = smoke.r + breathe;
     const smokeColor = smoke.color || "#7cc7ff";
-    const g = ctx.createRadialGradient(smoke.x, smoke.y, r * 0.1, smoke.x, smoke.y, r);
-    g.addColorStop(0, hexToRgba(smokeColor, 0.48 * pct));
-    g.addColorStop(0.42, `rgba(210, 222, 245, ${0.38 * pct})`);
-    g.addColorStop(0.78, hexToRgba(smokeColor, 0.2 * pct));
+    const g = ctx.createRadialGradient(smoke.x, smoke.y, r * 0.08, smoke.x, smoke.y, r);
+    g.addColorStop(0, hexToRgba(smokeColor, 0.22 * pct));
+    g.addColorStop(0.44, `rgba(210, 222, 245, ${0.22 * pct})`);
+    g.addColorStop(0.84, `rgba(58, 66, 82, ${0.16 * pct})`);
     g.addColorStop(1, "rgba(80, 90, 110, 0)");
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(smoke.x, smoke.y, r, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = hexToRgba(smokeColor, 0.5 * pct);
+    const whiteFrames = SMOKE_WHITE_FRAMES || [];
+    const blackFrames = SMOKE_BLACK_FRAMES || [];
+    const framePhase = Math.floor((1 - pct) * whiteFrames.length * 1.6 + t * 2) % Math.max(1, whiteFrames.length);
+    for (let i = 0; i < 11; i++) {
+      const a = smoke.wobble + i * 0.74 + t * (0.08 + i * 0.008);
+      const drift = (1 - pct) * 20;
+      const px = smoke.x + Math.cos(a) * r * (0.12 + (i % 4) * 0.14) + Math.sin(t + i) * 4;
+      const py = smoke.y + Math.sin(a * 1.23) * r * (0.10 + (i % 3) * 0.12) - drift;
+      const size = r * (0.58 + (i % 5) * 0.09) * (0.72 + (1 - pct) * 0.38);
+      const frames = i % 4 === 0 ? blackFrames : whiteFrames;
+      const key = frames[(framePhase + i) % Math.max(1, frames.length)];
+      if (key && drawImageAsset(key, px, py, size, size * 0.9, a * 0.18, (i % 4 === 0 ? 0.18 : 0.26) * pct)) continue;
+      ctx.fillStyle = `rgba(230,235,245,${0.1 * pct})`;
+      ctx.beginPath();
+      ctx.ellipse(px, py, size * 0.28, size * 0.22, a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = hexToRgba(smokeColor, 0.28 * pct);
     ctx.lineWidth = 2;
     ctx.setLineDash([8, 8]);
     ctx.beginPath();
     ctx.arc(smoke.x, smoke.y, r * 0.92, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
-
-    ctx.fillStyle = `rgba(255,255,255,${0.16 * pct})`;
-    for (let i = 0; i < 6; i++) {
-      const a = smoke.wobble + i * 1.047 + t * 0.28;
-      const px = smoke.x + Math.cos(a) * r * 0.38;
-      const py = smoke.y + Math.sin(a * 1.2) * r * 0.26;
-      ctx.beginPath();
-      ctx.arc(px, py, 8 + Math.sin(t * 2 + i) * 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
   }
 }
 
@@ -7055,6 +8189,15 @@ function loop(t) {
   updatePauseRequest();
   syncPauseButton();
 
+  if (mode === "village") {
+    updateVillage(rawDt);
+    updateEffects(rawDt);
+    updateHud();
+    draw();
+    requestAnimationFrame(loop);
+    return;
+  }
+
   if (hitStop > 0) {
     hitStop = Math.max(0, hitStop - rawDt);
   }
@@ -7103,9 +8246,18 @@ window.addEventListener("keydown", e => {
   const key = e.key.toLowerCase();
   if (key === "p" || key === "escape") {
     e.preventDefault();
-    if (mode === "running") requestFightPause();
+    if (mode === "village") renderMenu();
+    else if (mode === "running") requestFightPause();
     else if (mode === "paused") resumeFight();
     else if (mode === "pauseRequest") showPauseOverlay(false);
+    return;
+  }
+  if (mode === "village") {
+    if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) keys.add(key);
+    if (key === "e" || key === "enter" || key === " " || key === "spacebar") {
+      e.preventDefault();
+      interactVillage();
+    }
     return;
   }
   if (key === " " || key === "spacebar") {
@@ -7181,7 +8333,9 @@ overlay.addEventListener("click", e => {
 
   const actions = {
     startTower: () => startTower(),
+    openHub: () => renderVillageHub(),
     openStory: () => renderStorySelect(),
+    helpVillager: () => helpVillager(button.dataset.id),
     startStoryChapter: () => startStoryChapter(button.dataset.id),
     continueStoryBriefing: () => continueStoryBriefing(),
     continueStoryScene: () => continueStoryScene(),
