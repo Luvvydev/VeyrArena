@@ -4,6 +4,7 @@ const hudEl = document.getElementById("hud");
 const logEl = document.getElementById("log");
 const overlay = document.getElementById("overlay");
 const titleCard = document.getElementById("titleCard");
+const pauseButton = document.getElementById("pauseButton");
 
 const W = canvas.width;
 const H = canvas.height;
@@ -98,6 +99,7 @@ const ASSET_PATHS = {
     real_breacher: "./assets/sfx/gun_real_breacher.mp3",
     real_short: "./assets/sfx/gun_real_short.mp3",
     gun_empty: "./assets/sfx/gun_empty.mp3",
+    reload: "./assets/sfx/reload.mp3",
     level_up_chime: "./assets/sfx/level_up_chime.mp3",
     bonus_chime: "./assets/sfx/bonus_chime.mp3",
     ui_button_click: "./assets/sfx/ui_button_click.mp3",
@@ -134,7 +136,11 @@ const ASSET_PATHS = {
     voice_winner: "./assets/voice/winner.ogg",
     voice_you_win: "./assets/voice/you_win.ogg",
     voice_game_over: "./assets/voice/game_over.ogg",
-    voice_round_1: "./assets/voice/round_1.ogg"
+    voice_round_1: "./assets/voice/round_1.ogg",
+    voice_boss_mwah: "./assets/voice/boss_mwah.mp3",
+    voice_boss_cry: "./assets/voice/boss_cry.mp3",
+    voice_boss_breath: "./assets/voice/boss_breath.mp3",
+    voice_boss_laugh: "./assets/voice/boss_laugh.mp3"
   }
 };
 
@@ -294,6 +300,8 @@ let lastPlayerFootstepAt = 0;
 let lastPlayerTraceAt = 0;
 let playerTraceSide = 1;
 let footstepVariantCursor = 0;
+let pauseRequestedAt = 0;
+let pauseAcceptedAt = 0;
 
 let lastTime = performance.now();
 let mode = "menu";
@@ -1675,6 +1683,83 @@ function closeOverlay() {
   document.body.dataset.screen = "game";
 }
 
+function syncPauseButton() {
+  if (!pauseButton) return;
+  pauseButton.hidden = !(mode === "running" && !gameOver);
+}
+
+function showPauseOverlay(accepted = false) {
+  overlay.style.display = "grid";
+  overlay.className = "overlayScreen pauseMenu";
+  document.body.dataset.screen = "game";
+  titleCard.innerHTML = `
+    <div class="pauseCard">
+      <div class="pauseTag">PAUSE REQUEST</div>
+      <h2>${accepted ? "Pause accepted" : "Waiting for opponent"}</h2>
+      <p>${accepted ? "The other side accepted the pause. The fight is frozen until you resume." : "Your pause request was sent to the other side. AI opponents always accept after a short delay."}</p>
+      <div class="pauseStatus ${accepted ? "accepted" : "pending"}">${accepted ? "ACCEPTED" : "REQUEST SENT"}</div>
+      ${accepted ? `<button class="vsButton green pauseResume" data-action="resumeFight">RESUME FIGHT</button>` : `<button class="vsButton blue pauseResume" data-action="noop">WAITING...</button>`}
+      <small>P resumes after acceptance.</small>
+    </div>
+  `;
+}
+
+function pauseRunAudio() {
+  if (!musicAudio) return;
+  try {
+    musicAudio.pause();
+  } catch {}
+}
+
+function resumeRunAudio() {
+  if (!musicAudio) return;
+  try {
+    updateMusicVolume();
+    musicAudio.play().catch(() => {});
+  } catch {}
+}
+
+function requestFightPause() {
+  if (mode !== "running" || gameOver) return;
+  mode = "pauseRequest";
+  running = false;
+  mouse.down = false;
+  keys.clear();
+  pauseRequestedAt = nowSec();
+  pauseAcceptedAt = 0;
+  addLog("Pause requested.");
+  pauseRunAudio();
+  showPauseOverlay(false);
+  updateHud();
+}
+
+function acceptFightPause() {
+  if (mode !== "pauseRequest") return;
+  mode = "paused";
+  running = false;
+  pauseAcceptedAt = nowSec();
+  addLog("Pause accepted.");
+  showPauseOverlay(true);
+  updateHud();
+}
+
+function updatePauseRequest() {
+  if (mode === "pauseRequest" && nowSec() - pauseRequestedAt >= 0.9) acceptFightPause();
+}
+
+function resumeFight() {
+  if (!(mode === "paused" || mode === "pauseRequest")) return;
+  closeOverlay();
+  mode = "running";
+  running = true;
+  pauseRequestedAt = 0;
+  pauseAcceptedAt = 0;
+  lastTime = performance.now();
+  resumeRunAudio();
+  addLog("Fight resumed.");
+  updateHud();
+}
+
 function renderMenu() {
   mode = "menu";
   running = false;
@@ -3050,6 +3135,26 @@ function beginRoundCountdown() {
   lastCountdownCue = "";
 }
 
+function bossTauntAudioKeys(bot) {
+  const name = bot?.profile?.name || bot?.name || "";
+  if (name.includes("Flicker")) return ["voice_boss_breath", "voice_boss_mwah"];
+  if (name.includes("Venom")) return ["voice_boss_cry", "voice_boss_mwah"];
+  if (name.includes("Graves")) return ["voice_boss_laugh", "voice_boss_cry"];
+  return ["voice_boss_cry", "voice_boss_laugh", "voice_boss_mwah"];
+}
+
+function maybePlayBossTauntAudio(bot, intro = false) {
+  if (!bot || bot.role !== "boss") return;
+  const t = nowSec();
+  if (!intro && bot.audioTauntCd && t < bot.audioTauntCd) return;
+  const keys = bossTauntAudioKeys(bot);
+  const pool = intro ? keys : keys.filter(item => item !== "voice_boss_breath");
+  const key = choice(pool.length ? pool : keys);
+  if (playAssetSfx(key, intro ? 0.46 : 0.28, "voice")) {
+    bot.audioTauntCd = t + (intro ? 7.5 : 10.0);
+  }
+}
+
 function bossIntroLine(bot) {
   const name = bot?.profile?.name || bot?.name || "";
   if (name.includes("Flicker")) return "Mira is above us. She asked if you were still alive. I was told to answer that question after this fight.";
@@ -3070,6 +3175,7 @@ function showBossIntro(bot) {
   const line = bossIntroLine(bot);
   const stageName = activeStage?.name || "Arena";
 
+  maybePlayBossTauntAudio(bot, true);
   openOverlay(`
     <div class="vsScreen bossIntroScreen">
       <div class="bossIntroBackdrop"></div>
@@ -3193,6 +3299,7 @@ function makeBot(name, x, y, role, color, floor, profile = null) {
     speedBurst: 0,
     bossAbilityTimer: isBoss ? rand(1.1, 2.2) : 99,
     tauntTimer: isBoss ? rand(1.8, 3.4) : 99,
+    audioTauntCd: isBoss ? 0 : 99,
     flankSide: Math.random() < 0.5 ? -1 : 1,
     memory: {
       playerLastRoute: [],
@@ -4315,6 +4422,7 @@ function startReload() {
   if (player.reload > 0 || player.ammo === player.maxAmmo || mode !== "running") return;
   player.reload = currentWeapon().reloadTime * runStats.reloadMult;
   player.noise = Math.max(player.noise, 85);
+  playAssetSfx("reload", 0.48);
   addLog("Reloading.");
   if (currentFloor >= 3) {
     for (const bot of bots) {
@@ -4967,6 +5075,7 @@ function updateBossBehavior(bot, seesPlayer) {
     bot.tauntTimer = rand(4.2, 7.2);
     const bark = choice(profile.barks || ["move", "again?", "peek"]);
     floatText.push({ x: bot.x - 24, y: bot.y - 34, text: bark, t: 1.1 });
+    maybePlayBossTauntAudio(bot);
     addScreenFlash(0.018);
   }
 
@@ -5463,7 +5572,7 @@ function updateHud() {
   const reload = player.reload > 0 ? `${player.reload.toFixed(1)}s` : "none";
   const hitRate = player.shots ? Math.round((player.hits / player.shots) * 100) + "%" : "n/a";
   const alive = bots.filter(b => b.alive).length;
-  const floorLabel = mode === "menu" ? "menu" : mode === "countdown" ? `${currentFloor} / 8 matchmaking` : `${currentFloor} / 8`;
+  const floorLabel = mode === "menu" ? "menu" : mode === "countdown" ? `${currentFloor} / 8 matchmaking` : mode === "pauseRequest" ? `${currentFloor} / 8 pause request` : mode === "paused" ? `${currentFloor} / 8 paused` : `${currentFloor} / 8`;
   const stageLabel = activeStage ? activeStage.name : "none";
   const upgrades = runStats?.upgrades?.length ? runStats.upgrades.join(", ") : "none";
 
@@ -6494,6 +6603,9 @@ function loop(t) {
   const rawDt = Math.min(0.035, (t - lastTime) / 1000);
   lastTime = t;
 
+  updatePauseRequest();
+  syncPauseButton();
+
   if (hitStop > 0) {
     hitStop = Math.max(0, hitStop - rawDt);
   }
@@ -6540,6 +6652,12 @@ function canvasPos(event) {
 window.addEventListener("keydown", e => {
   resumeAudio();
   const key = e.key.toLowerCase();
+  if (key === "p") {
+    e.preventDefault();
+    if (mode === "running") requestFightPause();
+    else if (mode === "paused") resumeFight();
+    return;
+  }
   keys.add(key);
 
   if (key === "1") setWeapon("pistol");
@@ -6570,6 +6688,13 @@ window.addEventListener("keydown", e => {
 });
 
 window.addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
+
+if (pauseButton) {
+  pauseButton.addEventListener("click", () => {
+    resumeAudio();
+    requestFightPause();
+  });
+}
 
 canvas.addEventListener("mousemove", e => {
   const p = canvasPos(e);
@@ -6625,7 +6750,8 @@ overlay.addEventListener("click", e => {
     chooseUpgrade: () => chooseUpgrade(Number(button.dataset.index)),
     chooseRoute: () => chooseRoute(button.dataset.route),
     buy: () => buyUnlock(button.dataset.type, button.dataset.id),
-    equip: () => equipUnlock(button.dataset.type, button.dataset.id)
+    equip: () => equipUnlock(button.dataset.type, button.dataset.id),
+    resumeFight: () => resumeFight()
   };
 
   if (actions[action]) actions[action]();

@@ -2927,3 +2927,107 @@ body[data-screen="game"] canvas {
     justify-self: stretch !important;
   }
 }
+
+
+#pauseButton {
+  position: absolute;
+  right: 22px;
+  top: 18px;
+  z-index: 12;
+  min-width: 86px;
+  padding: 10px 14px;
+  border: 2px solid rgba(255, 224, 110, 0.95);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #30384e, #111827);
+  color: #f7f2d6;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-shadow: 2px 2px 0 #000;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+}
+
+#pauseButton:hover {
+  filter: brightness(1.12);
+}
+
+body[data-screen="game"] #pauseButton {
+  display: block;
+}
+
+#pauseButton[hidden] {
+  display: none;
+}
+
+.pauseMenu {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.pauseCard {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, 88vw);
+  padding: 30px;
+  border: 3px solid var(--vs-gold);
+  background: linear-gradient(180deg, rgba(17, 25, 45, 0.97), rgba(7, 10, 18, 0.97));
+  color: var(--text);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.76), 0 0 70px rgba(0, 0, 0, 0.72);
+  text-align: center;
+}
+
+.pauseTag {
+  display: inline-block;
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 224, 110, 0.76);
+  color: var(--vs-gold);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  margin-bottom: 12px;
+}
+
+.pauseCard h2 {
+  font-size: clamp(34px, 4vw, 56px);
+  line-height: 1;
+  margin-bottom: 14px;
+  text-shadow: 3px 3px 0 #000;
+}
+
+.pauseCard p {
+  max-width: 440px;
+  margin: 0 auto 18px;
+  color: #d7dced;
+  line-height: 1.5;
+  font-size: 15px;
+}
+
+.pauseStatus {
+  width: fit-content;
+  margin: 0 auto 18px;
+  padding: 8px 14px;
+  border: 2px solid rgba(255, 224, 110, 0.65);
+  background: rgba(0, 0, 0, 0.34);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.pauseStatus.pending {
+  color: var(--warn);
+}
+
+.pauseStatus.accepted {
+  color: var(--good);
+  border-color: rgba(125, 255, 178, 0.7);
+}
+
+.pauseResume {
+  width: min(330px, 82vw);
+}
+
+.pauseCard small {
+  display: block;
+  margin-top: 12px;
+  color: rgba(235, 241, 255, 0.56);
+}
