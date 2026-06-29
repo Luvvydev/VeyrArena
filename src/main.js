@@ -734,7 +734,7 @@ const DEFAULT_HUB_SAVE = {
   ore: 0,
   crops: 0,
   farmHarvests: 0,
-  energy: 8,
+  energy: 5,
   towerDay: 0,
   fishingDay: -1,
   fishingUses: 0,
@@ -1836,6 +1836,7 @@ const villagePlayer = {
 let villageInteractTarget = null;
 let villageMessage = { speaker: "Maren", text: "Walk the village. Press E near people, buildings, rubble, the shrine, or the tower gate.", t: 5 };
 let villagePulse = 0;
+let villageEnergyFlash = 0;
 
 const VILLAGE_TOWER_GATE = { x: 840, y: 118 };
 const VILLAGE_SHRINE = { x: 840, y: 312 };
@@ -2188,13 +2189,16 @@ function hubHopePercent() {
 }
 
 function villageMaxEnergy() {
-  return 8 + Math.floor(hubProjectRank("garden") / 2);
+  return 5;
 }
 
 function villageEnergy() {
   const hub = ensureHubSave();
   const max = villageMaxEnergy();
-  hub.energy = clamp(Number(hub.energy ?? max) || 0, 0, max);
+  const raw = hub.energy;
+  hub.energy = raw === undefined || raw === null
+    ? max
+    : clamp(Number(raw) || 0, 0, max);
   return hub.energy;
 }
 
@@ -2206,21 +2210,31 @@ function refillVillageEnergy(source = "after tower") {
   hub.fishingUses = 0;
   assignVillageVisitor(source);
   updateFarmGrowthAfterTower();
-  hub.lastGain = `Energy restored after the tower. Day ${hub.towerDay}.`;
+  hub.lastGain = `Town energy restored after the tower. Day ${hub.towerDay}.`;
+  villageEnergyFlash = 1;
   saveGame();
 }
 
 function spendVillageEnergy(cost, label = "work") {
   const hub = ensureHubSave();
-  const energy = villageEnergy();
-  if (energy < cost) {
+  const max = villageMaxEnergy();
+  const energy = clamp(Number(hub.energy ?? max) || 0, 0, max);
+  const spend = Math.max(1, Math.ceil(Number(cost) || 1));
+  if (energy < spend) {
+    hub.energy = energy;
+    saveGame();
+    updateHud();
     playAssetSfx("ui_button_click", 0.16);
-    floatText.push({ x: villagePlayer.x - 36, y: villagePlayer.y - 46, text: "NO ENERGY", t: 1.0 });
-    setVillageMessage("Too tired", `You need ${cost} energy for ${label}. Go into the tower and finish a fight to recover energy.`, 3.0);
+    floatText.push({ x: villagePlayer.x - 48, y: villagePlayer.y - 46, text: "NO ENERGY", t: 1.1 });
+    setVillageMessage("Too tired", `You need ${spend} energy for ${label}. Go into the tower and finish a fight to recover energy.`, 3.0);
     return false;
   }
-  hub.energy = energy - cost;
+  hub.energy = clamp(energy - spend, 0, max);
+  villageEnergyFlash = 1;
+  villagePulse = Math.max(villagePulse, 0.35);
+  floatText.push({ x: villagePlayer.x - 30, y: villagePlayer.y - 58, text: `-${spend} energy`, t: 0.9 });
   saveGame();
+  updateHud();
   return true;
 }
 
@@ -2404,6 +2418,7 @@ function helpVillager(id) {
     if (mode !== "village") renderVillageHub();
     return;
   }
+  if (!spendVillageEnergy(1, `helping ${villager.name}`)) return;
 
   hub.supplies -= cost;
   hub.helped[id] = rank + 1;
@@ -2644,6 +2659,7 @@ function clearVillageRubble(id) {
   const hub = ensureHubSave();
   const rubble = VILLAGE_RUBBLE.find(item => item.id === id);
   if (!rubble || hub.rubbleCleared[id]) return;
+  if (!spendVillageEnergy(1, "clearing rubble")) return;
   hub.rubbleCleared[id] = true;
   hub.supplies += 1;
   hub.lastGain = "+1 supply found while clearing the village.";
@@ -2667,7 +2683,7 @@ function villageMineClearedToday(id) {
 }
 
 function villageMineActionText(mine) {
-  return villageMineClearedToday(mine.id) ? "mine is empty today" : "mine ore (1 energy)";
+  return villageMineClearedToday(mine.id) ? "mine is empty today" : "mine ore (2 energy)";
 }
 
 function mineVillageNode(id) {
@@ -2678,7 +2694,7 @@ function mineVillageNode(id) {
     setVillageMessage("Ore node", "This spot is empty. New ore will loosen after another tower fight.", 2.5);
     return;
   }
-  if (!spendVillageEnergy(1, "mining")) return;
+  if (!spendVillageEnergy(2, "mining")) return;
   hub.mineCleared[id] = hub.towerDay;
   addHubResource("ore", mine.ore || 1);
   if (mine.shards) save.shards += mine.shards;
@@ -2697,7 +2713,7 @@ function mineVillageNode(id) {
 function villageFishActionText() {
   const hub = ensureHubSave();
   const uses = hub.fishingDay === hub.towerDay ? Number(hub.fishingUses) || 0 : 0;
-  return uses >= 3 ? "pond is quiet today" : "fish pond (1 energy)";
+  return uses >= 2 ? "pond is quiet today" : "fish pond (2 energy)";
 }
 
 function fishVillagePond() {
@@ -2706,11 +2722,11 @@ function fishVillagePond() {
     hub.fishingDay = hub.towerDay;
     hub.fishingUses = 0;
   }
-  if ((Number(hub.fishingUses) || 0) >= 3) {
+  if ((Number(hub.fishingUses) || 0) >= 2) {
     setVillageMessage("Pond", "The fish stopped biting. Try again after another tower fight.", 2.5);
     return;
   }
-  if (!spendVillageEnergy(1, "fishing")) return;
+  if (!spendVillageEnergy(2, "fishing")) return;
   hub.fishingUses = (Number(hub.fishingUses) || 0) + 1;
   const lucky = villageHash(hub.towerDay, hub.fishingUses) > 0.58;
   addHubResource("fish", 1);
@@ -2819,12 +2835,16 @@ function interactVillageVisitor() {
     return;
   }
   const costText = Object.entries(visitor.cost || {}).map(([k, v]) => `${v} ${k}`).join(", ") || "free";
-  if (!payVisitorCost(visitor.cost)) {
-    playAssetSfx("ui_button_click", 0.16);
-    setVillageMessage(visitor.name, `Need ${costText}. ${visitor.text}`, 3.0);
-    floatText.push({ x: VILLAGE_VISITOR_SPOT.x - 36, y: VILLAGE_VISITOR_SPOT.y - 48, text: "need trade", t: 1.0 });
-    return;
+  for (const [key, value] of Object.entries(visitor.cost || {})) {
+    if ((Number(hub[key]) || 0) < value) {
+      playAssetSfx("ui_button_click", 0.16);
+      setVillageMessage(visitor.name, `Need ${costText}. ${visitor.text}`, 3.0);
+      floatText.push({ x: VILLAGE_VISITOR_SPOT.x - 36, y: VILLAGE_VISITOR_SPOT.y - 48, text: "need trade", t: 1.0 });
+      return;
+    }
   }
+  if (!spendVillageEnergy(1, "trading with the visitor")) return;
+  payVisitorCost(visitor.cost);
   applyVisitorReward(visitor.reward);
   hub.visitor.bought = true;
   saveGame();
@@ -2947,6 +2967,81 @@ function swingVillageToolAt(x, y) {
   return false;
 }
 
+function villageTargetWorldPoint(target) {
+  if (!target) return null;
+  if (target.type === "villager") {
+    const spot = VILLAGE_VILLAGER_SPOTS.find(item => item.id === target.id);
+    return spot ? { x: spot.x, y: spot.y } : null;
+  }
+  if (target.type === "rubble") {
+    const item = VILLAGE_RUBBLE.find(rubble => rubble.id === target.id);
+    return item ? { x: item.x, y: item.y } : null;
+  }
+  if (target.type === "stump") {
+    const item = VILLAGE_STUMPS.find(stump => stump.id === target.id);
+    return item ? { x: item.x, y: item.y } : null;
+  }
+  if (target.type === "farm") {
+    const item = VILLAGE_FARM_PLOTS.find(plot => plot.id === target.id);
+    return item ? { x: item.x, y: item.y } : null;
+  }
+  if (target.type === "mine") {
+    const item = VILLAGE_MINE_NODES.find(mine => mine.id === target.id);
+    return item ? { x: item.x, y: item.y } : null;
+  }
+  if (target.type === "fish") return { ...VILLAGE_FISHING_SPOTS[0] };
+  if (target.type === "visitor") return { ...VILLAGE_VISITOR_SPOT };
+  if (target.type === "project") {
+    const item = hubProjectById(target.id);
+    return item ? { x: item.x, y: item.y } : null;
+  }
+  if (target.type === "tower") return { ...VILLAGE_TOWER_GATE };
+  if (target.type === "shrine") return { ...VILLAGE_SHRINE };
+  if (target.type === "power") {
+    const b = VILLAGE_SERVICE_BUILDINGS.power;
+    return { x: b.x + b.w / 2, y: b.y + b.h - 8 };
+  }
+  if (target.type === "collection") {
+    const b = VILLAGE_SERVICE_BUILDINGS.collection;
+    return { x: b.x + b.w / 2, y: b.y + b.h - 8 };
+  }
+  if (target.type === "menu") {
+    const b = VILLAGE_SERVICE_BUILDINGS.road;
+    return { x: b.x + b.w / 2, y: b.y + b.h - 4 };
+  }
+  return null;
+}
+
+function clickVillageActionAt(x, y) {
+  for (const stump of VILLAGE_STUMPS) {
+    if (villageStumpCleared(stump.id)) continue;
+    const playerDistance = Math.hypot(villagePlayer.x - stump.x, villagePlayer.y - stump.y);
+    const clickDistance = Math.hypot(x - stump.x, y - stump.y);
+    if (playerDistance <= 74 && clickDistance <= 54) return chopVillageStump(stump.id);
+  }
+
+  villageInteractTarget = findVillageInteractTarget();
+  const target = villageInteractTarget;
+  if (target) {
+    const point = villageTargetWorldPoint(target);
+    const clickedPrompt = y - camera.y > H - 96;
+    const clickedTarget = point && Math.hypot(x - point.x, y - point.y) <= (target.type === "fish" ? 118 : 96);
+    if (clickedPrompt || clickedTarget || target.type === "mine" || target.type === "farm" || target.type === "fish" || target.type === "visitor") {
+      interactVillage();
+      return true;
+    }
+  }
+
+  villageToolSwing = {
+    t: 0.14,
+    x: villagePlayer.x,
+    y: villagePlayer.y,
+    angle: Math.atan2(y - villagePlayer.y, x - villagePlayer.x)
+  };
+  playAssetSfx("ui_button_click", 0.12);
+  return false;
+}
+
 function hubProjectById(id) {
   return VILLAGE_PROJECTS.find(project => project.id === id);
 }
@@ -2960,7 +3055,7 @@ function hubProjectActionText(project) {
   if (rank >= project.max) return `check ${project.name}`;
   const cost = hubProjectCost(project);
   return ensureHubSave().supplies >= cost
-    ? `upgrade ${project.name} (${cost} supplies)`
+    ? `upgrade ${project.name} (${cost} supplies, 1 energy)`
     : `need ${cost} supplies`;
 }
 
@@ -2985,6 +3080,7 @@ function improveVillageProject(id) {
     setVillageMessage(project.name, `Need ${cost} supplies. You have ${hub.supplies}. Chop stumps, clear rubble, or bring supplies back from the tower. Nothing was spent.`);
     return;
   }
+  if (!spendVillageEnergy(1, `improving ${project.name}`)) return;
 
   hub.supplies -= cost;
   const nextRank = rank + 1;
@@ -3103,6 +3199,7 @@ function updateVillage(dt) {
   villageToolSwing.t = Math.max(0, villageToolSwing.t - dt);
   villageMessage.t = Math.max(0, villageMessage.t - dt);
   villagePulse = Math.max(0, villagePulse - dt * 1.8);
+  villageEnergyFlash = Math.max(0, villageEnergyFlash - dt * 2.8);
   collectVillageStumpDrops();
   villageInteractTarget = findVillageInteractTarget();
   camera.x = clamp(p.x - W / 2, 0, Math.max(0, VILLAGE_WORLD.w - W));
@@ -4065,11 +4162,18 @@ function drawVillageScreenUi() {
   const maxEnergy = villageMaxEnergy();
   ctx.fillStyle = "rgba(255,255,255,0.12)";
   ctx.fillRect(32, 94, 152, 7);
-  ctx.fillStyle = "#52e4ff";
+  ctx.fillStyle = villageEnergyFlash > 0 ? "#ffffff" : "#52e4ff";
   ctx.fillRect(32, 94, 152 * (energy / Math.max(1, maxEnergy)), 7);
   ctx.fillStyle = "#52e4ff";
   ctx.font = "900 10px ui-monospace, monospace";
   ctx.fillText(`ENERGY ${energy}/${maxEnergy}`, 192, 101);
+  if (villageEnergyFlash > 0) {
+    ctx.fillStyle = "rgba(82,228,255,0.28)";
+    ctx.fillRect(30, 92, 156, 11);
+  }
+  ctx.fillStyle = energy <= 1 ? "#ff6b6b" : "rgba(217,222,234,0.65)";
+  ctx.font = "900 8px ui-monospace, monospace";
+  ctx.fillText("tower refills", 276, 101);
 
   ctx.fillStyle = "rgba(3,5,12,0.58)";
   ctx.fillRect(W - 174, 16, 158, 64);
@@ -4113,7 +4217,7 @@ function drawVillageScreenUi() {
     ctx.fillStyle = "#ffd35a";
     ctx.font = "900 13px ui-monospace, monospace";
     ctx.textAlign = "center";
-    ctx.fillText(`E  ${target.action.toUpperCase()}`, W / 2, H - 50);
+    ctx.fillText(`E / CLICK  ${target.action.toUpperCase()}`, W / 2, H - 50);
     ctx.fillStyle = "rgba(217,222,234,0.75)";
     ctx.font = "800 10px ui-monospace, monospace";
     ctx.fillText(target.label, W / 2, H - 32);
@@ -9603,9 +9707,9 @@ window.addEventListener("keydown", e => {
   }
   if (mode === "village") {
     if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"].includes(key)) keys.add(key);
-    if (key === "e" || key === "enter" || key === " " || key === "spacebar") {
+    if (key === "e") {
       e.preventDefault();
-      interactVillage();
+      if (!e.repeat) interactVillage();
     }
     return;
   }
@@ -9662,8 +9766,7 @@ canvas.addEventListener("mousemove", e => {
 canvas.addEventListener("mousedown", e => {
   resumeAudio();
   if (e.button === 0 && mode === "village") {
-    const p = canvasPos(e);
-    swingVillageToolAt(p.x, p.y);
+    mouse.down = false;
     return;
   }
   if (e.button === 0 && mode === "running" && !gameOver) {
