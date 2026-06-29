@@ -1,10 +1,8 @@
 # Veyr Arena
 
-Top down tactical tower prototype.
+Top down tactical shooter
 
-<p align="center">
-  <img src="assets/media/veyr-arena-preview.gif" alt="Veyr Arena gameplay preview" width="720">
-</p>
+
 
 [Watch preview with music and sound](assets/media/veyr-arena-preview-with-audio.mp4)
 
