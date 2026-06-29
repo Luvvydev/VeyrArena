@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const path = require("path");
 
 const isMac = process.platform === "darwin";
@@ -15,6 +15,7 @@ function createWindow() {
     fullscreenable: true,
     title: "Veyr Runner",
     webPreferences: {
+      preload: path.join(__dirname, "electron-preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -51,6 +52,12 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+});
+
+
+
+ipcMain.on("veyr:quit-app", () => {
+  app.quit();
 });
 
 app.on("window-all-closed", () => {

@@ -1878,7 +1878,6 @@ function renderMenu() {
   updateHud();
   startMusic("music_menu");
 
-  const best = save.bestFloor || 0;
   openOverlay(`
     <div class="vsScreen mainMenuScreen">
       <div class="vsBackdrop">
@@ -1893,7 +1892,7 @@ function renderMenu() {
         <button class="vsSquareButton profileButton" data-action="openCollection"><img src="${ASSET_PATHS.images[shapeById(save.selectedShape).sprite]}" alt=""></button>
         <div class="vsPlayerName">veyr_runner</div>
         <div class="vsCurrency"><span class="coinStack"></span><b>${save.shards}</b></div>
-        <button class="vsButton red small" data-action="noop">QUIT</button>
+        <button class="vsButton red small" data-action="quitApp">QUIT</button>
       </div>
 
       <div class="vsLogoBlock">
@@ -1911,14 +1910,6 @@ function renderMenu() {
         <button class="vsButton blue giant optionsButton" data-action="openOptions">OPTIONS</button>
       </div>
 
-      <div class="vsBottomStats">
-        <div><span>BEST FLOOR</span><b>${best}</b></div>
-        <div><span>CLEARANCES</span><b>${save.storyClears || 0}</b></div>
-        <div><span>OPERATIVE</span><b>${shapeById(save.selectedShape).name}</b></div>
-        <div><span>TRACE</span><b>${colorById(save.selectedColor).name}</b></div>
-      </div>
-
-      <div class="vsVersion">v4.1 story text<br>ui repair</div>
     </div>
   `, "mainMenu");
 }
@@ -7173,6 +7164,13 @@ overlay.addEventListener("click", e => {
     toggleMuteUnfocused: () => {
       setMuteUnfocused(!muteWhenUnfocusedEnabled());
       renderOptions();
+    },
+    quitApp: () => {
+      if (window.veyrDesktop?.quitApp) {
+        window.veyrDesktop.quitApp();
+        return;
+      }
+      window.close();
     },
     resetSave: () => resetSave(),
     refundPowerups: () => refundPowerups(),
