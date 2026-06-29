@@ -1,0 +1,6646 @@
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const hudEl = document.getElementById("hud");
+const logEl = document.getElementById("log");
+const overlay = document.getElementById("overlay");
+const titleCard = document.getElementById("titleCard");
+
+const W = canvas.width;
+const H = canvas.height;
+const SAVE_KEY = "veyrArenaSaveV2";
+
+const ASSET_PATHS = {
+  images: {
+    player_marine: "./assets/sprites/player_marine.png",
+    player_alt: "./assets/sprites/player_alt.png",
+    player_vanguard: "./assets/sprites/player_vanguard.png",
+    player_phantom: "./assets/sprites/player_phantom.png",
+    enemy_vanta: "./assets/sprites/enemy_vanta.png",
+    enemy_mire: "./assets/sprites/enemy_mire.png",
+    enemy_sable: "./assets/sprites/enemy_sable.png",
+    enemy_rook: "./assets/sprites/enemy_rook.png",
+    enemy_null: "./assets/sprites/enemy_null.png",
+    boss_vanta: "./assets/sprites/boss_vanta.png",
+    boss_null: "./assets/sprites/boss_null.png",
+
+    weapon_pistol: "./assets/weapons/pistol.png",
+    weapon_smg: "./assets/weapons/smg.png",
+    weapon_shotgun: "./assets/weapons/shotgun.png",
+    weapon_carbine: "./assets/weapons/carbine.png",
+    weapon_revolver: "./assets/weapons/revolver.png",
+    weapon_dmr: "./assets/weapons/dmr.png",
+    weapon_lmg: "./assets/weapons/lmg.png",
+    weapon_needler: "./assets/weapons/needler.png",
+    weapon_breacher: "./assets/weapons/breacher.png",
+
+    floor_stone: "./assets/textures/floor_stone.png",
+    floor_blue: "./assets/textures/floor_blue.png",
+    floor_sand: "./assets/textures/floor_sand.png",
+    floor_wood: "./assets/textures/floor_wood.png",
+    floor_red: "./assets/textures/floor_red.png",
+    floor_snow: "./assets/textures/floor_snow.png",
+    floor_forest: "./assets/textures/floor_forest.png",
+    floor_dungeon: "./assets/textures/floor_dungeon.png",
+    wall_stone: "./assets/textures/wall_stone.png",
+    wall_blue: "./assets/textures/wall_blue.png",
+    wall_sand: "./assets/textures/wall_sand.png",
+    wall_wood: "./assets/textures/wall_wood.png",
+    wall_red: "./assets/textures/wall_red.png",
+    wall_snow: "./assets/textures/wall_snow.png",
+    wall_forest: "./assets/textures/wall_forest.png",
+    wall_dungeon: "./assets/textures/wall_dungeon.png",
+
+    fx_crosshair: "./assets/fx/crosshair.png",
+    fx_hit: "./assets/fx/hit.png",
+    fx_burst: "./assets/fx/burst.png",
+    rpg_soldier: "./assets/sprites/rpg_soldier_idle.png",
+    rpg_orc: "./assets/sprites/rpg_orc_idle.png",
+    enemy_vampire: "./assets/sprites/enemy_vampire_idle.png",
+    story_intake: "./assets/story/story_intake.png",
+    story_dust: "./assets/story/story_dust.png",
+    story_cold: "./assets/story/story_cold.png",
+    story_deadwing: "./assets/story/story_deadwing.png",
+    story_broadcast: "./assets/story/story_broadcast.png",
+    story_core: "./assets/story/story_core.png"
+  },
+  audio: {
+    shot_light: "./assets/sfx/shoot_light.ogg",
+    shot_heavy: "./assets/sfx/shoot_heavy.ogg",
+    impact: "./assets/sfx/impact.ogg",
+    explosion: "./assets/sfx/explosion.ogg",
+    reward: "./assets/sfx/reward.ogg",
+    select: "./assets/sfx/select.ogg",
+    count: "./assets/sfx/count.ogg",
+    fight: "./assets/sfx/fight.ogg",
+    smoke: "./assets/sfx/smoke.ogg",
+    wall: "./assets/sfx/wall.ogg",
+    gun_pistol: "./assets/sfx/gun_pistol.wav",
+    gun_smg: "./assets/sfx/gun_smg.wav",
+    gun_shotgun: "./assets/sfx/gun_shotgun.wav",
+    gun_carbine: "./assets/sfx/gun_carbine.wav",
+    gun_revolver: "./assets/sfx/gun_revolver.wav",
+    gun_dmr: "./assets/sfx/gun_dmr.wav",
+    gun_lmg: "./assets/sfx/gun_lmg.wav",
+    gun_needler: "./assets/sfx/gun_needler.wav",
+    gun_breacher: "./assets/sfx/gun_breacher.wav",
+
+    fps_blaster: "./assets/sfx/fps_blaster.ogg",
+    fps_repeater: "./assets/sfx/fps_repeater.ogg",
+    fps_enemy_hurt: "./assets/sfx/fps_enemy_hurt.ogg",
+    fps_enemy_attack: "./assets/sfx/fps_enemy_attack.ogg",
+    fps_enemy_destroy: "./assets/sfx/fps_enemy_destroy.ogg",
+    fps_weapon_change: "./assets/sfx/fps_weapon_change.ogg",
+
+
+    real_pistol: "./assets/sfx/gun_real_pistol.mp3",
+    real_snap: "./assets/sfx/gun_real_snap.mp3",
+    real_heavy: "./assets/sfx/gun_real_heavy.mp3",
+    real_breacher: "./assets/sfx/gun_real_breacher.mp3",
+    real_short: "./assets/sfx/gun_real_short.mp3",
+    gun_empty: "./assets/sfx/gun_empty.mp3",
+    level_up_chime: "./assets/sfx/level_up_chime.mp3",
+    bonus_chime: "./assets/sfx/bonus_chime.mp3",
+    ui_button_click: "./assets/sfx/ui_button_click.mp3",
+    game_over_balanced: "./assets/sfx/game_over_balanced.mp3",
+    music_menu: "./assets/sfx/music_menu.mp3",
+    music_run: "./assets/sfx/music_run.mp3",
+    footstep_platformer: "./assets/sfx/footstep_platformer.ogg",
+    footstep_concrete_1: "./assets/sfx/footstep_concrete_1.mp3",
+    footstep_concrete_2: "./assets/sfx/footstep_concrete_2.mp3",
+    footstep_concrete_3: "./assets/sfx/footstep_concrete_3.mp3",
+    footstep_concrete_4: "./assets/sfx/footstep_concrete_4.mp3",
+    footstep_wood_1: "./assets/sfx/footstep_wood_1.mp3",
+    footstep_wood_2: "./assets/sfx/footstep_wood_2.mp3",
+    footstep_wood_3: "./assets/sfx/footstep_wood_3.mp3",
+    footstep_wood_4: "./assets/sfx/footstep_wood_4.mp3",
+    footstep_snow_1: "./assets/sfx/footstep_snow_1.mp3",
+    footstep_snow_2: "./assets/sfx/footstep_snow_2.mp3",
+    footstep_snow_3: "./assets/sfx/footstep_snow_3.mp3",
+    footstep_snow_4: "./assets/sfx/footstep_snow_4.mp3",
+    footstep_nature_1: "./assets/sfx/footstep_nature_1.mp3",
+    footstep_nature_2: "./assets/sfx/footstep_nature_2.mp3",
+    footstep_nature_3: "./assets/sfx/footstep_nature_3.mp3",
+    footstep_nature_4: "./assets/sfx/footstep_nature_4.mp3",
+    footstep_gravel_1: "./assets/sfx/footstep_gravel_1.mp3",
+    footstep_gravel_2: "./assets/sfx/footstep_gravel_2.mp3",
+    footstep_gravel_3: "./assets/sfx/footstep_gravel_3.mp3",
+    footstep_gravel_4: "./assets/sfx/footstep_gravel_4.mp3",
+    footstep_laminate_1: "./assets/sfx/footstep_laminate_1.mp3",
+    footstep_laminate_2: "./assets/sfx/footstep_laminate_2.mp3",
+    footstep_laminate_3: "./assets/sfx/footstep_laminate_3.mp3",
+    footstep_laminate_4: "./assets/sfx/footstep_laminate_4.mp3",
+    voice_ready: "./assets/voice/ready.ogg",
+    voice_fight: "./assets/voice/fight.ogg",
+    voice_winner: "./assets/voice/winner.ogg",
+    voice_you_win: "./assets/voice/you_win.ogg",
+    voice_game_over: "./assets/voice/game_over.ogg",
+    voice_round_1: "./assets/voice/round_1.ogg"
+  }
+};
+
+const assetImages = {};
+const assetAudio = {};
+
+function loadGameAssets() {
+  if (typeof Image !== "undefined") {
+    for (const [key, src] of Object.entries(ASSET_PATHS.images)) {
+      const img = new Image();
+      img.src = src;
+      assetImages[key] = img;
+    }
+  }
+
+  if (typeof Audio !== "undefined") {
+    for (const [key, src] of Object.entries(ASSET_PATHS.audio)) {
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      assetAudio[key] = audio;
+    }
+  }
+}
+
+loadGameAssets();
+
+function imageAsset(key) {
+  const img = assetImages[key];
+  return img && img.complete && img.naturalWidth > 0 ? img : null;
+}
+
+function drawImageAsset(key, x, y, w, h, angle = 0, alpha = 1) {
+  const img = imageAsset(key);
+  if (!img) return false;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(img, -w / 2, -h / 2, w, h);
+  ctx.restore();
+  return true;
+}
+
+function audioCategoryForKey(key, fallback = "sfx") {
+  if (key.startsWith("voice_") || key.includes("game_over")) return "voice";
+  if (key.startsWith("footstep_")) return "footsteps";
+  if (key.startsWith("music_")) return "music";
+  return fallback;
+}
+
+function volumeFor(category = "sfx") {
+  const settings = save.settings || DEFAULT_SAVE.settings;
+  const master = settings.master ?? 0.75;
+  const value = settings[category] ?? settings.sfx ?? 0.7;
+  return clamp(master * value, 0, 1);
+}
+
+function playAssetSfx(key, volume = 0.45, category = "sfx") {
+  resumeAudio();
+  const src = assetAudio[key];
+  if (!src) return false;
+
+  try {
+    const audio = src.cloneNode();
+    const resolvedCategory = audioCategoryForKey(key, category);
+    audio.volume = clamp(volume * volumeFor(resolvedCategory), 0, 0.85);
+    audio.play().catch(() => {});
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function stopMusic() {
+  if (!musicAudio) return;
+  try {
+    musicAudio.pause();
+    musicAudio.currentTime = 0;
+  } catch {}
+  musicAudio = null;
+  musicKey = "";
+}
+
+function updateMusicVolume() {
+  if (!musicAudio) return;
+  musicAudio.volume = clamp(0.55 * volumeFor("music"), 0, 0.65);
+}
+
+function startMusic(key) {
+  const src = assetAudio[key];
+  if (!src) return;
+  if (musicKey === key && musicAudio) {
+    updateMusicVolume();
+    return;
+  }
+  stopMusic();
+  try {
+    musicAudio = src.cloneNode();
+    musicAudio.loop = true;
+    musicKey = key;
+    updateMusicVolume();
+    musicAudio.play().catch(() => {});
+  } catch {
+    musicAudio = null;
+    musicKey = "";
+  }
+}
+
+function stageAssetKey(kind) {
+  const id = activeStage?.id || "graybox";
+  const map = {
+    graybox: { floor: "floor_stone", wall: "wall_stone" },
+    blue_halls: { floor: "floor_blue", wall: "wall_blue" },
+    amber_cross: { floor: "floor_sand", wall: "wall_sand" },
+    violet_split: { floor: "floor_wood", wall: "wall_wood" },
+    red_lock: { floor: "floor_red", wall: "wall_red" },
+    whiteout: { floor: "floor_snow", wall: "wall_snow" },
+    forest_wire: { floor: "floor_forest", wall: "wall_forest" },
+    undercrypt: { floor: "floor_dungeon", wall: "wall_dungeon" }
+  };
+  return (map[id] || map.graybox)[kind];
+}
+
+
+
+const keys = new Set();
+const mouse = { x: W / 2, y: H / 2, screenX: W / 2, screenY: H / 2, down: false };
+const bullets = [];
+const enemyShots = [];
+const floatText = [];
+const echoes = [];
+const logs = [];
+const breakables = [];
+const pickups = [];
+const particles = [];
+const decals = [];
+const shellCasings = [];
+const muzzleFlashes = [];
+const smokes = [];
+const movementTraces = [];
+const poisonPuddles = [];
+let killReplay = null;
+let killReplayClearQueued = false;
+
+let hitStop = 0;
+let cameraShake = 0;
+let screenFlash = 0;
+let roundStartAt = 0;
+let roundMatchLabel = "";
+let roundOpponentLabel = "";
+let lastCountdownCue = "";
+let audioCtx = null;
+let musicAudio = null;
+let musicKey = "";
+let lastPlayerFootstepAt = 0;
+let lastPlayerTraceAt = 0;
+let playerTraceSide = 1;
+let footstepVariantCursor = 0;
+
+let lastTime = performance.now();
+let mode = "menu";
+let running = false;
+let gameOver = false;
+let showDebug = false;
+let message = "";
+let walls = [];
+let activeStage = null;
+let worldW = W;
+let worldH = H;
+const camera = { x: 0, y: 0 };
+let currentFloor = 1;
+let towerCleared = false;
+let floorStartTime = 0;
+let teamPing = null;
+let pendingIntel = [];
+let offeredUpgrades = [];
+let offeredRewards = [];
+let pendingFloorReward = null;
+let activeRouteType = "standard";
+let nextRouteType = "standard";
+let lastRouteChoice = null;
+let activeStoryMode = false;
+let activeStoryChapterId = "ledger";
+let pendingStoryFloor = 0;
+let currentStoryBriefing = null;
+
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const rand = (min, max) => min + Math.random() * (max - min);
+const choice = arr => arr[Math.floor(Math.random() * arr.length)];
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const len = (x, y) => Math.hypot(x, y);
+const nowSec = () => performance.now() / 1000;
+const NAV_CELL = 32;
+let NAV_COLS = Math.ceil(W / NAV_CELL);
+let NAV_ROWS = Math.ceil(H / NAV_CELL);
+
+const WEAPONS = [
+  {
+    id: "pistol",
+    name: "Pistol",
+    ammo: 8,
+    fireDelay: 0.24,
+    reloadTime: 1.0,
+    pellets: 1,
+    spread: 0.018,
+    heatSpread: 0.012,
+    damage: [30, 44],
+    knockback: 9,
+    recoil: 5,
+    shake: 1.25,
+    hitStop: 0.028,
+    tracerTime: 0.09,
+    noise: 285,
+    casingSpeed: 80,
+    color: "#d8f6ff",
+    asset: "weapon_pistol",
+    shotSfx: "real_pistol",
+    aimAssist: 0.42,
+    note: "Accurate, clean single shots with a tiny aim settle."
+  },
+  {
+    id: "smg",
+    name: "SMG",
+    ammo: 24,
+    fireDelay: 0.072,
+    reloadTime: 1.35,
+    pellets: 1,
+    spread: 0.05,
+    heatSpread: 0.055,
+    damage: [10, 16],
+    knockback: 3,
+    recoil: 2.4,
+    shake: 0.7,
+    hitStop: 0.01,
+    tracerTime: 0.055,
+    noise: 330,
+    casingSpeed: 120,
+    color: "#7cc7ff",
+    asset: "weapon_smg",
+    shotSfx: "real_short",
+    aimAssist: 0.16,
+    suppression: 0.68,
+    note: "Fast, messy, suppressive."
+  },
+  {
+    id: "shotgun",
+    name: "Shotgun",
+    ammo: 4,
+    fireDelay: 0.68,
+    reloadTime: 1.42,
+    pellets: 7,
+    spread: 0.18,
+    heatSpread: 0,
+    damage: [13, 22],
+    knockback: 20,
+    recoil: 9,
+    shake: 3.2,
+    hitStop: 0.038,
+    tracerTime: 0.075,
+    noise: 390,
+    casingSpeed: 65,
+    color: "#ffd166",
+    asset: "weapon_shotgun",
+    shotSfx: "real_heavy",
+    aimAssist: 0.08,
+    suppression: 0.45,
+    note: "Short range, heavy knockback."
+  },
+  {
+    id: "carbine",
+    name: "Carbine",
+    ammo: 18,
+    fireDelay: 0.145,
+    reloadTime: 1.22,
+    pellets: 1,
+    spread: 0.032,
+    heatSpread: 0.018,
+    damage: [19, 27],
+    knockback: 6,
+    recoil: 3.5,
+    shake: 0.95,
+    hitStop: 0.018,
+    tracerTime: 0.07,
+    noise: 315,
+    casingSpeed: 105,
+    color: "#a1ffce",
+    asset: "weapon_carbine",
+    shotSfx: "real_snap",
+    aimAssist: 0.28,
+    suppression: 0.38,
+    note: "Controlled mid range pressure."
+  },
+  {
+    id: "revolver",
+    name: "Revolver",
+    ammo: 6,
+    fireDelay: 0.42,
+    reloadTime: 1.55,
+    pellets: 1,
+    spread: 0.01,
+    heatSpread: 0.006,
+    damage: [48, 66],
+    knockback: 14,
+    recoil: 8,
+    shake: 2.8,
+    hitStop: 0.046,
+    tracerTime: 0.1,
+    noise: 360,
+    casingSpeed: 75,
+    color: "#ffb86b",
+    asset: "weapon_revolver",
+    shotSfx: "real_pistol",
+    aimAssist: 0.34,
+    ricochet: 1,
+    note: "Slow hand cannon. Bankable wall threat."
+  },
+  {
+    id: "dmr",
+    name: "DMR",
+    ammo: 5,
+    fireDelay: 0.72,
+    reloadTime: 1.65,
+    pellets: 1,
+    spread: 0.006,
+    heatSpread: 0.004,
+    damage: [68, 92],
+    knockback: 18,
+    recoil: 10,
+    shake: 3.4,
+    hitStop: 0.055,
+    tracerTime: 0.13,
+    noise: 405,
+    casingSpeed: 70,
+    color: "#ffffff",
+    asset: "weapon_dmr",
+    shotSfx: "real_heavy",
+    aimAssist: 0.3,
+    pierce: 1,
+    note: "Slow, loud, surgical piercer."
+  },
+  {
+    id: "lmg",
+    name: "LMG",
+    ammo: 48,
+    fireDelay: 0.095,
+    reloadTime: 2.25,
+    pellets: 1,
+    spread: 0.095,
+    heatSpread: -0.045,
+    damage: [12, 18],
+    knockback: 4,
+    recoil: 4.8,
+    shake: 1.1,
+    hitStop: 0.006,
+    tracerTime: 0.052,
+    noise: 430,
+    casingSpeed: 135,
+    color: "#ff5c7a",
+    asset: "weapon_lmg",
+    shotSfx: "real_short",
+    aimAssist: 0.12,
+    suppression: 0.85,
+    note: "Unstable at first, steadier while sustained."
+  },
+  {
+    id: "needler",
+    name: "Needler",
+    ammo: 12,
+    fireDelay: 0.18,
+    reloadTime: 1.25,
+    pellets: 1,
+    spread: 0.028,
+    heatSpread: 0.01,
+    damage: [16, 23],
+    knockback: 2,
+    recoil: 2.2,
+    shake: 0.55,
+    hitStop: 0.008,
+    tracerTime: 0.06,
+    noise: 240,
+    casingSpeed: 65,
+    color: "#c77dff",
+    asset: "weapon_needler",
+    shotSfx: "shot_light",
+    dot: { damage: 8, ticks: 3, interval: 0.42 },
+    aimAssist: 0.48,
+    note: "Quiet tagging pistol. Lower burst, better for stalking."
+  },
+  {
+    id: "breacher",
+    name: "Breacher",
+    ammo: 2,
+    fireDelay: 0.95,
+    reloadTime: 1.7,
+    pellets: 9,
+    spread: 0.24,
+    heatSpread: 0,
+    damage: [10, 18],
+    knockback: 30,
+    recoil: 13,
+    shake: 4.1,
+    hitStop: 0.05,
+    tracerTime: 0.08,
+    noise: 450,
+    casingSpeed: 55,
+    color: "#ff8a3d",
+    asset: "weapon_breacher",
+    shotSfx: "real_breacher",
+    aimAssist: 0.06,
+    suppression: 0.7,
+    note: "Two-shot room clearer. Huge shove, risky reload."
+  }
+];
+
+const WEAPON_BY_ID = Object.fromEntries(WEAPONS.map(weapon => [weapon.id, weapon]));
+
+const DEFAULT_SAVE = {
+  shards: 0,
+  bestFloor: 0,
+  totalClears: 0,
+  totalWeaponFinds: 0,
+  storyClears: 0,
+  completedChapters: [],
+  selectedShape: "circle",
+  selectedColor: "pale",
+  unlockedShapes: ["circle"],
+  unlockedColors: ["pale"],
+  powerups: {
+    might: 0,
+    armor: 0,
+    maxHealth: 0,
+    cooldown: 0,
+    area: 0,
+    speed: 0,
+    reload: 0,
+    luck: 0,
+    traceMemory: 0,
+    noiseDiscipline: 0,
+    smokeKit: 0,
+    medSense: 0,
+    contractPay: 0,
+    bossRead: 0
+  },
+  storyFlags: {},
+  settings: {
+    master: 0.75,
+    sfx: 0.7,
+    voice: 0.42,
+    music: 0.22,
+    footsteps: 0.8
+  }
+};
+
+let save = loadSave();
+
+const SHAPES = [
+  { id: "circle", name: "Rift Runner", cost: 0, req: 0, sprite: "player_marine" },
+  { id: "diamond", name: "Vanguard", cost: 8, req: 2, sprite: "player_vanguard" },
+  { id: "triangle", name: "Outrider", cost: 12, req: 3, sprite: "player_alt" },
+  { id: "hex", name: "Phantom", cost: 16, req: 4, sprite: "player_phantom" },
+  { id: "medic", name: "Field Medic", cost: 22, req: 5, sprite: "rpg_soldier" },
+  { id: "orc", name: "Breaker", cost: 30, req: 6, sprite: "rpg_orc" },
+  { id: "vampire", name: "Night Glass", cost: 42, req: 7, sprite: "enemy_vampire" },
+  { id: "nullSuit", name: "Null Frame", cost: 55, req: 8, sprite: "enemy_null" }
+];
+
+const COLORS = [
+  { id: "pale", name: "Pale Trace", value: "#d8f6ff", cost: 0, req: 0 },
+  { id: "arc", name: "Arc Blue", value: "#7cc7ff", cost: 5, req: 1 },
+  { id: "volt", name: "Volt Green", value: "#7dffb2", cost: 8, req: 2 },
+  { id: "ember", name: "Ember", value: "#ffb86b", cost: 10, req: 3 },
+  { id: "void", name: "Void Violet", value: "#c77dff", cost: 12, req: 4 },
+  { id: "blood", name: "Bloodline", value: "#ff304f", cost: 18, req: 5 },
+  { id: "snow", name: "Whiteout", value: "#eef8ff", cost: 24, req: 6 },
+  { id: "toxin", name: "Toxin", value: "#9dff63", cost: 32, req: 7 },
+  { id: "gold", name: "Gold", value: "#ffd35a", cost: 46, req: 8 }
+];
+
+const STORY_CHAPTERS = [
+  {
+    "id": "ledger",
+    "contractNo": "01",
+    "name": "The First Door",
+    "subtitle": "Find Mira",
+    "handler": "Radio guide",
+    "target": "The first lock",
+    "objective": "Win eight floors and open the first door to the upper tower.",
+    "payout": "+12 shards, first clue",
+    "risk": "Basic guards, locked doors, and a boss at the gate.",
+    "art": "story_intake",
+    "accent": "#52e4ff",
+    "stageIds": [
+      "graybox",
+      "blue_halls",
+      "amber_cross"
+    ],
+    "unlockAt": 0,
+    "log": "Story chapter started.",
+    "summary": "Mira was taken into Veyr Tower. You climb because she is alive somewhere above you.",
+    "briefingSlides": [
+      {
+        "speaker": "GUIDE",
+        "title": "Where she is",
+        "text": "Mira was taken into Veyr Tower before dawn. The lower doors are locked. The first way up is simple. Clear the floors, beat the guard, and make the tower open."
+      },
+      {
+        "speaker": "RUNNER",
+        "title": "Why I am here",
+        "text": "She helped me when I was too weak to help myself. Now she is trapped upstairs. I am going in, floor by floor, until I reach her."
+      },
+      {
+        "speaker": "GUIDE",
+        "title": "The climb",
+        "text": "Every chapter sends you through eight fights. Some floors are quiet. Some have a boss waiting. Take supplies when you can and keep moving up."
+      }
+    ],
+    "lines": {
+      "1": {
+        "speaker": "GUIDE",
+        "title": "Floor one",
+        "text": "You are inside. Mira is above the first locked door. Clear this floor and the tower has to wake up."
+      },
+      "2": {
+        "speaker": "RUNNER",
+        "title": "After the first fight",
+        "text": "One floor down. Tell me where the next door is."
+      },
+      "4": {
+        "speaker": "GUIDE",
+        "title": "First sign",
+        "text": "I found a camera log from last night. Mira was taken through this section alive. She was walking, and two guards were with her."
+      },
+      "6": {
+        "speaker": "RUNNER",
+        "title": "Keep moving",
+        "text": "Then I am close enough to matter. Open the next floor."
+      },
+      "8": {
+        "speaker": "GUIDE",
+        "title": "The first door",
+        "text": "The first boss is behind this door. Beat him and the stairs open."
+      }
+    }
+  },
+  {
+    "id": "iron",
+    "contractNo": "02",
+    "name": "The Guard Floor",
+    "subtitle": "Beat Vanta",
+    "handler": "Radio guide",
+    "target": "Vanta, gate guard",
+    "objective": "Beat Vanta and reach the next set of stairs.",
+    "payout": "+16 shards, stair key",
+    "risk": "A stronger boss with better aim and more smoke.",
+    "art": "story_dust",
+    "accent": "#ffb86b",
+    "stageIds": [
+      "amber_cross",
+      "forest_wire",
+      "graybox"
+    ],
+    "unlockAt": 2,
+    "log": "Guard floor started.",
+    "summary": "Vanta guards the stairs. He has stopped other people who tried to rescue someone.",
+    "briefingSlides": [
+      {
+        "speaker": "GUIDE",
+        "title": "The guard",
+        "text": "The next stairs belong to Vanta. He is stronger than the guards below him, and he likes to wait behind cover."
+      },
+      {
+        "speaker": "RUNNER",
+        "title": "No choice",
+        "text": "Mira went this way. I only need the stairs behind him."
+      },
+      {
+        "speaker": "GUIDE",
+        "title": "Mira update",
+        "text": "I found a short video from upstairs. Mira is alive. She looked tired, and she was trying to keep her hands steady."
+      }
+    ],
+    "lines": {
+      "1": {
+        "speaker": "GUIDE",
+        "title": "Second section",
+        "text": "These floors are tighter. Vanta controls the door at the end. Take corners slowly."
+      },
+      "3": {
+        "speaker": "GUIDE",
+        "title": "Camera room",
+        "text": "He can see parts of this floor from the guard room. Assume he knows you are coming."
+      },
+      "5": {
+        "speaker": "RUNNER",
+        "title": "Mira",
+        "text": "Keep watching the cameras. If she appears again, tell me right away."
+      },
+      "7": {
+        "speaker": "VANTA",
+        "title": "Gate guard",
+        "text": "Mira came through here asking for you. She said you would follow. I told her most people stop after the first door."
+      },
+      "8": {
+        "speaker": "GUIDE",
+        "title": "Vanta's room",
+        "text": "He is behind the next door. Beat him and the stairs open."
+      }
+    }
+  },
+  {
+    "id": "whiteout",
+    "contractNo": "03",
+    "name": "The Snow Yard",
+    "subtitle": "Follow the trail",
+    "handler": "Radio guide",
+    "target": "The cold yard",
+    "objective": "Cross the snow yard and find where Mira was moved.",
+    "payout": "+18 shards, torn scarf",
+    "risk": "Bad vision, quiet enemies, and hidden movement.",
+    "art": "story_cold",
+    "accent": "#dff7ff",
+    "stageIds": [
+      "whiteout",
+      "blue_halls",
+      "graybox"
+    ],
+    "unlockAt": 3,
+    "log": "Snow yard started.",
+    "summary": "Mira left a trail in the snow yard. Someone there knows where she was moved.",
+    "briefingSlides": [
+      {
+        "speaker": "GUIDE",
+        "title": "Snow yard",
+        "text": "The next section is outside the warm part of the tower. Snow has blown through broken walls. Footprints show that Mira was moved through here."
+      },
+      {
+        "speaker": "RUNNER",
+        "title": "Her trail",
+        "text": "If she left anything behind, I want it. If someone took it from her, I want them."
+      },
+      {
+        "speaker": "GUIDE",
+        "title": "How to survive",
+        "text": "Use pulse when the room goes quiet. The enemies here wait longer before they shoot."
+      }
+    ],
+    "lines": {
+      "1": {
+        "speaker": "GUIDE",
+        "title": "Cold entry",
+        "text": "You are in the snow yard. Visibility is bad. Move from cover to cover."
+      },
+      "2": {
+        "speaker": "RUNNER",
+        "title": "Tracks",
+        "text": "I see footprints near the wall. One set is smaller than the others."
+      },
+      "4": {
+        "speaker": "GUIDE",
+        "title": "A clue",
+        "text": "I found torn cloth on the camera feed. It matches Mira's jacket."
+      },
+      "6": {
+        "speaker": "RUNNER",
+        "title": "Close",
+        "text": "Then she came through here alive. Keep the route open."
+      },
+      "8": {
+        "speaker": "COLD GUARD",
+        "title": "Snow hunter",
+        "text": "She was cold when they brought her past me. She still asked whether you had made it inside."
+      }
+    }
+  },
+  {
+    "id": "deadwing",
+    "contractNo": "04",
+    "name": "The Broken Wing",
+    "subtitle": "Search the old rooms",
+    "handler": "Radio guide",
+    "target": "Graves, wing boss",
+    "objective": "Search the broken wing and find the key path to the top.",
+    "payout": "+20 shards, old key",
+    "risk": "Broken rooms, ambushes, and enemies behind you.",
+    "art": "story_deadwing",
+    "accent": "#c77dff",
+    "stageIds": [
+      "undercrypt",
+      "violet_split",
+      "forest_wire"
+    ],
+    "unlockAt": 4,
+    "log": "Broken wing started.",
+    "summary": "The broken wing holds old rescue gear and a hidden path upward.",
+    "briefingSlides": [
+      {
+        "speaker": "GUIDE",
+        "title": "Broken wing",
+        "text": "This part of the tower was closed years ago. Guards still use it because the cameras fail and people get lost."
+      },
+      {
+        "speaker": "RUNNER",
+        "title": "Search everything",
+        "text": "Mira may have passed through here. I want every room checked."
+      },
+      {
+        "speaker": "GUIDE",
+        "title": "Graves",
+        "text": "Graves runs this section. He sends weaker fighters in from behind while he waits for you to panic."
+      }
+    ],
+    "lines": {
+      "1": {
+        "speaker": "GUIDE",
+        "title": "Wing entry",
+        "text": "The cameras are bad in this wing. Stay near cover and listen for doors opening behind you."
+      },
+      "3": {
+        "speaker": "RUNNER",
+        "title": "Old rooms",
+        "text": "Search the walls, lockers, and side rooms. Mira could have left something small."
+      },
+      "5": {
+        "speaker": "GRAVES",
+        "title": "Wing boss",
+        "text": "Mira counted doors when she came through here. I heard her through the wall. She sounded braver than you look."
+      },
+      "7": {
+        "speaker": "GUIDE",
+        "title": "Key room",
+        "text": "There is an old key room past the next fight. Clear it and we get a cleaner route to the top."
+      },
+      "8": {
+        "speaker": "GRAVES",
+        "title": "Boss room",
+        "text": "People come here to save someone. Most of them leave something behind for me."
+      }
+    }
+  },
+  {
+    "id": "broadcast",
+    "contractNo": "05",
+    "name": "The Camera Floor",
+    "subtitle": "Make them show her",
+    "handler": "Radio guide",
+    "target": "The broadcast room",
+    "objective": "Take over the camera room and find Mira's cell.",
+    "payout": "+24 shards, cell number",
+    "risk": "Crowd hazards, poison, and boss pressure.",
+    "art": "story_broadcast",
+    "accent": "#ff304f",
+    "stageIds": [
+      "red_lock",
+      "amber_cross",
+      "violet_split"
+    ],
+    "unlockAt": 5,
+    "log": "Camera floor started.",
+    "summary": "The tower is showing your climb to viewers. The camera room can reveal where Mira is held.",
+    "briefingSlides": [
+      {
+        "speaker": "PRODUCER",
+        "title": "The show",
+        "text": "The tower is broadcasting your climb now. They put Mira's face on the screen because people pay more when they know why you are fighting."
+      },
+      {
+        "speaker": "RUNNER",
+        "title": "Use the cameras",
+        "text": "If they are showing her, they know where she is. Put the cameras on her door."
+      },
+      {
+        "speaker": "GUIDE",
+        "title": "The plan",
+        "text": "Clear this section and I can force the camera map open. We only need one clear picture of her cell."
+      }
+    ],
+    "lines": {
+      "1": {
+        "speaker": "PRODUCER",
+        "title": "Smile for them",
+        "text": "The viewers like you more now that they have seen Mira. Try to keep your face toward the cameras when you bleed."
+      },
+      "2": {
+        "speaker": "RUNNER",
+        "title": "Cell door",
+        "text": "Show me her door. I will give your viewers the rest."
+      },
+      "4": {
+        "speaker": "GUIDE",
+        "title": "Camera map",
+        "text": "I have three possible rooms. One has fresh food outside it. One has a chair against the door. One has her jacket on the floor."
+      },
+      "6": {
+        "speaker": "VENOM",
+        "title": "Paid guard",
+        "text": "They paid me to slow you down. The longer you take, the more scared she gets upstairs."
+      },
+      "8": {
+        "speaker": "GUIDE",
+        "title": "Camera room",
+        "text": "Win this fight and I can lock the camera map open long enough to find her cell."
+      }
+    }
+  },
+  {
+    "id": "core",
+    "contractNo": "06",
+    "name": "The Top Room",
+    "subtitle": "Save Mira",
+    "handler": "Radio guide",
+    "target": "The final boss",
+    "objective": "Reach Mira's cell, beat the final guard, and get her out.",
+    "payout": "+30 shards, rescue",
+    "risk": "Final boss, locked cell, and changing doors.",
+    "art": "story_core",
+    "accent": "#7cc7ff",
+    "stageIds": [
+      "blue_halls",
+      "undercrypt",
+      "whiteout",
+      "red_lock"
+    ],
+    "unlockAt": 7,
+    "log": "Top room started.",
+    "summary": "Mira is in a cell near the top. One last boss stands between you and her.",
+    "briefingSlides": [
+      {
+        "speaker": "GUIDE",
+        "title": "I found her",
+        "text": "I found Mira's cell. It is near the top, behind the blue doors. She is alive."
+      },
+      {
+        "speaker": "RUNNER",
+        "title": "Last climb",
+        "text": "Open the way. I am done stopping for guards, games, and speeches."
+      },
+      {
+        "speaker": "GUIDE",
+        "title": "Final warning",
+        "text": "The last boss is waiting near her cell. He may be a real climber pulled into the tower, or he may be one of Veyr's killers. Treat him like a person who wants to live."
+      }
+    ],
+    "lines": {
+      "1": {
+        "speaker": "GUIDE",
+        "title": "Top floor",
+        "text": "You are close to her cell. The tower is moving guards into every room ahead of you."
+      },
+      "3": {
+        "speaker": "RUNNER",
+        "title": "Cell number",
+        "text": "Keep her door on the screen. If it moves, call out the new room."
+      },
+      "5": {
+        "speaker": "FINAL GUARD",
+        "title": "Near the cell",
+        "text": "Mira asked if you were still alive. I told her I would know soon."
+      },
+      "7": {
+        "speaker": "GUIDE",
+        "title": "Last door",
+        "text": "This is the last door before her cell. Take what you need and go through."
+      },
+      "8": {
+        "speaker": "VEYR",
+        "title": "Tower voice",
+        "text": "The cell is locked until the final fight is over. The girl is watching from the room above you."
+      }
+    }
+  }
+];
+
+function storyChapterById(id) {
+  return STORY_CHAPTERS.find(chapter => chapter.id === id) || STORY_CHAPTERS[0];
+}
+
+function storySceneForFloor(floor) {
+  if (!activeStoryMode) return null;
+  const chapter = storyChapterById(activeStoryChapterId);
+  const line = (chapter.lines || {})[floor];
+  if (!line) return null;
+  return { chapter, line };
+}
+
+
+function storyTextHtml(text) {
+  return String(text || "")
+    .split(/\n\s*\n/)
+    .map(part => `<p>${part.trim()}</p>`)
+    .join("");
+}
+
+function stageById(id) {
+  return STAGES.find(stage => stage.id === id);
+}
+
+const POWERUPS = [
+  { id: "might", name: "Might", icon: "I", max: 8, cost: 6, desc: "Raises shot damage by 5% per rank." },
+  { id: "armor", name: "Armor", icon: "A", max: 7, cost: 7, desc: "Reduces incoming damage by 6% per rank." },
+  { id: "maxHealth", name: "Max Health", icon: "H", max: 8, cost: 7, desc: "Adds 10 max HP per rank." },
+  { id: "cooldown", name: "Cooldown", icon: "C", max: 7, cost: 6, desc: "Reduces Pulse cooldown by 8% per rank." },
+  { id: "area", name: "Area", icon: "R", max: 7, cost: 6, desc: "Adds Pulse reveal range per rank." },
+  { id: "speed", name: "Move Speed", icon: "S", max: 6, cost: 8, desc: "Raises movement speed by 4% per rank." },
+  { id: "reload", name: "Reload", icon: "L", max: 6, cost: 7, desc: "Reloads faster by 7% per rank." },
+  { id: "luck", name: "Luck", icon: "?", max: 6, cost: 8, desc: "Adds bonus shards from cleared floors." },
+  { id: "traceMemory", name: "Trace Memory", icon: "T", max: 5, cost: 9, desc: "Pulse echoes linger longer." },
+  { id: "noiseDiscipline", name: "Quiet Step", icon: "Q", max: 5, cost: 9, desc: "Sneaking makes less sound." },
+  { id: "smokeKit", name: "Smoke Kit", icon: "M", max: 4, cost: 10, desc: "Start each floor with more smoke." },
+  { id: "medSense", name: "Med Sense", icon: "+", max: 4, cost: 9, desc: "Health pickups restore more HP." },
+  { id: "contractPay", name: "Floor Pay", icon: "$", max: 5, cost: 11, desc: "Cleared floors pay more shards." },
+  { id: "bossRead", name: "Boss Read", icon: "B", max: 4, cost: 12, desc: "Boss pressure is easier to survive." }
+];
+
+const RUN_UPGRADES = [
+  {
+    id: "pulse_core",
+    name: "Pulse Core",
+    tag: "Awareness",
+    desc: "Pulse cooldown reduced by 18%.",
+    apply: () => runStats.pulseCdMult *= 0.82
+  },
+  {
+    id: "echo_trace",
+    name: "Echo Trace",
+    tag: "Awareness",
+    desc: "Pulse reveals contact echoes longer and from farther away.",
+    apply: () => {
+      runStats.pulseRange += 70;
+      runStats.echoDuration += 0.8;
+    }
+  },
+  {
+    id: "hollow_points",
+    name: "Hollow Points",
+    tag: "Combat",
+    desc: "Shots deal 18% more damage.",
+    apply: () => runStats.damageMult *= 1.18
+  },
+  {
+    id: "deep_mag",
+    name: "Deep Mag",
+    tag: "Combat",
+    desc: "Magazine size increased by 2.",
+    apply: () => {
+      runStats.ammoBonus += 2;
+      player.ammo += 2;
+    }
+  },
+  {
+    id: "fast_hands",
+    name: "Fast Hands",
+    tag: "Combat",
+    desc: "Reload time reduced by 18%.",
+    apply: () => runStats.reloadMult *= 0.82
+  },
+  {
+    id: "ghost_step",
+    name: "Ghost Step",
+    tag: "Movement",
+    desc: "Sneaking makes less noise and pressure fades faster.",
+    apply: () => {
+      runStats.sneakNoiseMult *= 0.65;
+      runStats.suspicionBleed += 2.5;
+    }
+  },
+  {
+    id: "reflex_buffer",
+    name: "Reflex Buffer",
+    tag: "Defense",
+    desc: "Once per floor, the first hit is softened by 70%.",
+    apply: () => runStats.reflexBuffer += 1
+  },
+  {
+    id: "threat_read",
+    name: "Threat Read",
+    tag: "Awareness",
+    desc: "Threat Sense gives a stronger warning when pressure builds.",
+    apply: () => runStats.threatRead += 1
+  },
+  {
+    id: "runner_frame",
+    name: "Runner Frame",
+    tag: "Movement",
+    desc: "Move speed increased by 10%.",
+    apply: () => runStats.moveMult *= 1.1
+  },
+  {
+    id: "pulse_amp",
+    name: "Pulse Amp",
+    tag: "Awareness",
+    desc: "Pulse range increased by 110.",
+    apply: () => runStats.pulseRange += 110
+  },
+  {
+    id: "echo_hold",
+    name: "Echo Hold",
+    tag: "Awareness",
+    desc: "Pulse echoes remain visible 1.2s longer.",
+    apply: () => runStats.echoDuration += 1.2
+  },
+  {
+    id: "fast_ping",
+    name: "Fast Ping",
+    tag: "Awareness",
+    desc: "Pulse cooldown reduced by 12%.",
+    apply: () => runStats.pulseCdMult *= 0.88
+  },
+  {
+    id: "spare_smoke",
+    name: "Spare Smoke",
+    tag: "Utility",
+    desc: "Gain one extra smoke charge each floor.",
+    apply: () => {
+      runStats.smokeBonus += 1;
+      player.smokeCharges += 1;
+    }
+  },
+  {
+    id: "field_patch",
+    name: "Field Patch",
+    tag: "Defense",
+    desc: "Gain 18 max HP and heal 18 now.",
+    apply: () => {
+      runStats.maxHpBonus += 18;
+      player.maxHp += 18;
+      player.hp = Math.min(player.maxHp, player.hp + 18);
+    }
+  },
+  {
+    id: "calm_hands",
+    name: "Calm Hands",
+    tag: "Combat",
+    desc: "Weapon heat builds 18% slower.",
+    apply: () => runStats.heatMult *= 0.82
+  }
+];
+
+let runStats = null;
+
+const STAGES = [
+  {
+    id: "graybox",
+    name: "Graybox Entry",
+    material: "concrete",
+    palette: {
+      floor: "#070a0f",
+      grid: "rgba(255,255,255,0.035)",
+      wall: "#202637",
+      wallLine: "#343d55",
+      pulse: "#7cc7ff"
+    },
+    spawn: { x: 76, y: 92 },
+    botSpawns: [
+      { x: 768, y: 88, role: "hunter" },
+      { x: 838, y: 508, role: "coward" },
+      { x: 650, y: 610, role: "baiter" },
+      { x: 515, y: 128, role: "anchor" }
+    ],
+    walls: [
+      { x: 140, y: 80, w: 40, h: 210 },
+      { x: 285, y: 70, w: 240, h: 36 },
+      { x: 620, y: 70, w: 46, h: 180 },
+      { x: 730, y: 150, w: 120, h: 38 },
+      { x: 90, y: 390, w: 220, h: 42 },
+      { x: 385, y: 250, w: 46, h: 210 },
+      { x: 510, y: 345, w: 215, h: 42 },
+      { x: 780, y: 360, w: 42, h: 180 },
+      { x: 220, y: 535, w: 360, h: 34 }
+    ]
+  },
+  {
+    id: "blue_halls",
+    name: "Blue Halls",
+    material: "concrete",
+    palette: {
+      floor: "#060b13",
+      grid: "rgba(124,199,255,0.04)",
+      wall: "#1a2b40",
+      wallLine: "#31506c",
+      pulse: "#7cc7ff"
+    },
+    spawn: { x: 82, y: 560 },
+    botSpawns: [
+      { x: 820, y: 78, role: "hunter" },
+      { x: 820, y: 560, role: "flanker" },
+      { x: 460, y: 310, role: "anchor" },
+      { x: 720, y: 320, role: "baiter" },
+      { x: 290, y: 110, role: "support" }
+    ],
+    walls: [
+      { x: 180, y: 80, w: 42, h: 170 },
+      { x: 180, y: 390, w: 42, h: 170 },
+      { x: 330, y: 190, w: 260, h: 38 },
+      { x: 330, y: 410, w: 260, h: 38 },
+      { x: 470, y: 228, w: 42, h: 182 },
+      { x: 710, y: 80, w: 46, h: 210 },
+      { x: 710, y: 350, w: 46, h: 210 }
+    ]
+  },
+  {
+    id: "amber_cross",
+    name: "Amber Cross",
+    material: "gravel",
+    palette: {
+      floor: "#100b07",
+      grid: "rgba(255,184,107,0.04)",
+      wall: "#30251d",
+      wallLine: "#6b4c31",
+      pulse: "#ffd166"
+    },
+    spawn: { x: 480, y: 590 },
+    botSpawns: [
+      { x: 480, y: 64, role: "hunter" },
+      { x: 850, y: 120, role: "flanker" },
+      { x: 110, y: 120, role: "flanker" },
+      { x: 850, y: 520, role: "baiter" },
+      { x: 110, y: 520, role: "support" }
+    ],
+    walls: [
+      { x: 105, y: 160, w: 230, h: 36 },
+      { x: 625, y: 160, w: 230, h: 36 },
+      { x: 105, y: 444, w: 230, h: 36 },
+      { x: 625, y: 444, w: 230, h: 36 },
+      { x: 462, y: 110, w: 36, h: 180 },
+      { x: 462, y: 350, w: 36, h: 180 },
+      { x: 365, y: 302, w: 230, h: 36 }
+    ]
+  },
+  {
+    id: "violet_split",
+    name: "Violet Split",
+    material: "wood",
+    palette: {
+      floor: "#0d0714",
+      grid: "rgba(199,125,255,0.045)",
+      wall: "#2a1b3c",
+      wallLine: "#553b79",
+      pulse: "#c77dff"
+    },
+    spawn: { x: 80, y: 320 },
+    botSpawns: [
+      { x: 875, y: 320, role: "hunter" },
+      { x: 510, y: 100, role: "anchor" },
+      { x: 510, y: 540, role: "anchor" },
+      { x: 765, y: 120, role: "flanker" },
+      { x: 765, y: 520, role: "baiter" },
+      { x: 240, y: 120, role: "support" }
+    ],
+    walls: [
+      { x: 220, y: 64, w: 40, h: 190 },
+      { x: 220, y: 386, w: 40, h: 190 },
+      { x: 410, y: 0, w: 42, h: 220 },
+      { x: 410, y: 420, w: 42, h: 220 },
+      { x: 590, y: 210, w: 42, h: 220 },
+      { x: 745, y: 64, w: 40, h: 190 },
+      { x: 745, y: 386, w: 40, h: 190 },
+      { x: 350, y: 300, w: 260, h: 40 }
+    ]
+  },
+  {
+    id: "red_lock",
+    name: "Red Lock",
+    material: "laminate",
+    palette: {
+      floor: "#120608",
+      grid: "rgba(255,92,122,0.04)",
+      wall: "#341820",
+      wallLine: "#78364a",
+      pulse: "#ff5c7a"
+    },
+    spawn: { x: 80, y: 80 },
+    botSpawns: [
+      { x: 880, y: 560, role: "hunter" },
+      { x: 880, y: 80, role: "flanker" },
+      { x: 80, y: 560, role: "flanker" },
+      { x: 480, y: 320, role: "anchor" },
+      { x: 480, y: 100, role: "baiter" },
+      { x: 480, y: 540, role: "support" },
+      { x: 820, y: 320, role: "hunter" }
+    ],
+    walls: [
+      { x: 160, y: 145, w: 220, h: 36 },
+      { x: 580, y: 145, w: 220, h: 36 },
+      { x: 160, y: 459, w: 220, h: 36 },
+      { x: 580, y: 459, w: 220, h: 36 },
+      { x: 290, y: 265, w: 110, h: 36 },
+      { x: 560, y: 265, w: 110, h: 36 },
+      { x: 290, y: 339, w: 110, h: 36 },
+      { x: 560, y: 339, w: 110, h: 36 },
+      { x: 462, y: 220, w: 36, h: 200 }
+    ]
+  },
+  {
+    id: "whiteout",
+    name: "Whiteout Yard",
+    material: "snow",
+    palette: {
+      floor: "#c7d7e6",
+      grid: "rgba(23, 55, 83, 0.06)",
+      wall: "#9fb2c6",
+      wallLine: "#5b7897",
+      pulse: "#7cc7ff"
+    },
+    spawn: { x: 88, y: 550 },
+    botSpawns: [
+      { x: 845, y: 82, role: "duelist" },
+      { x: 840, y: 540, role: "anchor" },
+      { x: 500, y: 90, role: "hunter" }
+    ],
+    walls: [
+      { x: 172, y: 130, w: 170, h: 34 },
+      { x: 618, y: 130, w: 170, h: 34 },
+      { x: 170, y: 478, w: 170, h: 34 },
+      { x: 620, y: 478, w: 170, h: 34 },
+      { x: 448, y: 210, w: 64, h: 220 },
+      { x: 320, y: 305, w: 96, h: 30 },
+      { x: 545, y: 305, w: 96, h: 30 }
+    ]
+  },
+  {
+    id: "forest_wire",
+    name: "Forest Wire",
+    material: "nature",
+    palette: {
+      floor: "#0f261b",
+      grid: "rgba(125,255,178,0.045)",
+      wall: "#263b23",
+      wallLine: "#637b38",
+      pulse: "#7dffb2"
+    },
+    spawn: { x: 78, y: 320 },
+    botSpawns: [
+      { x: 870, y: 320, role: "hunter" },
+      { x: 480, y: 92, role: "flanker" },
+      { x: 480, y: 548, role: "anchor" }
+    ],
+    walls: [
+      { x: 190, y: 90, w: 42, h: 190 },
+      { x: 190, y: 360, w: 42, h: 190 },
+      { x: 380, y: 80, w: 210, h: 34 },
+      { x: 380, y: 526, w: 210, h: 34 },
+      { x: 460, y: 245, w: 40, h: 150 },
+      { x: 710, y: 180, w: 42, h: 110 },
+      { x: 710, y: 350, w: 42, h: 110 }
+    ]
+  },
+  {
+    id: "undercrypt",
+    name: "Undercrypt",
+    material: "concrete",
+    palette: {
+      floor: "#111015",
+      grid: "rgba(255,211,90,0.035)",
+      wall: "#29232d",
+      wallLine: "#6f5b6d",
+      pulse: "#ffd35a"
+    },
+    spawn: { x: 480, y: 590 },
+    botSpawns: [
+      { x: 480, y: 62, role: "boss" },
+      { x: 110, y: 105, role: "flanker" },
+      { x: 850, y: 105, role: "hunter" }
+    ],
+    walls: [
+      { x: 120, y: 135, w: 220, h: 38 },
+      { x: 620, y: 135, w: 220, h: 38 },
+      { x: 120, y: 465, w: 220, h: 38 },
+      { x: 620, y: 465, w: 220, h: 38 },
+      { x: 452, y: 120, w: 56, h: 150 },
+      { x: 452, y: 370, w: 56, h: 150 },
+      { x: 330, y: 302, w: 300, h: 36 }
+    ]
+  }
+];
+
+const BOT_COLORS = ["#ff6b6b", "#ffb86b", "#c77dff", "#ffd166", "#ff5c7a", "#a1ffce", "#7cc7ff"];
+const BOSS_FLOORS = new Set([3, 5, 7, 8]);
+
+const BOT_PROFILES = [
+  {
+    name: "Vanta",
+    callSign: "Angle Demon",
+    color: "#ff6b6b",
+    model: "blade",
+    sprite: "enemy_vanta",
+    weaponId: "carbine",
+    trait: "wide swings, fast shoulder peeks, and commits hard after contact",
+    patience: 0.62,
+    coverBias: 0.5,
+    aggression: 0.92,
+    aim: 0.82,
+    reactionBoost: 0.1,
+    peekBias: 0.95,
+    smokeBias: 0.05
+  },
+  {
+    name: "Mire",
+    callSign: "Turtle",
+    color: "#ffb86b",
+    model: "shield",
+    sprite: "enemy_mire",
+    weaponId: "shotgun",
+    trait: "backs into cover, forces close corners, and waits for overpeeks",
+    patience: 1.08,
+    coverBias: 1.0,
+    aggression: 0.46,
+    aim: 0.58,
+    reactionBoost: -0.04,
+    peekBias: 0.35,
+    smokeBias: 0.18
+  },
+  {
+    name: "Sable",
+    callSign: "Reload Thief",
+    color: "#c77dff",
+    model: "split",
+    sprite: "enemy_sable",
+    weaponId: "smg",
+    trait: "presses reloads, stutter steps, and punishes repeated paths",
+    patience: 0.8,
+    coverBias: 0.7,
+    aggression: 0.7,
+    aim: 0.64,
+    reactionBoost: 0.02,
+    peekBias: 0.72,
+    smokeBias: 0.14
+  },
+  {
+    name: "Rook",
+    callSign: "Hard Hold",
+    color: "#ffd166",
+    model: "anchor",
+    sprite: "enemy_rook",
+    weaponId: "dmr",
+    trait: "holds long lanes and relocates after losing the angle",
+    patience: 1.18,
+    coverBias: 1.0,
+    aggression: 0.52,
+    aim: 0.78,
+    reactionBoost: 0.04,
+    peekBias: 0.28,
+    smokeBias: 0.06
+  },
+  {
+    name: "Null",
+    callSign: "Smoke Rat",
+    color: "#a1ffce",
+    model: "needle",
+    sprite: "enemy_null",
+    weaponId: "needler",
+    trait: "breaks vision with smoke and changes angles",
+    patience: 0.7,
+    coverBias: 0.72,
+    aggression: 0.76,
+    aim: 0.68,
+    reactionBoost: 0.06,
+    peekBias: 0.75,
+    smokeBias: 0.72
+  }
+];
+
+const BOSS_PROFILES = [
+  {
+    name: "Vanta",
+    title: "Gate Guard",
+    color: "#ff3b57",
+    model: "boss_blade",
+    sprite: "boss_vanta",
+    weaponId: "revolver",
+    trait: "guards the stairs and fights hard from cover",
+    bossKit: "mirror",
+    barks: ["go home", "she waited", "you look tired"],
+    patience: 0.78,
+    coverBias: 0.86,
+    aggression: 1.04,
+    aim: 0.92,
+    reactionBoost: 0.16,
+    peekBias: 1.0,
+    smokeBias: 0.14
+  },
+  {
+    name: "Flicker",
+    title: "Cold Room Hunter",
+    color: "#8cf4ff",
+    model: "boss_eye",
+    sprite: "boss_null",
+    weaponId: "needler",
+    trait: "hides in smoke and waits for clean shots",
+    bossKit: "flicker",
+    barks: ["she heard me", "keep walking", "wrong room"],
+    patience: 0.84,
+    coverBias: 1.02,
+    aggression: 0.94,
+    aim: 0.91,
+    reactionBoost: 0.14,
+    peekBias: 0.9,
+    smokeBias: 0.72
+  },
+  {
+    name: "Venom",
+    title: "Paid Guard",
+    color: "#7dff72",
+    model: "needle",
+    sprite: "enemy_null",
+    weaponId: "breacher",
+    trait: "uses poison and pressure to slow the rescue",
+    bossKit: "poison",
+    barks: ["slow down", "she is upstairs", "keep bleeding"],
+    patience: 0.92,
+    coverBias: 0.88,
+    aggression: 0.82,
+    aim: 0.86,
+    reactionBoost: 0.1,
+    peekBias: 0.62,
+    smokeBias: 0.28
+  },
+  {
+    name: "Graves",
+    title: "Old Wing Guard",
+    color: "#c77dff",
+    model: "anchor",
+    sprite: "boss_null",
+    weaponId: "dmr",
+    trait: "calls weak guards from side rooms",
+    bossKit: "necro",
+    barks: ["doors open", "more coming", "leave something"],
+    patience: 1.02,
+    coverBias: 1.08,
+    aggression: 0.7,
+    aim: 0.88,
+    reactionBoost: 0.12,
+    peekBias: 0.42,
+    smokeBias: 0.18
+  }
+];
+
+const player = {
+  x: 76,
+  y: 92,
+  r: 10,
+  baseSpeed: 176,
+  hp: 100,
+  maxHp: 100,
+  angle: 0,
+  ammo: 6,
+  maxAmmo: 6,
+  reload: 0,
+  shotCd: 0,
+  pulseCd: 0,
+  pulseActive: 0,
+  noise: 0,
+  spotted: 0,
+  kills: 0,
+  shots: 0,
+  hits: 0,
+  reflexReady: 0,
+  weaponId: "pistol",
+  weaponHeat: 0,
+  recoil: 0,
+  smokeCharges: 0,
+  fireBuffer: 0,
+  nearMissCd: 0,
+  moveIntent: 0
+};
+
+let bots = [];
+
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return structuredClone(DEFAULT_SAVE);
+    const parsed = JSON.parse(raw);
+    return {
+      ...structuredClone(DEFAULT_SAVE),
+      ...parsed,
+      unlockedShapes: parsed.unlockedShapes?.length ? parsed.unlockedShapes : ["circle"],
+      unlockedColors: parsed.unlockedColors?.length ? parsed.unlockedColors : ["pale"],
+      completedChapters: Array.isArray(parsed.completedChapters) ? parsed.completedChapters : [],
+      storyFlags: {
+        ...(parsed.storyFlags || {})
+      },
+      powerups: {
+        ...structuredClone(DEFAULT_SAVE).powerups,
+        ...(parsed.powerups || {})
+      },
+      settings: {
+        ...structuredClone(DEFAULT_SAVE).settings,
+        ...(parsed.settings || {})
+      }
+    };
+  } catch {
+    return structuredClone(DEFAULT_SAVE);
+  }
+}
+
+function saveGame() {
+  localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+}
+
+function resetSave() {
+  save = structuredClone(DEFAULT_SAVE);
+  saveGame();
+  renderMenu();
+  addLog("Save reset.");
+}
+
+function angleTo(a, b) {
+  return Math.atan2(b.y - a.y, b.x - a.x);
+}
+
+function normAngle(a) {
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
+}
+
+function addLog(text) {
+  logs.unshift({ text, t: nowSec() });
+  logs.splice(8);
+  renderLog();
+}
+
+function renderLog() {
+  logEl.innerHTML = logs.map(item => `<div class="logItem">${item.text}</div>`).join("");
+}
+
+function openOverlay(html, screen = "modal") {
+  overlay.style.display = "grid";
+  overlay.className = `overlayScreen ${screen}`;
+  titleCard.innerHTML = html;
+  document.body.dataset.screen = screen;
+}
+
+function closeOverlay() {
+  overlay.style.display = "none";
+  overlay.className = "";
+  document.body.dataset.screen = "game";
+}
+
+function renderMenu() {
+  mode = "menu";
+  running = false;
+  gameOver = false;
+  towerCleared = false;
+  activeStoryMode = false;
+  updateHud();
+  startMusic("music_menu");
+
+  const best = save.bestFloor || 0;
+  openOverlay(`
+    <div class="vsScreen mainMenuScreen">
+      <div class="vsBackdrop">
+        <div class="vsMoon"></div>
+        <div class="vsScanlines"></div>
+        <div class="vsShape vsShapeLeft"></div>
+        <div class="vsShape vsShapeRight"></div>
+        <div class="vsHeroCore"></div>
+      </div>
+
+      <div class="vsTopBar mainTopBar">
+        <button class="vsSquareButton profileButton" data-action="openCollection"><img src="${ASSET_PATHS.images[shapeById(save.selectedShape).sprite]}" alt=""></button>
+        <div class="vsPlayerName">veyr_runner</div>
+        <div class="vsCurrency"><span class="coinStack"></span><b>${save.shards}</b></div>
+        <button class="vsButton red small" data-action="noop">QUIT</button>
+      </div>
+
+      <div class="vsLogoBlock">
+        <div class="vsLogoLine">VEYR</div>
+        <div class="vsLogoLine">ARENA</div>
+        <div class="vsSubtitle">THE ASCENT</div>
+      </div>
+
+      <div class="vsMainCluster storyMainCluster">
+        <button class="vsButton green giant startButton" data-action="openStory">CAMPAIGN</button>
+        <button class="vsButton blue giant" data-action="startTower">TOWER RUN</button>
+        <button class="vsButton blue giant" data-action="openCollection">COLLECTION</button>
+        <button class="vsButton blue giant" data-action="openPowerUps">POWER UP</button>
+        <button class="vsButton blue giant" data-action="openUnlockList">UNLOCKS</button>
+        <button class="vsButton blue giant optionsButton" data-action="openOptions">OPTIONS</button>
+      </div>
+
+      <div class="vsBottomStats">
+        <div><span>BEST FLOOR</span><b>${best}</b></div>
+        <div><span>CLEARANCES</span><b>${save.storyClears || 0}</b></div>
+        <div><span>OPERATIVE</span><b>${shapeById(save.selectedShape).name}</b></div>
+        <div><span>TRACE</span><b>${colorById(save.selectedColor).name}</b></div>
+      </div>
+
+      <div class="vsVersion">v4.1 story text<br>ui repair</div>
+    </div>
+  `, "mainMenu");
+}
+
+function renderStorySelect() {
+  mode = "storySelect";
+  const cards = STORY_CHAPTERS.map(chapter => {
+    const locked = (save.bestFloor || 0) < chapter.unlockAt;
+    const done = (save.completedChapters || []).includes(chapter.id);
+    const art = ASSET_PATHS.images[chapter.art];
+    return `
+      <button class="storyChapterCard contractCard ${locked ? "locked" : ""} ${done ? "completed" : ""}" data-action="${locked ? "noop" : "startStoryChapter"}" data-id="${chapter.id}" style="--accent:${chapter.accent}; --storyBg:url('${art}')">
+        <span class="contractStatus">${done ? "CLEARED" : locked ? `REACH FLOOR ${chapter.unlockAt}` : "AVAILABLE"}</span>
+        <small>CHAPTER ${chapter.contractNo} · ${chapter.subtitle}</small>
+        <b>${chapter.name}</b>
+        <p>${chapter.summary}</p>
+        <div class="contractFacts">
+          <div><em>Guide</em><strong>${chapter.handler}</strong></div>
+          <div><em>Enemy</em><strong>${chapter.target}</strong></div>
+          <div><em>Goal</em><strong>${chapter.objective}</strong></div>
+          <div><em>Reward</em><strong>${chapter.payout}</strong></div>
+        </div>
+      </button>
+    `;
+  }).join("");
+
+  const archives = storyArchiveRows();
+
+  openOverlay(`
+    <div class="vsScreen framedScreen storySelectScreen campaignSelectScreen">
+      ${renderTopStrip("Campaign", "backMenu")}
+      <div class="vsPanel storyPanel campaignPanel">
+        <h2>Story Chapters</h2>
+        <p class="campaignLead">Mira was taken into Veyr Tower. Clear chapters, beat bosses, find her cell, and get her out.</p>
+        <div class="storyChapterGrid campaignChapterGrid">${cards}</div>
+        <h3>Story Notes</h3>
+        <div class="archiveGrid">${archives}</div>
+      </div>
+    </div>
+  `, "storyMenu");
+}
+
+function storyArchiveRows() {
+  const rows = [
+    { req: 1, title: "Mira", text: "Mira was taken into the tower before dawn. She is still alive upstairs." },
+    { req: 2, title: "The first door", text: "The lower stairs open after eight cleared floors." },
+    { req: 3, title: "Vanta", text: "Vanta guards the next stairs and has stopped other rescue attempts." },
+    { req: 4, title: "Snow yard", text: "Mira left footprints and torn cloth in the cold yard." },
+    { req: 5, title: "Broken wing", text: "The old rooms hold clues from people who climbed before you." },
+    { req: 6, title: "Camera floor", text: "The tower is showing the climb to viewers, and the cameras can reveal her cell." },
+    { req: 7, title: "Top room", text: "Mira's cell is near the top behind blue doors." },
+    { req: 8, title: "Final door", text: "One last boss stands near her cell." }
+  ];
+
+  return rows.map(row => {
+    const locked = (save.bestFloor || 0) < row.req;
+    return `
+      <div class="archiveCard ${locked ? "locked" : ""}">
+        <b>${locked ? "LOCKED" : row.title}</b>
+        <p>${locked ? `Reach floor ${row.req}.` : row.text}</p>
+      </div>
+    `;
+  }).join("");
+}
+
+function startStoryChapter(id) {
+  showStoryBriefing(id, 0);
+}
+
+function showStoryBriefing(id, index = 0) {
+  const chapter = storyChapterById(id);
+  const slides = chapter.briefingSlides || [];
+  const slide = slides[index] || { speaker: chapter.handler, title: chapter.name, text: chapter.summary };
+  const art = ASSET_PATHS.images[chapter.art];
+  const last = index >= slides.length - 1;
+  currentStoryBriefing = { chapterId: chapter.id, index };
+  mode = "storyBriefing";
+  running = false;
+
+  openOverlay(`
+    <div class="vsScreen storySceneScreen campaignSceneScreen briefingScreen" style="--accent:${chapter.accent}; --storyBg:url('${art}')">
+      <div class="storySceneBackdrop"></div>
+      <div class="storyFreezeFrame campaignFreezeFrame briefingFrame">
+        <div class="storySceneImage campaignSceneImage briefingImage">
+          <div class="campaignChapterStamp">CHAPTER ${chapter.contractNo} · ${chapter.name}</div>
+        </div>
+        <div class="storyDialogueBox campaignDialogueBox briefingDialogueBox">
+          <div class="storySpeaker">${slide.speaker}</div>
+          <div class="storyFloorTag">${slide.title} · ${index + 1} / ${Math.max(1, slides.length)}</div>
+          <div class="storyBodyText">${storyTextHtml(slide.text)}</div>
+          <div class="briefingTerms"><span>${chapter.objective}</span><b>${chapter.payout}</b></div>
+          <button class="vsButton green storyContinue" data-action="continueStoryBriefing">${last ? "START CHAPTER" : "NEXT"}</button>
+        </div>
+      </div>
+    </div>
+  `, "storySceneMenu");
+}
+
+function continueStoryBriefing() {
+  if (!currentStoryBriefing) {
+    renderStorySelect();
+    return;
+  }
+  const chapter = storyChapterById(currentStoryBriefing.chapterId);
+  const nextIndex = currentStoryBriefing.index + 1;
+  if (nextIndex < (chapter.briefingSlides || []).length) {
+    showStoryBriefing(chapter.id, nextIndex);
+    return;
+  }
+  const chapterId = chapter.id;
+  currentStoryBriefing = null;
+  startTower({ story: true, chapterId });
+}
+
+function showStoryScene(floor, scene) {
+  mode = "storyScene";
+  running = false;
+  pendingStoryFloor = floor;
+  const { chapter, line } = scene;
+  const art = ASSET_PATHS.images[chapter.art];
+  const nextLabel = isBossFloor(floor) ? "FACE BOSS" : "ENTER FLOOR";
+  const floorLabel = `${line.title || "Floor note"} · FLOOR ${floor} / ${activeStage?.name || chapter.name}`;
+
+  openOverlay(`
+    <div class="vsScreen storySceneScreen campaignSceneScreen" style="--accent:${chapter.accent}; --storyBg:url('${art}')">
+      <div class="storySceneBackdrop"></div>
+      <div class="storyFreezeFrame campaignFreezeFrame">
+        <div class="storySceneImage campaignSceneImage">
+          <div class="campaignChapterStamp">CHAPTER ${chapter.contractNo} · ${chapter.name}</div>
+        </div>
+        <div class="storyDialogueBox campaignDialogueBox">
+          <div class="storySpeaker">${line.speaker}</div>
+          <div class="storyFloorTag">${floorLabel}</div>
+          <div class="storyBodyText">${storyTextHtml(line.text)}</div>
+          <button class="vsButton green storyContinue" data-action="continueStoryScene">${nextLabel}</button>
+        </div>
+      </div>
+    </div>
+  `, "storySceneMenu");
+}
+
+function continueStoryScene() {
+  const floor = pendingStoryFloor;
+  pendingStoryFloor = 0;
+  if (isBossFloor(floor) && bots[0]) showBossIntro(bots[0]);
+  else beginRoundCountdown();
+}
+
+
+function renderTopStrip(title, backAction) {
+  return `
+    <div class="vsTopBar screenTopBar">
+      <div class="vsPlayerName">veyr_runner</div>
+      <div class="vsCurrency"><span class="coinStack"></span><b>${save.shards}</b></div>
+      <button class="vsButton red small" data-action="${backAction}">BACK</button>
+    </div>
+  `;
+}
+
+
+function renderCollection() {
+  mode = "collection";
+  const operativeCards = SHAPES.map(item => renderShopCard(item, "shape")).join("");
+  const tintCards = COLORS.map(item => renderShopCard(item, "color")).join("");
+  const operative = shapeById(save.selectedShape);
+  const tint = colorById(save.selectedColor);
+  const sprite = ASSET_PATHS.images[operative.sprite] || "";
+
+  openOverlay(`
+    <div class="vsScreen framedScreen collectionScreen">
+      ${renderTopStrip("Collection", "backMenu")}
+      <div class="vsPanel collectionPanel">
+        <h2>Operatives</h2>
+        <div class="shopGrid operativeGrid">${operativeCards}</div>
+        <h2>Trace Tints</h2>
+        <div class="shopGrid tintGrid">${tintCards}</div>
+        <div class="vsDetailBar collectionDetailBar">
+          <div class="selectedSpriteBox">${sprite ? `<img src="${sprite}" alt="">` : ""}</div>
+          <div><b>${operative.name} · ${tint.name}</b></div>
+          <button class="vsButton green" data-action="backMenu">CONFIRM</button>
+        </div>
+      </div>
+    </div>
+  `, "collectionMenu");
+}
+
+function renderUnlocks() {
+  renderCollection();
+}
+
+function renderPowerUps() {
+  mode = "powerups";
+  const cards = POWERUPS.map(renderPowerCard).join("");
+  openOverlay(`
+    <div class="vsScreen framedScreen powerScreen">
+      ${renderTopStrip("Power Up", "backMenu")}
+      <div class="vsPanel powerPanel">
+        <h2>Power Up</h2>
+        <button class="vsButton blue refundButton" data-action="refundPowerups">Refund PowerUps</button>
+        <div class="powerGrid">${cards}</div>
+      </div>
+    </div>
+  `, "powerMenu");
+}
+
+function renderUnlockList() {
+  mode = "unlockList";
+  const rows = unlockRows();
+  const completed = rows.filter(row => row.done).length;
+  const percent = Math.round((completed / Math.max(1, rows.length)) * 100);
+  const groups = [
+    { title: "Tower Access", rows: rows.slice(0, 12) },
+    { title: "Story Notes", rows: rows.slice(12, 19) },
+    { title: "Floor Progress", rows: rows.slice(19, 25) },
+    { title: "Power Ranks", rows: rows.slice(25) }
+  ];
+  const html = groups.map(group => `
+    <section class="unlockGroup">
+      <div class="unlockGroupTitle"><b>${group.title}</b><span>${group.rows.filter(row => row.done).length} / ${group.rows.length}</span></div>
+      <div class="unlockGroupRows">
+        ${group.rows.map(row => `
+          <div class="unlockRow ${row.done ? "done" : ""}">
+            <span class="unlockCheck">${row.done ? "✓" : ""}</span>
+            <div class="unlockCopy"><b>${row.text}</b><small>${row.done ? "Requirement cleared" : "Requirement open"}</small></div>
+            <em class="unlockReward">${row.reward}</em>
+          </div>
+        `).join("")}
+      </div>
+    </section>
+  `).join("");
+
+  openOverlay(`
+    <div class="vsScreen framedScreen unlockScreen">
+      ${renderTopStrip("Unlocks", "backMenu")}
+      <div class="vsPanel unlockPanel">
+        <h2>Unlock Board</h2>
+        <div class="unlockSummary">
+          <div><b>${completed}</b><span>cleared</span></div>
+          <div><b>${rows.length - completed}</b><span>open</span></div>
+          <div><b>${percent}%</b><span>complete</span></div>
+        </div>
+        <div class="unlockProgress"><i style="width:${percent}%"></i></div>
+        <div class="unlockList unlockBoard">${html}</div>
+      </div>
+    </div>
+  `, "unlockMenu");
+}
+
+
+function renderOptions() {
+  mode = "options";
+  const slider = (key, label) => {
+    const value = Math.round((save.settings?.[key] ?? DEFAULT_SAVE.settings[key]) * 100);
+    return `
+      <label class="volumeRow">
+        <span>${label}</span>
+        <input type="range" min="0" max="100" value="${value}" data-volume="${key}">
+        <b data-volume-value="${key}">${value}%</b>
+      </label>
+    `;
+  };
+
+  openOverlay(`
+    <div class="vsScreen framedScreen optionsScreen">
+      ${renderTopStrip("Options", "backMenu")}
+      <div class="vsPanel optionsPanel">
+        <h2>Audio</h2>
+        <div class="volumeGrid">
+          ${slider("master", "Master")}
+          ${slider("sfx", "Weapons / impacts")}
+          ${slider("footsteps", "Footsteps")}
+          ${slider("voice", "Voice")}
+          ${slider("music", "Music")}
+        </div>
+        <h2>Tools</h2>
+        <div class="optionsActions">
+          <button class="vsButton blue" data-action="toggleDebugMenu">Debug: ${showDebug ? "ON" : "OFF"}</button>
+          <button class="vsButton red" data-action="resetSave">Reset Save</button>
+        </div>
+      </div>
+    </div>
+  `, "optionsMenu");
+}
+
+function unlockRows() {
+  const powerCount = Object.values(save.powerups || {}).reduce((sum, rank) => sum + rank, 0);
+  const completed = save.completedChapters || [];
+  return [
+    { done: save.bestFloor >= 1, text: "Clear floor 1.", reward: "+ shards" },
+    { done: save.bestFloor >= 2, text: "Reach floor 2.", reward: "Vanguard suit" },
+    { done: save.bestFloor >= 3, text: "Reach floor 3.", reward: "Outrider suit" },
+    { done: save.bestFloor >= 4, text: "Reach floor 4.", reward: "Phantom suit" },
+    { done: save.bestFloor >= 5, text: "Reach floor 5.", reward: "Field Medic suit" },
+    { done: save.bestFloor >= 6, text: "Reach floor 6.", reward: "Breaker suit" },
+    { done: save.bestFloor >= 7, text: "Reach floor 7.", reward: "Night Glass suit" },
+    { done: save.bestFloor >= 8, text: "Clear the tower.", reward: "Null Frame suit" },
+    { done: save.bestFloor >= 5, text: "Open Broadcast Layer.", reward: "Bloodline trace" },
+    { done: save.bestFloor >= 6, text: "Open Cold Floor.", reward: "Whiteout trace" },
+    { done: save.bestFloor >= 7, text: "Open Core route.", reward: "Toxin trace" },
+    { done: save.bestFloor >= 8, text: "Finish an eight floor run.", reward: "Gold trace" },
+    { done: (save.storyClears || 0) >= 1, text: "Clear any campaign chapter.", reward: "Mira note" },
+    { done: completed.includes("ledger"), text: "Clear The First Door.", reward: "First clue" },
+    { done: completed.includes("iron"), text: "Clear The Guard Floor.", reward: "Stair key" },
+    { done: completed.includes("whiteout"), text: "Clear The Snow Yard.", reward: "Torn scarf" },
+    { done: completed.includes("deadwing"), text: "Clear The Broken Wing.", reward: "Old key" },
+    { done: completed.includes("broadcast"), text: "Clear The Camera Floor.", reward: "Cell number" },
+    { done: completed.includes("core"), text: "Clear The Top Room.", reward: "Rescue" },
+    { done: save.totalClears >= 5, text: "Clear 5 floors total.", reward: "Steady pay" },
+    { done: save.totalClears >= 15, text: "Clear 15 floors total.", reward: "Floor habit" },
+    { done: save.totalClears >= 35, text: "Clear 35 floors total.", reward: "Arena regular" },
+    { done: (save.totalWeaponFinds || 0) >= 2, text: "Extract 2 cache weapons.", reward: "Armory habit" },
+    { done: (save.totalWeaponFinds || 0) >= 6, text: "Extract 6 cache weapons.", reward: "Weapon chaser" },
+    { done: (save.totalWeaponFinds || 0) >= 12, text: "Extract 12 cache weapons.", reward: "Cache specialist" },
+    { done: powerCount >= 1, text: "Buy any PowerUp.", reward: "First rank" },
+    { done: powerCount >= 10, text: "Buy 10 PowerUp ranks.", reward: "Prepared" },
+    { done: powerCount >= 25, text: "Buy 25 PowerUp ranks.", reward: "Loaded" },
+    { done: powerCount >= 50, text: "Buy 50 PowerUp ranks.", reward: "Overbuilt" }
+  ];
+}
+
+function renderShopCard(item, type) {
+  const unlockedList = type === "shape" ? save.unlockedShapes : save.unlockedColors;
+  const selected = type === "shape" ? save.selectedShape === item.id : save.selectedColor === item.id;
+  const unlocked = unlockedList.includes(item.id);
+  const canBuy = save.bestFloor >= item.req && save.shards >= item.cost;
+  const lockedByFloor = save.bestFloor < item.req;
+
+  let button = "";
+  let status = "LOCKED";
+  if (selected) {
+    status = "EQUIPPED";
+    button = `<button class="vsButton gray" disabled>Equipped</button>`;
+  } else if (unlocked) {
+    status = "OWNED";
+    button = `<button class="vsButton green" data-action="equip" data-type="${type}" data-id="${item.id}">Equip</button>`;
+  } else if (lockedByFloor) {
+    button = `<button class="vsButton gray" disabled>Reach floor ${item.req}</button>`;
+  } else {
+    status = canBuy ? "AVAILABLE" : "NEED SHARDS";
+    button = `<button class="vsButton blue" data-action="buy" data-type="${type}" data-id="${item.id}" ${canBuy ? "" : "disabled"}>Buy ${item.cost}</button>`;
+  }
+
+  const preview = type === "color"
+    ? `<span class="swatch bigSwatch" style="background:${item.value}"></span>`
+    : `<span class="operativePreview">${item.sprite ? `<img src="${ASSET_PATHS.images[item.sprite]}" alt="">` : ""}</span>`;
+
+  return `
+    <div class="shopCard ${selected ? "selectedCard" : ""} ${unlocked ? "ownedCard" : ""}">
+      <div class="shopCardTop">${preview}<span class="shopStatus">${status}</span></div>
+      <div class="shopTitle"><b>${item.name}</b></div>
+      <div class="shopTags"><span>Cost ${item.cost}</span><span>Floor ${item.req}</span></div>
+      ${button}
+    </div>
+  `;
+}
+
+
+function renderPowerCard(item) {
+  const rank = powerRank(item.id);
+  const maxed = rank >= item.max;
+  const cost = powerupCost(item);
+  const canBuy = !maxed && save.shards >= cost;
+  const pips = Array.from({ length: item.max }, (_, i) => `<span class="pip ${i < rank ? "filled" : ""}"></span>`).join("");
+
+  return `
+    <button class="powerCard" data-action="buyPowerup" data-id="${item.id}" ${canBuy ? "" : "disabled"}>
+      <span class="powerName">${item.name}</span>
+      <span class="powerIcon">${item.icon}</span>
+      <span class="pipRow">${pips}</span>
+      <span class="powerCost">${maxed ? "MAX" : `${cost} shards`}</span>
+      <span class="powerDesc">${item.desc}</span>
+    </button>
+  `;
+}
+
+function powerRank(id) {
+  return save.powerups?.[id] || 0;
+}
+
+function powerupById(id) {
+  return POWERUPS.find(item => item.id === id);
+}
+
+function powerupCost(item) {
+  return Math.ceil(item.cost * (1 + powerRank(item.id) * 0.75));
+}
+
+function buyPowerup(id) {
+  const item = powerupById(id);
+  if (!item) return;
+  const rank = powerRank(id);
+  if (rank >= item.max) return;
+  const cost = powerupCost(item);
+  if (save.shards < cost) return;
+
+  save.shards -= cost;
+  save.powerups[id] = rank + 1;
+  saveGame();
+  renderPowerUps();
+}
+
+function refundPowerups() {
+  let refunded = 0;
+  for (const item of POWERUPS) {
+    const rank = powerRank(item.id);
+    for (let i = 0; i < rank; i++) {
+      refunded += Math.ceil(item.cost * (1 + i * 0.75));
+    }
+    save.powerups[item.id] = 0;
+  }
+  save.shards += refunded;
+  saveGame();
+  renderPowerUps();
+}
+
+function buyUnlock(type, id) {
+  const catalog = type === "shape" ? SHAPES : COLORS;
+  const listName = type === "shape" ? "unlockedShapes" : "unlockedColors";
+  const selectedName = type === "shape" ? "selectedShape" : "selectedColor";
+  const item = catalog.find(x => x.id === id);
+  if (!item) return;
+  if (save[listName].includes(id)) {
+    save[selectedName] = id;
+    saveGame();
+    renderUnlocks();
+    return;
+  }
+  if (save.bestFloor < item.req || save.shards < item.cost) return;
+
+  save.shards -= item.cost;
+  save[listName].push(id);
+  save[selectedName] = id;
+  saveGame();
+  renderUnlocks();
+}
+
+function equipUnlock(type, id) {
+  if (type === "shape" && save.unlockedShapes.includes(id)) save.selectedShape = id;
+  if (type === "color" && save.unlockedColors.includes(id)) save.selectedColor = id;
+  saveGame();
+  renderUnlocks();
+}
+
+function shapeById(id) {
+  return SHAPES.find(x => x.id === id) || SHAPES[0];
+}
+
+function colorById(id) {
+  return COLORS.find(x => x.id === id) || COLORS[0];
+}
+
+
+function currentWeapon() {
+  return WEAPON_BY_ID[player.weaponId] || WEAPONS[0];
+}
+
+function playerMaxAmmo() {
+  return currentWeapon().ammo + runStats.ammoBonus;
+}
+
+function setWeapon(id) {
+  if (!WEAPON_BY_ID[id] || mode !== "running") return;
+  if (runStats?.weapons && !runStats.weapons.includes(id)) {
+    addLog(`${WEAPON_BY_ID[id].name} not found this run yet.`);
+    return;
+  }
+  if (player.weaponId === id) return;
+
+  player.weaponId = id;
+  player.maxAmmo = playerMaxAmmo();
+  player.ammo = player.maxAmmo;
+  player.weaponHeat = 0;
+  player.recoil = 0;
+  player.reload = 0;
+  player.shotCd = 0.12;
+  player.weaponHeat = 0;
+  playAssetSfx("fps_weapon_change", 0.34);
+  addLog(`Weapon switched: ${currentWeapon().name}.`);
+  updateHud();
+}
+
+function addScreenFlash(amount = 0.05) {
+  screenFlash = Math.max(screenFlash, amount);
+}
+
+function addShake(amount = 1) {
+  cameraShake = Math.max(cameraShake, amount);
+}
+
+function addHitStop(seconds) {
+  hitStop = Math.max(hitStop, seconds);
+}
+
+function ensureAudio() {
+  if (audioCtx) return audioCtx;
+  const AudioClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioClass) return null;
+  audioCtx = new AudioClass();
+  return audioCtx;
+}
+
+function resumeAudio() {
+  const ac = ensureAudio();
+  if (ac && ac.state === "suspended") {
+    ac.resume().catch(() => {});
+  }
+  return ac;
+}
+
+function playTone(freq, duration, type = "square", gain = 0.035, slide = 0) {
+  const ac = ensureAudio();
+  if (!ac) return;
+  const osc = ac.createOscillator();
+  const g = ac.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, ac.currentTime);
+  if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), ac.currentTime + duration);
+  g.gain.setValueAtTime(gain * volumeFor("sfx"), ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + duration);
+  osc.connect(g).connect(ac.destination);
+  osc.start();
+  osc.stop(ac.currentTime + duration);
+}
+
+function playGunCrack(intensity = 1, variant = "") {
+  const ac = ensureAudio();
+  if (!ac) return;
+
+  const duration = variant.includes("shotgun") || variant.includes("breacher") ? 0.16 : variant.includes("dmr") || variant.includes("revolver") ? 0.12 : 0.07;
+  const bufferSize = Math.max(1, Math.floor(ac.sampleRate * duration));
+  const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < bufferSize; i++) {
+    const t = i / bufferSize;
+    const snap = Math.pow(1 - t, variant.includes("smg") || variant.includes("lmg") ? 9 : 5);
+    const tail = Math.pow(1 - t, 2.4) * 0.45;
+    data[i] = (Math.random() * 2 - 1) * (snap + tail) * 0.42;
+  }
+
+  const src = ac.createBufferSource();
+  src.buffer = buffer;
+
+  const highpass = ac.createBiquadFilter();
+  highpass.type = "highpass";
+  highpass.frequency.value = variant.includes("shotgun") || variant.includes("breacher") ? 240 : 520;
+
+  const lowpass = ac.createBiquadFilter();
+  lowpass.type = "lowpass";
+  lowpass.frequency.value = variant.includes("needler") ? 1800 : variant.includes("smg") || variant.includes("lmg") ? 2600 : 4200;
+
+  const gain = ac.createGain();
+  gain.gain.setValueAtTime((0.018 + Math.min(0.055, intensity * 0.012)) * volumeFor("sfx"), ac.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + duration);
+
+  src.connect(highpass).connect(lowpass).connect(gain).connect(ac.destination);
+  src.start();
+  src.stop(ac.currentTime + duration);
+
+  const thump = ac.createOscillator();
+  const thumpGain = ac.createGain();
+  thump.type = "sine";
+  thump.frequency.setValueAtTime(variant.includes("shotgun") || variant.includes("breacher") ? 74 : 120, ac.currentTime);
+  thump.frequency.exponentialRampToValueAtTime(42, ac.currentTime + 0.06);
+  thumpGain.gain.setValueAtTime((0.018 + Math.min(0.035, intensity * 0.006)) * volumeFor("sfx"), ac.currentTime);
+  thumpGain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.08);
+  thump.connect(thumpGain).connect(ac.destination);
+  thump.start();
+  thump.stop(ac.currentTime + 0.09);
+}
+
+function playFootstepTransient(material = "concrete", sneaking = false, scale = 1) {
+  const ac = resumeAudio();
+  if (!ac) return;
+
+  const materialTone = {
+    concrete: { hp: 900, lp: 4200, thump: 96, dur: 0.055 },
+    wood: { hp: 520, lp: 2600, thump: 135, dur: 0.07 },
+    snow: { hp: 260, lp: 1700, thump: 72, dur: 0.12 },
+    nature: { hp: 360, lp: 2100, thump: 86, dur: 0.095 },
+    gravel: { hp: 700, lp: 5200, thump: 110, dur: 0.085 },
+    laminate: { hp: 650, lp: 3200, thump: 118, dur: 0.065 }
+  }[material] || { hp: 700, lp: 3600, thump: 105, dur: 0.06 };
+
+  const duration = materialTone.dur * (sneaking ? 0.85 : 1);
+  const bufferSize = Math.max(1, Math.floor(ac.sampleRate * duration));
+  const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < bufferSize; i++) {
+    const t = i / bufferSize;
+    const attack = Math.min(1, t / 0.08);
+    const decay = Math.pow(1 - t, material === "snow" || material === "nature" ? 1.2 : 2.6);
+    const grit = material === "gravel" || material === "snow" ? 1.25 : material === "wood" ? 0.75 : 1;
+    data[i] = (Math.random() * 2 - 1) * attack * decay * grit;
+  }
+
+  const src = ac.createBufferSource();
+  src.buffer = buffer;
+
+  const highpass = ac.createBiquadFilter();
+  highpass.type = "highpass";
+  highpass.frequency.value = materialTone.hp;
+
+  const lowpass = ac.createBiquadFilter();
+  lowpass.type = "lowpass";
+  lowpass.frequency.value = materialTone.lp;
+
+  const gain = ac.createGain();
+  const volume = (sneaking ? 0.035 : 0.105) * scale * volumeFor("footsteps");
+  gain.gain.setValueAtTime(volume, ac.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + duration);
+
+  src.connect(highpass).connect(lowpass).connect(gain).connect(ac.destination);
+  src.start();
+  src.stop(ac.currentTime + duration);
+
+  const thump = ac.createOscillator();
+  const thumpGain = ac.createGain();
+  thump.type = "sine";
+  thump.frequency.setValueAtTime(materialTone.thump, ac.currentTime);
+  thump.frequency.exponentialRampToValueAtTime(Math.max(40, materialTone.thump * 0.55), ac.currentTime + duration);
+  thumpGain.gain.setValueAtTime((sneaking ? 0.012 : 0.035) * scale * volumeFor("footsteps"), ac.currentTime);
+  thumpGain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + duration);
+  thump.connect(thumpGain).connect(ac.destination);
+  thump.start();
+  thump.stop(ac.currentTime + duration);
+}
+
+function playFootstepSound(material, sneaking = false, scale = 1, forcePlatformer = false) {
+  const keys = footstepKeysForMaterial(material);
+  footstepVariantCursor = (footstepVariantCursor + 1) % keys.length;
+  const key = forcePlatformer
+    ? "footstep_platformer"
+    : keys[(footstepVariantCursor + Math.floor(rand(0, keys.length))) % keys.length];
+
+  const assetVolume = (sneaking ? 0.28 : 0.82) * scale;
+  const playedAsset = playAssetSfx(key, assetVolume, "footsteps");
+
+  if (!playedAsset || scale > 0.22) {
+    playFootstepTransient(material, sneaking, scale);
+  }
+}
+
+function playSfx(kind, intensity = 1, variant = "") {
+  if (kind === "shot") {
+    const layer = variant.includes("smg") || variant.includes("lmg") || variant.includes("needler") ? "fps_repeater" : "fps_blaster";
+    playAssetSfx(layer, 0.18 + Math.min(0.18, intensity * 0.04));
+    const played = playAssetSfx(variant || "shot_light", 0.28 + Math.min(0.24, intensity * 0.05));
+    playGunCrack(intensity, variant);
+    if (played) return;
+    playTone(140 + intensity * 55, 0.045, "sawtooth", 0.032, -70);
+  }
+  if (kind === "hit") {
+    if (playAssetSfx("fps_enemy_hurt", 0.36) || playAssetSfx("impact", 0.42)) return;
+    playTone(280 + intensity * 40, 0.035, "square", 0.028, -120);
+  }
+  if (kind === "wall") {
+    if (playAssetSfx("wall", 0.25)) return;
+    playTone(95, 0.025, "triangle", 0.018, -25);
+  }
+  if (kind === "explosion") {
+    if (playAssetSfx("fps_enemy_destroy", 0.42) || playAssetSfx("explosion", 0.55)) return;
+    playTone(80, 0.16, "sawtooth", 0.05, -120);
+  }
+  if (kind === "reward") {
+    if (playAssetSfx("level_up_chime", 0.5)) {
+      setTimeout(() => playAssetSfx("bonus_chime", 0.38), 120);
+      setTimeout(() => playAssetSfx("platformer_coin", 0.28), 230);
+      return;
+    }
+    playTone(420, 0.08, "square", 0.03, 160);
+    setTimeout(() => playTone(620, 0.08, "square", 0.03, 220), 90);
+    setTimeout(() => playTone(880, 0.11, "square", 0.035, 180), 180);
+  }
+  if (kind === "count") {
+    if (lastCountdownCue === "3") playAssetSfx("voice_ready", 0.45);
+    if (playAssetSfx("count", 0.42)) return;
+    playTone(520, 0.05, "square", 0.026, -80);
+  }
+  if (kind === "fight") {
+    playAssetSfx("voice_fight", 0.52);
+    if (playAssetSfx("fight", 0.48)) return;
+    playTone(180, 0.12, "sawtooth", 0.04, -90);
+  }
+  if (kind === "smoke") {
+    if (playAssetSfx("smoke", 0.36)) return;
+    playTone(70, 0.12, "triangle", 0.025, 20);
+  }
+}
+
+function pointFromAngle(origin, angle, distance) {
+  return {
+    x: origin.x + Math.cos(angle) * distance,
+    y: origin.y + Math.sin(angle) * distance
+  };
+}
+
+function playerBarrelPoint(angle = player.angle) {
+  return pointFromAngle(player, angle, player.r + 11 + player.recoil * 0.18);
+}
+
+function aimAssistAngle(baseAngle, weapon) {
+  const strength = weapon.aimAssist || 0;
+  if (strength <= 0 || mode !== "running") return baseAngle;
+
+  let best = null;
+  let bestScore = Infinity;
+  const maxDiff = weapon.id === "shotgun" ? 0.09 : weapon.id === "smg" || weapon.id === "lmg" ? 0.055 : 0.075;
+  const maxRange = weapon.id === "shotgun" ? 390 : 720;
+
+  for (const bot of bots) {
+    if (!bot.alive || !botVisibleToPlayer(bot)) continue;
+    const d = dist(player, bot);
+    if (d > maxRange || !hasVisualLineOfSight(player, bot)) continue;
+
+    const targetAngle = angleTo(player, bot);
+    const diff = normAngle(targetAngle - baseAngle);
+    const abs = Math.abs(diff);
+    if (abs > maxDiff) continue;
+
+    const score = abs * 1000 + d * 0.002;
+    if (score < bestScore) {
+      bestScore = score;
+      best = { diff, d };
+    }
+  }
+
+  if (!best) return baseAngle;
+  const distanceFalloff = clamp(1 - best.d / maxRange, 0.25, 1);
+  return baseAngle + best.diff * strength * 0.45 * distanceFalloff;
+}
+
+function playerDodgeRadius() {
+  const moving = player.moveIntent > 0;
+  const sneaking = keys.has("shift");
+  const base = player.r * 0.58;
+  if (sneaking) return base * 0.92;
+  return moving ? base : player.r * 0.72;
+}
+
+function maybeNearMiss(point, shooterName) {
+  if (player.nearMissCd > 0) return;
+  player.nearMissCd = 0.22;
+  addScreenFlash(0.018);
+  addShake(0.45);
+  floatText.push({ x: player.x + rand(-18, 18), y: player.y - 28, text: "near miss", t: 0.38 });
+}
+
+function suppressBotsAlongLine(a, b, weapon, ignored = null) {
+  const amount = weapon.suppression || 0;
+  if (amount <= 0) return;
+
+  for (const bot of bots) {
+    if (!bot.alive || bot === ignored) continue;
+    const p = closestPointOnLine(bot, a, b);
+    const along = dist(a, p);
+    if (along > dist(a, b)) continue;
+    const d = Math.hypot(bot.x - p.x, bot.y - p.y);
+    if (d > 42 + amount * 20 || !hasLineOfSight(a, bot)) continue;
+
+    bot.suppressed = Math.max(bot.suppressed, 0.45 + amount * 0.45);
+    bot.panic = Math.max(bot.panic, 0.22 + amount * 0.28);
+    bot.suspicion = Math.max(bot.suspicion, 34 + amount * 24);
+
+    const cover = chooseCoverPoint(bot);
+    if (cover && Math.random() < 0.55 + amount * 0.25) {
+      bot.target = cover;
+      bot.state = "search";
+      bot.maskDelay = Math.max(bot.maskDelay, rand(0.08, 0.22));
+    }
+  }
+}
+
+function wallNormalAt(point) {
+  let best = null;
+  let bestDistance = Infinity;
+
+  for (const wall of walls) {
+    const distances = [
+      { d: Math.abs(point.x - wall.x), nx: -1, ny: 0 },
+      { d: Math.abs(point.x - (wall.x + wall.w)), nx: 1, ny: 0 },
+      { d: Math.abs(point.y - wall.y), nx: 0, ny: -1 },
+      { d: Math.abs(point.y - (wall.y + wall.h)), nx: 0, ny: 1 }
+    ];
+
+    const nearWall =
+      point.x >= wall.x - 8 && point.x <= wall.x + wall.w + 8 &&
+      point.y >= wall.y - 8 && point.y <= wall.y + wall.h + 8;
+
+    if (!nearWall) continue;
+
+    for (const item of distances) {
+      if (item.d < bestDistance) {
+        bestDistance = item.d;
+        best = item;
+      }
+    }
+  }
+
+  return best;
+}
+
+function tryRicochet(origin, hitPoint, incomingAngle, weapon) {
+  if (!weapon.ricochet) return false;
+
+  const normal = wallNormalAt(hitPoint);
+  if (!normal) return false;
+
+  const vx = Math.cos(incomingAngle);
+  const vy = Math.sin(incomingAngle);
+  const dot = vx * normal.nx + vy * normal.ny;
+  const rx = vx - 2 * dot * normal.nx;
+  const ry = vy - 2 * dot * normal.ny;
+  const reflected = Math.atan2(ry, rx);
+  const start = { x: hitPoint.x + Math.cos(reflected) * 8, y: hitPoint.y + Math.sin(reflected) * 8 };
+  const end = rayBlocked(start, reflected + rand(-0.025, 0.025), 460);
+
+  let hitTarget = null;
+  let hitDist = Infinity;
+  for (const bot of bots) {
+    if (!bot.alive) continue;
+    const along = lineCircleHit(bot, start, end, 3);
+    if (along !== null && along < hitDist && hasVisualLineOfSight(start, bot)) {
+      hitTarget = bot;
+      hitDist = along;
+    }
+  }
+
+  const finalPoint = hitTarget ? closestPointOnLine(hitTarget, start, end) : end;
+  bullets.push({
+    x1: start.x,
+    y1: start.y,
+    x2: finalPoint.x,
+    y2: finalPoint.y,
+    t: weapon.tracerTime * 0.8,
+    maxT: weapon.tracerTime * 0.8,
+    owner: "player",
+    color: weapon.color,
+    width: 1.35
+  });
+
+  addParticles("spark", hitPoint.x, hitPoint.y, reflected, 9);
+  playAssetSfx("impact", 0.16);
+
+  if (hitTarget) {
+    damageBot(hitTarget, rand(weapon.damage[0], weapon.damage[1]) * 0.55 * runStats.damageMult, reflected, weapon, finalPoint);
+    return true;
+  }
+
+  return false;
+}
+
+function tryPierceBot(firstTarget, hitPoint, angle, weapon) {
+  if (!weapon.pierce) return false;
+
+  const start = { x: hitPoint.x + Math.cos(angle) * 12, y: hitPoint.y + Math.sin(angle) * 12 };
+  const end = rayBlocked(start, angle, 520);
+
+  let hitTarget = null;
+  let hitDist = Infinity;
+  for (const bot of bots) {
+    if (!bot.alive || bot === firstTarget) continue;
+    const along = lineCircleHit(bot, start, end, 2);
+    if (along !== null && along < hitDist && hasVisualLineOfSight(start, bot)) {
+      hitTarget = bot;
+      hitDist = along;
+    }
+  }
+
+  const finalPoint = hitTarget ? closestPointOnLine(hitTarget, start, end) : end;
+  bullets.push({
+    x1: start.x,
+    y1: start.y,
+    x2: finalPoint.x,
+    y2: finalPoint.y,
+    t: weapon.tracerTime * 0.72,
+    maxT: weapon.tracerTime * 0.72,
+    owner: "player",
+    color: weapon.color,
+    width: 1.2
+  });
+
+  if (hitTarget) {
+    damageBot(hitTarget, rand(weapon.damage[0], weapon.damage[1]) * 0.45 * runStats.damageMult, angle, weapon, finalPoint);
+    return true;
+  }
+
+  return false;
+}
+
+function addMuzzleFlash(x, y, angle, weapon) {
+  muzzleFlashes.push({
+    x,
+    y,
+    angle,
+    t: 0.055,
+    maxT: 0.055,
+    size: 11 + weapon.recoil * 1.2,
+    color: weapon.color
+  });
+}
+
+function addShellCasing(angle, weapon) {
+  const side = angle + Math.PI * 0.55 + rand(-0.28, 0.28);
+  const speed = weapon.casingSpeed * rand(0.7, 1.25);
+  const p = pointFromAngle(player, angle - Math.PI * 0.5, 4);
+
+  shellCasings.push({
+    x: p.x,
+    y: p.y,
+    vx: Math.cos(side) * speed,
+    vy: Math.sin(side) * speed,
+    rot: rand(0, Math.PI * 2),
+    spin: rand(-10, 10),
+    t: 2.5,
+    maxT: 2.5
+  });
+
+  if (shellCasings.length > 90) shellCasings.shift();
+}
+
+function addParticles(kind, x, y, angle, count = 5) {
+  const configs = {
+    spark: { color: "#ffd166", speed: [70, 210], life: [0.14, 0.34], size: [1, 3] },
+    dust: { color: "#aab2c9", speed: [24, 90], life: [0.28, 0.65], size: [2, 5] },
+    blood: { color: "#b8122f", speed: [25, 120], life: [0.26, 0.7], size: [2, 5] },
+    wood: { color: "#d2a15d", speed: [45, 150], life: [0.2, 0.5], size: [1, 4] },
+    fire: { color: "#ff8a3d", speed: [80, 260], life: [0.18, 0.48], size: [2, 6] },
+    reward: { color: "#ffd35a", speed: [70, 220], life: [0.28, 0.8], size: [2, 5] }
+  };
+  const cfg = configs[kind] || configs.spark;
+
+  for (let i = 0; i < count; i++) {
+    const spread = kind === "blood" ? 1.25 : 0.85;
+    const a = angle + Math.PI + rand(-spread, spread);
+    const speed = rand(cfg.speed[0], cfg.speed[1]);
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(a) * speed,
+      vy: Math.sin(a) * speed,
+      t: rand(cfg.life[0], cfg.life[1]),
+      maxT: cfg.life[1],
+      size: rand(cfg.size[0], cfg.size[1]),
+      color: cfg.color,
+      kind
+    });
+  }
+
+  if (particles.length > 220) particles.splice(0, particles.length - 220);
+}
+
+function addDecal(kind, x, y, angle, size = 8) {
+  decals.push({
+    kind,
+    x,
+    y,
+    angle,
+    size,
+    t: kind === "blood" ? 28 : 18,
+    maxT: kind === "blood" ? 28 : 18,
+    ox: rand(-2, 2),
+    oy: rand(-2, 2)
+  });
+
+  if (decals.length > 150) decals.shift();
+}
+
+function addImpact(kind, x, y, angle, weapon) {
+  if (kind === "bot") {
+    if (imageAsset("fx_hit")) {
+      floatText.push({ x, y, text: "✦", t: 0.28, sprite: "fx_hit" });
+    }
+    addParticles("blood", x, y, angle, weapon.id === "shotgun" ? 10 : 5);
+    addParticles("spark", x, y, angle, 2);
+    addDecal("blood", x + rand(-4, 4), y + rand(-4, 4), angle, weapon.id === "shotgun" ? rand(10, 17) : rand(5, 10));
+    addHitStop(weapon.hitStop);
+    addShake(weapon.shake * 0.5);
+    addScreenFlash(0.035);
+    return;
+  }
+
+  if (kind === "breakable") {
+    addParticles("wood", x, y, angle, 7);
+    addParticles("dust", x, y, angle, 5);
+    addDecal("chip", x, y, angle, rand(5, 9));
+    addShake(weapon.shake * 0.28);
+    return;
+  }
+
+  addParticles("spark", x, y, angle, 7);
+  addParticles("dust", x, y, angle, 3);
+  addDecal("bullet", x, y, angle, rand(3, 6));
+  playSfx("wall");
+}
+
+function applyKnockback(entity, angle, amount) {
+  if (!amount) return;
+  moveEntity(entity, Math.cos(angle) * amount, Math.sin(angle) * amount);
+}
+
+
+function acquireWeapon(id) {
+  const weapon = WEAPON_BY_ID[id];
+  if (!weapon || !runStats) return;
+
+  const alreadyHeld = runStats.weapons.includes(id);
+  if (!alreadyHeld) {
+    runStats.weapons.push(id);
+    runStats.weaponFinds += 1;
+    save.totalWeaponFinds = (save.totalWeaponFinds || 0) + 1;
+    saveGame();
+  }
+
+  player.weaponId = id;
+  player.maxAmmo = playerMaxAmmo();
+  player.ammo = player.maxAmmo;
+  player.reload = 0;
+  player.shotCd = 0.14;
+  player.weaponHeat = 0;
+  player.recoil = 0;
+  addLog(`${alreadyHeld ? "Refreshed" : "Acquired"}: ${weapon.name}.`);
+}
+
+function weaponRewardCard(weapon, index) {
+  const statLine = `${weapon.ammo} mag · ${Math.round((weapon.damage[0] + weapon.damage[1]) / 2)} dmg · ${weapon.pellets > 1 ? `${weapon.pellets} pellets` : `${Math.round(1 / weapon.fireDelay)} rps`}`;
+  const icon = weapon.asset ? `<img class="weaponRewardIcon" src="${ASSET_PATHS.images[weapon.asset]}" alt="">` : "";
+  return `
+    <button class="upgradeCard weaponRewardCard" data-action="chooseReward" data-index="${index}">
+      <span>Weapon Cache</span>
+      ${icon}
+      <b>${weapon.name}</b>
+      <p>${weapon.note}<br><em>${statLine}</em></p>
+    </button>
+  `;
+}
+
+function upgradeRewardCard(upgrade, index) {
+  return `
+    <button class="upgradeCard" data-action="chooseReward" data-index="${index}">
+      <span>${upgrade.tag}</span>
+      <b>${upgrade.name}</b>
+      <p>${upgrade.desc}</p>
+    </button>
+  `;
+}
+
+function startTower(options = {}) {
+  activeStoryMode = Boolean(options.story);
+  activeStoryChapterId = options.chapterId || "ledger";
+  activeRouteType = "standard";
+  nextRouteType = "standard";
+  lastRouteChoice = null;
+
+  runStats = {
+    maxHpBonus: powerRank("maxHealth") * 10,
+    ammoBonus: 0,
+    pulseCdMult: Math.max(0.55, 1 - powerRank("cooldown") * 0.08),
+    pulseRange: 420 + powerRank("area") * 30,
+    echoDuration: 2.6 + powerRank("traceMemory") * 0.35,
+    reloadMult: Math.max(0.55, 1 - powerRank("reload") * 0.07),
+    damageMult: 1 + powerRank("might") * 0.05,
+    moveMult: 1 + powerRank("speed") * 0.04,
+    sneakNoiseMult: Math.max(0.55, 1 - powerRank("noiseDiscipline") * 0.07),
+    suspicionBleed: 0,
+    reflexBuffer: 0,
+    threatRead: 0,
+    smokeBonus: powerRank("smokeKit"),
+    heatMult: 1,
+    upgrades: [],
+    weapons: ["pistol"],
+    weaponFinds: 0,
+    clearStreak: 0
+  };
+
+  player.weaponId = "pistol";
+  player.maxHp = 100 + powerRank("maxHealth") * 10;
+  player.hp = player.maxHp;
+  player.kills = 0;
+  player.shots = 0;
+  player.hits = 0;
+  killReplay = null;
+  logs.length = 0;
+  if (activeStoryMode) addLog(`${storyChapterById(activeStoryChapterId).name} ascent started.`);
+  else addLog("Tower run started.");
+  startFloor(1);
+}
+
+function defaultRouteForFloor(floor) {
+  if (BOSS_FLOORS.has(floor)) return "boss";
+  if (floor === 1) return "cache";
+  return "standard";
+}
+
+function stageForFloor(floor, routeType) {
+  if (activeStoryMode) {
+    const chapter = storyChapterById(activeStoryChapterId);
+    const ids = chapter.stageIds || [];
+    const picked = stageById(ids[(floor - 1) % Math.max(1, ids.length)]);
+    if (picked) return picked;
+  }
+  if (routeType === "boss" || routeType === "rival") return STAGES[(floor + 2) % STAGES.length];
+  if (routeType === "cache") return STAGES[(floor + 1) % STAGES.length];
+  return STAGES[(floor - 1) % STAGES.length];
+}
+
+function botIntroName(bot) {
+  if (!bot) return "unknown";
+  const profile = bot.profile || {};
+  const title = profile.title || profile.callSign || bot.role;
+  return `${bot.name} // ${title}`;
+}
+
+
+function bossProfileForFloor(floor) {
+  if (activeRouteType === "rival") return BOSS_PROFILES[(floor + 1) % BOSS_PROFILES.length];
+  if (floor >= 8) return BOSS_PROFILES[3];
+  if (floor >= 7) return BOSS_PROFILES[1];
+  if (floor >= 5) return BOSS_PROFILES[2];
+  return BOSS_PROFILES[0];
+}
+
+function expandStageForFloor(stage, floor, routeType) {
+  const scale = clamp(1.35 + floor * 0.045 + (routeType === "boss" || routeType === "rival" ? 0.08 : 0), 1.42, 1.72);
+  const scaled = {
+    ...stage,
+    baseId: stage.id,
+    worldW: Math.round(W * scale),
+    worldH: Math.round(H * scale),
+    spawn: scalePoint(stage.spawn, scale),
+    botSpawns: (stage.botSpawns || []).map(spawn => ({ ...spawn, ...scalePoint(spawn, scale) })),
+    walls: (stage.walls || []).map(wall => scaleRect(wall, scale))
+  };
+
+  scaled.botSpawns = scaled.botSpawns.map((spawn, i) => ({
+    ...spawn,
+    x: clamp(spawn.x, 52, scaled.worldW - 52),
+    y: clamp(spawn.y, 52, scaled.worldH - 52)
+  }));
+  scaled.spawn = {
+    x: clamp(scaled.spawn.x, 52, scaled.worldW - 52),
+    y: clamp(scaled.spawn.y, 52, scaled.worldH - 52)
+  };
+
+  addWorldRoomDetails(scaled, floor, routeType);
+  return scaled;
+}
+
+function scalePoint(point, scale) {
+  return {
+    x: Math.round(point.x * scale),
+    y: Math.round(point.y * scale)
+  };
+}
+
+function scaleRect(rect, scale) {
+  return {
+    ...rect,
+    x: Math.round(rect.x * scale),
+    y: Math.round(rect.y * scale),
+    w: Math.max(24, Math.round(rect.w * scale)),
+    h: Math.max(24, Math.round(rect.h * scale))
+  };
+}
+
+function worldRect(rect) {
+  return {
+    ...rect,
+    x: Math.round(rect.x * (worldW / W)),
+    y: Math.round(rect.y * (worldH / H)),
+    w: Math.max(20, Math.round(rect.w * (worldW / W))),
+    h: Math.max(20, Math.round(rect.h * (worldH / H)))
+  };
+}
+
+function addWorldRoomDetails(stage, floor, routeType) {
+  const w = stage.worldW;
+  const h = stage.worldH;
+  const theme = stage.id;
+
+  const extra = [
+    { x: w * 0.13, y: h * 0.22, w: w * 0.18, h: 30, cover: true, softGlow: true },
+    { x: w * 0.68, y: h * 0.22, w: w * 0.18, h: 30, cover: true, softGlow: true },
+    { x: w * 0.13, y: h * 0.72, w: w * 0.18, h: 30, cover: true, softGlow: true },
+    { x: w * 0.68, y: h * 0.72, w: w * 0.18, h: 30, cover: true, softGlow: true },
+    { x: w * 0.45, y: h * 0.22, w: 34, h: h * 0.17, cover: true, softGlow: true },
+    { x: w * 0.52, y: h * 0.62, w: 34, h: h * 0.17, cover: true, softGlow: true }
+  ];
+
+  if (routeType === "cache") {
+    extra.push({ x: w * 0.42, y: h * 0.47, w: w * 0.16, h: 28, cover: true, softGlow: true });
+  }
+
+  if (theme === "forest_wire" || theme === "whiteout") {
+    extra.push({ x: w * 0.32, y: h * 0.41, w: 32, h: h * 0.22, cover: true, softGlow: true });
+    extra.push({ x: w * 0.62, y: h * 0.37, w: 32, h: h * 0.22, cover: true, softGlow: true });
+  }
+
+  for (const rect of extra) {
+    stage.walls.push({
+      ...rect,
+      x: Math.round(rect.x),
+      y: Math.round(rect.y),
+      w: Math.round(rect.w),
+      h: Math.round(rect.h)
+    });
+  }
+}
+
+function updateCamera() {
+  camera.x = clamp(player.x - W / 2, 0, Math.max(0, worldW - W));
+  camera.y = clamp(player.y - H / 2, 0, Math.max(0, worldH - H));
+}
+
+function screenMouseX() {
+  return mouse.screenX ?? mouse.x - camera.x;
+}
+
+function screenMouseY() {
+  return mouse.screenY ?? mouse.y - camera.y;
+}
+
+function worldToScreen(p) {
+  return { x: p.x - camera.x, y: p.y - camera.y };
+}
+
+function viewportVisible(p, pad = 80) {
+  return p.x >= camera.x - pad && p.x <= camera.x + W + pad && p.y >= camera.y - pad && p.y <= camera.y + H + pad;
+}
+
+function startFloor(floor) {
+  currentFloor = floor;
+  activeRouteType = nextRouteType || defaultRouteForFloor(floor);
+  nextRouteType = null;
+
+  activeStage = expandStageForFloor(stageForFloor(floor, activeRouteType), floor, activeRouteType);
+  worldW = activeStage.worldW || W;
+  worldH = activeStage.worldH || H;
+  NAV_COLS = Math.ceil(worldW / NAV_CELL);
+  NAV_ROWS = Math.ceil(worldH / NAV_CELL);
+  walls = activeStage.walls.map(w => ({ ...w }));
+  addTacticalCover(floor);
+  teamPing = null;
+  pendingIntel.length = 0;
+  bullets.length = 0;
+  enemyShots.length = 0;
+  floatText.length = 0;
+  echoes.length = 0;
+  breakables.length = 0;
+  pickups.length = 0;
+  smokes.length = 0;
+  poisonPuddles.length = 0;
+  movementTraces.length = 0;
+  message = "";
+
+  player.x = activeStage.spawn.x;
+  player.y = activeStage.spawn.y;
+  camera.x = 0;
+  camera.y = 0;
+  resolveWallOverlap(player, 12);
+  player.maxHp = 100 + runStats.maxHpBonus;
+  player.hp = player.maxHp;
+  player.r = 10;
+  player.baseSpeed = 176;
+  player.maxAmmo = playerMaxAmmo();
+  player.ammo = player.maxAmmo;
+  player.weaponHeat = 0;
+  player.recoil = 0;
+  player.reload = 0;
+  player.shotCd = 0;
+  player.pulseCd = floor === 1 ? 0 : Math.min(player.pulseCd, 2.5);
+  player.pulseActive = 0;
+  player.noise = 0;
+  player.spotted = 0;
+  player.reflexReady = runStats.reflexBuffer;
+  player.smokeCharges = (isBossFloor(floor) ? 2 : activeRouteType === "cache" ? 1 : 1) + (runStats.smokeBonus || 0);
+
+  bots = makeFloorBots(floor);
+  for (const bot of bots) resolveWallOverlap(bot, 18);
+  spawnBreakables(floor);
+  spawnSmokeCanisters(floor);
+
+  floorStartTime = nowSec();
+  running = false;
+  gameOver = false;
+  startMusic("music_run");
+
+  roundOpponentLabel = bots.length === 1
+    ? botIntroName(bots[0])
+    : `${bots.length} contacts`;
+  roundMatchLabel = isBossFloor(floor)
+    ? "BOSS FIGHT"
+    : activeRouteType === "cache"
+      ? "SUPPLY ROOM"
+      : bots.length === 1
+        ? "SOLO FIGHT"
+        : "GROUP FIGHT";
+  lastCountdownCue = "";
+
+  addLog(`Floor ${floor}: ${activeStage.name}.`);
+  addLog(`${roundMatchLabel}: ${roundOpponentLabel}.`);
+  if (floor >= 2 && !isBossFloor(floor)) addLog("Next door locked.");
+  if (isBossFloor(floor)) addLog("Boss floor.");
+  if (activeRouteType === "cache") addLog("Weapon cache route.");
+  updateHud();
+
+  const scene = storySceneForFloor(floor);
+  if (scene) showStoryScene(floor, scene);
+  else if (isBossFloor(floor) && bots[0]) showBossIntro(bots[0]);
+  else beginRoundCountdown();
+}
+
+function isBossFloor(floor = currentFloor) {
+  return BOSS_FLOORS.has(floor) || activeRouteType === "boss" || activeRouteType === "rival";
+}
+
+function beginRoundCountdown() {
+  closeOverlay();
+  mode = "countdown";
+  running = false;
+  roundStartAt = nowSec() + 4.2;
+  lastCountdownCue = "";
+}
+
+function bossIntroLine(bot) {
+  const name = bot?.profile?.name || bot?.name || "";
+  if (name.includes("Flicker")) return "Mira is above us. She asked if you were still alive. I was told to answer that question after this fight.";
+  if (name.includes("Venom")) return "They paid me to keep you here. Every minute you spend with me is another minute she spends locked upstairs.";
+  if (name.includes("Graves")) return "I kept things from the people who came before you. A ring. A badge. A strip of cloth. You can add something small before you leave.";
+  if (name.includes("Null")) return "She passed through the yard shaking from the cold. She still looked back toward the stairs like she expected you.";
+  if (name.includes("Vanta")) return "Mira came through this room asking for you. I told her the next person through that door would probably be tired, angry, and easy to kill.";
+  return "The tower sent me because you are close. Your rescue ends at these stairs.";
+}
+
+function showBossIntro(bot) {
+  mode = "bossIntro";
+  running = false;
+  const profile = bot.profile || {};
+  const spriteKey = profile.sprite || bot.sprite || "enemy_vanta";
+  const spritePath = ASSET_PATHS.images[spriteKey] || ASSET_PATHS.images.enemy_vanta;
+  const title = profile.title || bot.callSign || "Boss";
+  const line = bossIntroLine(bot);
+  const stageName = activeStage?.name || "Arena";
+
+  openOverlay(`
+    <div class="vsScreen bossIntroScreen">
+      <div class="bossIntroBackdrop"></div>
+      <div class="bossIntroFrame">
+        <div class="bossScene">
+          <div class="bossStageTag">${stageName}</div>
+          <div class="bossPortrait">
+            <img src="${spritePath}" alt="">
+          </div>
+        </div>
+        <div class="bossTextBox">
+          <div class="bossNamePlate">${bot.name}</div>
+          <div class="bossRole">${title}</div>
+          <p>${line}</p>
+          <button class="vsButton green bossContinue" data-action="beginBossIntro">FIGHT</button>
+        </div>
+      </div>
+    </div>
+  `, "bossIntroMenu");
+}
+
+function makeFloorBots(floor) {
+  const created = [];
+
+  if (isBossFloor(floor)) {
+    const profile = bossProfileForFloor(floor);
+    const spawn = activeStage.botSpawns[0] || { x: worldW - 90, y: worldH - 90, role: "boss" };
+    created.push(makeBot(profile.name, spawn.x, spawn.y, "boss", profile.color, floor, profile));
+    return created;
+  }
+
+  const count = activeRouteType === "standard" && floor >= 6 ? 2 : 1;
+  const rolesByFloor = [
+    ["duelist"],
+    ["baiter"],
+    ["hunter"],
+    ["boss"],
+    ["anchor"],
+    ["hunter", "flanker"],
+    ["baiter"],
+    ["boss"]
+  ];
+
+  const roles = activeRouteType === "cache" ? ["duelist"] : rolesByFloor[(floor - 1) % rolesByFloor.length] || ["duelist"];
+  for (let i = 0; i < count; i++) {
+    const template = activeStage.botSpawns[i % activeStage.botSpawns.length];
+    const profile = BOT_PROFILES[(floor + i - 1) % BOT_PROFILES.length];
+    const role = roles[i % roles.length] || template.role || "duelist";
+    created.push(makeBot(profile.name, template.x, template.y, role, profile.color, floor, profile));
+  }
+
+  return created;
+}
+
+
+function botName(i) {
+  return ["Vanta", "Mire", "Sable", "Rook", "Null", "Ash", "Vex"][i] || "Unit";
+}
+
+function makeBot(name, x, y, role, color, floor, profile = null) {
+  const p = nearestFreePoint(x, y, 28);
+  const difficulty = floor - 1;
+  const isBoss = role === "boss";
+  const persona = profile || BOT_PROFILES[0];
+  const weapon = WEAPON_BY_ID[persona.weaponId || "pistol"] || WEAPON_BY_ID.pistol;
+  const aimSkill = clamp(persona.aim ?? 0.62, 0.35, 0.95);
+
+  const roleSpeed = role === "duelist" ? 18 : role === "flanker" ? 12 : role === "coward" ? -8 : role === "anchor" ? -6 : isBoss ? 14 : 0;
+  const roleReaction = role === "duelist" ? -0.22 : role === "hunter" ? -0.08 : role === "coward" ? 0.12 : role === "support" ? 0.05 : isBoss ? -0.26 : 0;
+  const roleAim = role === "duelist" ? -0.08 : role === "hunter" ? -0.03 : role === "coward" ? 0.05 : role === "flanker" ? 0.02 : isBoss ? -0.09 : 0;
+  const maxHp = isBoss
+    ? 220 + difficulty * 16
+    : role === "duelist"
+      ? 138 + difficulty * 12
+      : 84 + difficulty * 7 + (role === "anchor" ? 18 : 0);
+
+  return {
+    name,
+    x: p.x,
+    y: p.y,
+    r: isBoss ? 14 : 11,
+    hp: maxHp,
+    maxHp,
+    color,
+    role,
+    profile: persona,
+    callSign: persona.callSign || persona.title || role,
+    model: persona.model || "blade",
+    trait: persona.trait || "searches like a player",
+    weaponId: weapon.id,
+    weapon,
+    speed: 112 + difficulty * 3.3 + roleSpeed,
+    aimSpread: clamp((0.26 - aimSkill * 0.18) - difficulty * 0.008 + roleAim, isBoss || role === "duelist" ? 0.045 : 0.085, 0.31),
+    reaction: clamp((0.78 - aimSkill * 0.34) - difficulty * 0.018 + roleReaction - (persona.reactionBoost || 0), isBoss || role === "duelist" ? 0.16 : 0.3, 0.75),
+    shotCd: rand(0.55, 1.4),
+    burstShots: 0,
+    strafeTimer: rand(0.2, 0.7),
+    smokeCharges: isBoss ? 2 : persona.smokeBias > 0.5 ? 1 : 0,
+    stealth: persona.bossKit === "flicker",
+    stealthReveal: persona.bossKit === "flicker" ? 1.2 : 0,
+    lastTraceAt: 0,
+    traceSide: 1,
+    lastFakeTraceAt: 0,
+    state: "patrol",
+    angle: rand(-Math.PI, Math.PI),
+    suspicion: 0,
+    suspicionBase: 7 + difficulty * 1.35 + (isBoss ? 18 : role === "duelist" ? 14 : 0),
+    lastSeen: null,
+    lastHeard: null,
+    target: null,
+    wrongCheck: null,
+    pressureHint: null,
+    pressureTimer: rand(1.2, 2.7),
+    maskDelay: 0,
+    panic: 0,
+    flinch: 0,
+    flash: 0,
+    stagger: 0,
+    thinkPause: 0,
+    suppressed: 0,
+    speedBurst: 0,
+    bossAbilityTimer: isBoss ? rand(1.1, 2.2) : 99,
+    tauntTimer: isBoss ? rand(1.8, 3.4) : 99,
+    flankSide: Math.random() < 0.5 ? -1 : 1,
+    memory: {
+      playerLastRoute: [],
+      shotsHeard: 0,
+      timesFlanked: 0,
+      lostSightAt: 0
+    },
+    pathPause: rand(0.1, 1.2),
+    moveJitter: rand(-1, 1),
+    path: [],
+    pathIndex: 0,
+    pathGoalKey: "",
+    pathRefresh: 0,
+    stuckTime: 0,
+    lastX: p.x,
+    lastY: p.y,
+    coverPoint: null,
+    coverTimer: 0,
+    decisionTimer: rand(0.14, 0.55),
+    alive: true,
+    recentlyHit: 0,
+    floor
+  };
+}
+
+
+function rectsOverlap(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+function canPlaceCover(rect) {
+  const keepouts = [activeStage.spawn, ...(activeStage.botSpawns || [])];
+  for (const p of keepouts) {
+    if (circleRectOverlap({ x: p.x, y: p.y, r: 58 }, rect)) return false;
+  }
+  return !walls.some(wall => rectsOverlap(wall, rect));
+}
+
+function addTacticalCover(floor) {
+  const patterns = [
+    [
+      { x: 305, y: 155, w: 88, h: 26 }, { x: 565, y: 155, w: 88, h: 26 },
+      { x: 305, y: 470, w: 88, h: 26 }, { x: 565, y: 470, w: 88, h: 26 },
+      { x: 80, y: 300, w: 72, h: 24 }, { x: 808, y: 300, w: 72, h: 24 }
+    ],
+    [
+      { x: 270, y: 105, w: 30, h: 92 }, { x: 660, y: 445, w: 30, h: 92 },
+      { x: 410, y: 285, w: 132, h: 24 }, { x: 125, y: 290, w: 90, h: 24 }, { x: 745, y: 290, w: 90, h: 24 }
+    ],
+    [
+      { x: 220, y: 250, w: 90, h: 24 }, { x: 650, y: 250, w: 90, h: 24 },
+      { x: 220, y: 365, w: 90, h: 24 }, { x: 650, y: 365, w: 90, h: 24 },
+      { x: 462, y: 292, w: 36, h: 60 }
+    ]
+  ];
+
+  const candidates = patterns[(floor - 1) % patterns.length];
+  const routeBonus = activeRouteType === "cache" || isBossFloor(floor) ? 2 : 0;
+  const count = isBossFloor(floor) ? candidates.length : Math.min(candidates.length, 4 + routeBonus + Math.floor(floor / 4));
+  for (const rect of candidates.slice(0, count)) {
+    const cover = { ...worldRect(rect), cover: true, softGlow: true };
+    if (canPlaceCover(cover)) walls.push(cover);
+  }
+
+  if (isBossFloor(floor)) {
+    const duelCover = [
+      { x: 160, y: 275, w: 86, h: 26 },
+      { x: 714, y: 340, w: 86, h: 26 },
+      { x: 428, y: 150, w: 104, h: 24 },
+      { x: 428, y: 468, w: 104, h: 24 }
+    ];
+    for (const rect of duelCover) {
+      const cover = { ...worldRect(rect), cover: true, softGlow: true };
+      if (canPlaceCover(cover)) walls.push(cover);
+    }
+  }
+}
+
+function isCircleBlocked(x, y, r) {
+  const c = { x, y, r };
+  return walls.some(wall => circleRectOverlap(c, wall));
+}
+
+function nearestFreePoint(x, y, r) {
+  const base = { x: clamp(x, r, worldW - r), y: clamp(y, r, worldH - r) };
+  if (!isCircleBlocked(base.x, base.y, r)) return base;
+
+  for (let radius = 8; radius <= 260; radius += 8) {
+    for (let i = 0; i < 36; i++) {
+      const a = (Math.PI * 2 * i) / 36;
+      const p = {
+        x: clamp(base.x + Math.cos(a) * radius, r, worldW - r),
+        y: clamp(base.y + Math.sin(a) * radius, r, worldH - r)
+      };
+      if (!isCircleBlocked(p.x, p.y, r)) return p;
+    }
+  }
+
+  let best = null;
+  let bestDistance = Infinity;
+  for (let py = r; py <= worldH - r; py += 16) {
+    for (let px = r; px <= worldW - r; px += 16) {
+      if (isCircleBlocked(px, py, r)) continue;
+      const d = Math.hypot(px - base.x, py - base.y);
+      if (d < bestDistance) {
+        best = { x: px, y: py };
+        bestDistance = d;
+      }
+    }
+  }
+
+  return best || base;
+}
+
+function resolveWallOverlap(entity, clearance = 0) {
+  const checkRadius = entity.r + clearance;
+  if (!isCircleBlocked(entity.x, entity.y, checkRadius)) return;
+  const p = nearestFreePoint(entity.x, entity.y, checkRadius);
+  entity.x = p.x;
+  entity.y = p.y;
+}
+
+function circleRectOverlap(c, r) {
+  const nx = clamp(c.x, r.x, r.x + r.w);
+  const ny = clamp(c.y, r.y, r.y + r.h);
+  return Math.hypot(c.x - nx, c.y - ny) < c.r;
+}
+
+function moveEntity(e, dx, dy) {
+  const startX = e.x;
+  const startY = e.y;
+  const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / 5));
+  const stepX = dx / steps;
+  const stepY = dy / steps;
+
+  for (let i = 0; i < steps; i++) {
+    tryMoveAxis(e, "x", stepX);
+    tryMoveAxis(e, "y", stepY);
+  }
+
+  return Math.hypot(e.x - startX, e.y - startY);
+}
+
+function tryMoveAxis(e, axis, amount) {
+  if (!amount) return false;
+
+  const old = e[axis];
+  e[axis] = clamp(old + amount, e.r, axis === "x" ? worldW - e.r : worldH - e.r);
+
+  if (isCircleBlocked(e.x, e.y, e.r)) {
+    e[axis] = old;
+    return false;
+  }
+
+  return true;
+}
+
+function lineIntersectsRect(a, b, r) {
+  const steps = Math.ceil(dist(a, b) / 6);
+  for (let i = 0; i <= steps; i++) {
+    const t = i / Math.max(steps, 1);
+    const x = a.x + (b.x - a.x) * t;
+    const y = a.y + (b.y - a.y) * t;
+    if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return true;
+  }
+  return false;
+}
+
+function hasLineOfSight(a, b) {
+  for (const wall of walls) {
+    if (lineIntersectsRect(a, b, wall)) return false;
+  }
+  return true;
+}
+
+function smokeBlocksLine(a, b) {
+  for (const smoke of smokes) {
+    if (smoke.t <= 0) continue;
+    const p = closestPointOnLine(smoke, a, b);
+    if (Math.hypot(smoke.x - p.x, smoke.y - p.y) < smoke.r) return true;
+  }
+  return false;
+}
+
+function linePassesSmoke(a, b) {
+  return smokeBlocksLine(a, b);
+}
+
+function recentPoint(point, seconds = 4.5) {
+  return point && (point.t === undefined || nowSec() - point.t <= seconds);
+}
+
+function nearestBotHealthPickup(bot) {
+  if (!pickups.length || bot.hp > bot.maxHp * 0.58) return null;
+
+  let best = null;
+  let bestScore = Infinity;
+
+  for (const pickup of pickups) {
+    if (pickup.heal <= 0) continue;
+    const d = dist(bot, pickup);
+    if (d > 420 && !hasLineOfSight(bot, pickup)) continue;
+    const pathPenalty = hasClearMovementPath(bot, pickup, bot.r + 4) ? 0 : 90;
+    const exposedPenalty = hasLineOfSight(player, pickup) ? 90 : 0;
+    const score = d + pathPenalty + exposedPenalty;
+
+    if (score < bestScore) {
+      best = pickup;
+      bestScore = score;
+    }
+  }
+
+  return best;
+}
+
+function botSmokeFirePoint(bot) {
+  if (!hasLineOfSight(bot, player) || !linePassesSmoke(bot, player)) return null;
+
+  const profile = bot.profile || BOT_PROFILES[0];
+  const canBlindFire =
+    bot.role === "boss" ||
+    bot.suppressed > 0 ||
+    bot.suspicion > 72 ||
+    profile.smokeBias > 0.45;
+
+  if (!canBlindFire) return null;
+
+  if (recentPoint(bot.lastSeen, bot.role === "boss" ? 7.0 : 4.2)) {
+    return safePointNear(bot.lastSeen.x, bot.lastSeen.y, bot.role === "boss" ? 28 : 48);
+  }
+
+  if (recentPoint(bot.pressureHint, 5.2)) {
+    return safePointNear(bot.pressureHint.x, bot.pressureHint.y, bot.role === "boss" ? 36 : 58);
+  }
+
+  if (recentPoint(bot.lastHeard, 3.8)) {
+    return safePointNear(bot.lastHeard.x, bot.lastHeard.y, 64);
+  }
+
+  return null;
+}
+
+function hasVisualLineOfSight(a, b) {
+  return hasLineOfSight(a, b) && !smokeBlocksLine(a, b);
+}
+
+function withinVisionCone(bot, target) {
+  const d = dist(bot, target);
+  const visionRange = 245 + Math.min(currentFloor, 7) * 13;
+  if (d > visionRange) return false;
+  const to = angleTo(bot, target);
+  const diff = Math.abs(normAngle(to - bot.angle));
+  return diff < Math.PI * 0.46 && hasVisualLineOfSight(bot, target);
+}
+
+function rayBlocked(a, angle, maxDist) {
+  const b = { x: a.x + Math.cos(angle) * maxDist, y: a.y + Math.sin(angle) * maxDist };
+  for (let d = 0; d <= maxDist; d += 5) {
+    const p = { x: a.x + Math.cos(angle) * d, y: a.y + Math.sin(angle) * d };
+    for (const wall of walls) {
+      if (p.x >= wall.x && p.x <= wall.x + wall.w && p.y >= wall.y && p.y <= wall.y + wall.h) {
+        return p;
+      }
+    }
+  }
+  return b;
+}
+
+function safePointNear(x, y, spread = 90) {
+  for (let i = 0; i < 24; i++) {
+    const p = {
+      x: clamp(x + rand(-spread, spread), 28, worldW - 28),
+      y: clamp(y + rand(-spread, spread), 28, worldH - 28)
+    };
+    if (!isCircleBlocked(p.x, p.y, 16)) return p;
+  }
+  return nearestFreePoint(x, y, 18);
+}
+
+function hasClearMovementPath(a, b, r) {
+  const steps = Math.max(1, Math.ceil(dist(a, b) / 8));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const x = a.x + (b.x - a.x) * t;
+    const y = a.y + (b.y - a.y) * t;
+    if (isCircleBlocked(x, y, r)) return false;
+  }
+  return true;
+}
+
+function cellKey(c, r) {
+  return `${c},${r}`;
+}
+
+function pointToCell(p) {
+  return {
+    c: clamp(Math.floor(p.x / NAV_CELL), 0, NAV_COLS - 1),
+    r: clamp(Math.floor(p.y / NAV_CELL), 0, NAV_ROWS - 1)
+  };
+}
+
+function cellCenter(c, r) {
+  return {
+    x: clamp(c * NAV_CELL + NAV_CELL / 2, 18, worldW - 18),
+    y: clamp(r * NAV_CELL + NAV_CELL / 2, 18, worldH - 18)
+  };
+}
+
+function cellWalkable(c, r, radius) {
+  if (c < 0 || r < 0 || c >= NAV_COLS || r >= NAV_ROWS) return false;
+  const p = cellCenter(c, r);
+  return !isCircleBlocked(p.x, p.y, radius);
+}
+
+function findPath(start, goal, radius) {
+  const safeStart = nearestFreePoint(start.x, start.y, radius);
+  const safeGoal = nearestFreePoint(goal.x, goal.y, radius);
+  const s = pointToCell(safeStart);
+  const g = pointToCell(safeGoal);
+  const startKey = cellKey(s.c, s.r);
+  const goalKey = cellKey(g.c, g.r);
+
+  if (startKey === goalKey) return [safeGoal];
+
+  const open = [{ c: s.c, r: s.r, g: 0, f: Math.hypot(g.c - s.c, g.r - s.r), parent: null }];
+  const best = new Map([[startKey, 0]]);
+  const closed = new Set();
+  const dirs = [
+    [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
+    [1, 1, 1.42], [1, -1, 1.42], [-1, 1, 1.42], [-1, -1, 1.42]
+  ];
+
+  let winner = null;
+  let guard = 0;
+
+  while (open.length && guard < 2600) {
+    guard += 1;
+    open.sort((a, b) => a.f - b.f);
+    const node = open.shift();
+    const key = cellKey(node.c, node.r);
+    if (closed.has(key)) continue;
+    closed.add(key);
+
+    if (key === goalKey) {
+      winner = node;
+      break;
+    }
+
+    for (const [dc, dr, cost] of dirs) {
+      const nc = node.c + dc;
+      const nr = node.r + dr;
+      if (!cellWalkable(nc, nr, radius)) continue;
+
+      if (dc && dr) {
+        if (!cellWalkable(node.c + dc, node.r, radius) || !cellWalkable(node.c, node.r + dr, radius)) {
+          continue;
+        }
+      }
+
+      const nKey = cellKey(nc, nr);
+      if (closed.has(nKey)) continue;
+
+      const gScore = node.g + cost;
+      if (best.has(nKey) && best.get(nKey) <= gScore) continue;
+
+      best.set(nKey, gScore);
+      const h = Math.hypot(g.c - nc, g.r - nr);
+      open.push({ c: nc, r: nr, g: gScore, f: gScore + h, parent: node });
+    }
+  }
+
+  if (!winner) return [safeGoal];
+
+  const points = [];
+  let n = winner;
+  while (n) {
+    points.push(cellCenter(n.c, n.r));
+    n = n.parent;
+  }
+  points.reverse();
+  points.shift();
+  points.push(safeGoal);
+  return smoothPath(points, radius);
+}
+
+function smoothPath(points, radius) {
+  if (points.length <= 2) return points;
+  const smoothed = [];
+  let i = 0;
+
+  while (i < points.length) {
+    smoothed.push(points[i]);
+    if (i >= points.length - 1) break;
+
+    let next = points.length - 1;
+    for (; next > i + 1; next--) {
+      if (hasClearMovementPath(points[i], points[next], radius)) break;
+    }
+
+    i = Math.max(i + 1, next);
+  }
+
+  return smoothed;
+}
+
+function getBotMovePoint(bot, target) {
+  const radius = bot.r + 4;
+  const goal = nearestFreePoint(target.x, target.y, radius);
+
+  if (hasClearMovementPath(bot, goal, radius)) {
+    bot.path = [];
+    bot.pathIndex = 0;
+    bot.pathGoalKey = "";
+    return goal;
+  }
+
+  const goalKey = `${Math.round(goal.x / 16)},${Math.round(goal.y / 16)}`;
+  bot.pathRefresh -= 1;
+
+  if (!bot.path.length || bot.pathGoalKey !== goalKey || bot.pathRefresh <= 0) {
+    bot.path = findPath(bot, goal, radius);
+    bot.pathIndex = 0;
+    bot.pathGoalKey = goalKey;
+    bot.pathRefresh = 18;
+  }
+
+  while (bot.pathIndex < bot.path.length - 1 && dist(bot, bot.path[bot.pathIndex]) < 18) {
+    bot.pathIndex += 1;
+  }
+
+  return bot.path[bot.pathIndex] || goal;
+}
+
+function nearestWallDistance(p) {
+  let best = Infinity;
+  for (const wall of walls) {
+    const nx = clamp(p.x, wall.x, wall.x + wall.w);
+    const ny = clamp(p.y, wall.y, wall.y + wall.h);
+    best = Math.min(best, Math.hypot(p.x - nx, p.y - ny));
+  }
+  return best;
+}
+
+function chooseCoverPoint(bot) {
+  if (bot.coverPoint && bot.coverTimer > nowSec() && !isCircleBlocked(bot.coverPoint.x, bot.coverPoint.y, bot.r + 4)) {
+    return bot.coverPoint;
+  }
+
+  const wantsToBreakSight = bot.hp < bot.maxHp * 0.52 || bot.role === "coward";
+  let best = null;
+  let bestScore = -Infinity;
+
+  for (let i = 0; i < 34; i++) {
+    const a = (Math.PI * 2 * i) / 34 + rand(-0.08, 0.08);
+    const range = rand(70, 165);
+    const p = nearestFreePoint(bot.x + Math.cos(a) * range, bot.y + Math.sin(a) * range, bot.r + 4);
+    if (dist(p, player) < 70 || dist(p, player) > 360) continue;
+
+    const wallDistance = nearestWallDistance(p);
+    const nearCover = clamp(70 - wallDistance, 0, 70);
+    const lineToPlayer = hasVisualLineOfSight(p, player);
+    const route = hasClearMovementPath(bot, p, bot.r + 4) ? 26 : 0;
+    const distanceScore = 90 - Math.abs(dist(p, player) - 150);
+    const sightScore = wantsToBreakSight ? (lineToPlayer ? -45 : 55) : (lineToPlayer ? 35 : -10);
+    const score = nearCover * 1.1 + distanceScore * 0.25 + sightScore + route;
+
+    if (score > bestScore) {
+      best = p;
+      bestScore = score;
+    }
+  }
+
+  bot.coverPoint = best;
+  bot.coverTimer = nowSec() + rand(1.2, 2.4);
+  return best;
+}
+
+function randomFreePoint(minPlayerDistance = 100) {
+  for (let i = 0; i < 80; i++) {
+    const p = {
+      x: rand(36, worldW - 36),
+      y: rand(36, worldH - 36)
+    };
+    if (dist(p, player) < minPlayerDistance) continue;
+    if (isCircleBlocked(p.x, p.y, 22)) continue;
+    if (breakables.some(item => item.alive && dist(item, p) < 42)) continue;
+    return p;
+  }
+  return nearestFreePoint(worldW * 0.5, worldH * 0.5, 22);
+}
+
+function spawnBreakables(floor) {
+  const count = Math.min(7, 3 + Math.ceil(floor * 0.55));
+  for (let i = 0; i < count; i++) {
+    const p = randomFreePoint(130);
+    const type = i % 3 === 2 ? "smoke" : "med";
+    breakables.push({
+      x: p.x,
+      y: p.y,
+      r: rand(11, 16),
+      hp: 32 + floor * 3,
+      maxHp: 32 + floor * 3,
+      type,
+      alive: true,
+      wobble: rand(0, Math.PI * 2)
+    });
+  }
+}
+
+function spawnSmokeCanisters(floor) {
+  const count = floor >= 2 ? (isBossFloor(floor) ? 2 : 1) : 0;
+  for (let i = 0; i < count; i++) {
+    const p = randomFreePoint(160);
+    breakables.push({
+      x: p.x,
+      y: p.y,
+      r: 13,
+      hp: 24 + floor * 2,
+      maxHp: 24 + floor * 2,
+      type: "smoke",
+      alive: true,
+      wobble: rand(0, Math.PI * 2)
+    });
+  }
+}
+
+
+function addPoisonPuddle(x, y, radius = 72, duration = 6.8, color = "#7dff72") {
+  const p = nearestFreePoint(x, y, 24);
+  poisonPuddles.push({
+    x: p.x,
+    y: p.y,
+    r: radius,
+    t: duration,
+    maxT: duration,
+    color,
+    wobble: rand(0, Math.PI * 2),
+    pulse: rand(0, Math.PI * 2)
+  });
+  if (poisonPuddles.length > 7) poisonPuddles.shift();
+  addParticles("spark", p.x, p.y, rand(-Math.PI, Math.PI), 22, color);
+  addScreenFlash(0.015);
+}
+
+function updatePoisonPuddles(dt) {
+  for (const puddle of poisonPuddles) {
+    puddle.t -= dt;
+    if (mode === "running" && dist(player, puddle) < player.r + puddle.r * 0.78) {
+      damagePlayer((puddle.r > 80 ? 13 : 9) * dt, "poison");
+      player.spotted = Math.max(player.spotted, 0.12);
+      if (Math.random() < 0.18) {
+        addParticles("spark", player.x + rand(-6, 6), player.y + rand(-6, 6), rand(-Math.PI, Math.PI), 2, puddle.color);
+      }
+    }
+  }
+
+  for (let i = poisonPuddles.length - 1; i >= 0; i--) {
+    if (poisonPuddles[i].t <= 0) poisonPuddles.splice(i, 1);
+  }
+}
+
+function drawPoisonPuddles() {
+  const t = nowSec();
+  for (const puddle of poisonPuddles) {
+    if (!viewportVisible(puddle, puddle.r + 40)) continue;
+    const pct = clamp(puddle.t / puddle.maxT, 0, 1);
+    const r = puddle.r + Math.sin(t * 2.8 + puddle.pulse) * 5;
+    const g = ctx.createRadialGradient(puddle.x, puddle.y, 5, puddle.x, puddle.y, r);
+    g.addColorStop(0, hexToRgba(puddle.color, 0.36 * pct));
+    g.addColorStop(0.62, hexToRgba(puddle.color, 0.18 * pct));
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(puddle.x, puddle.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = 0.16 * pct;
+    ctx.strokeStyle = puddle.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(puddle.x, puddle.y, r * 0.72, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function addSmoke(x, y, radius = 74, duration = 7.0, color = "#7cc7ff") {
+  const p = nearestFreePoint(x, y, 24);
+  smokes.push({
+    x: p.x,
+    y: p.y,
+    r: radius,
+    t: duration,
+    maxT: duration,
+    wobble: rand(0, Math.PI * 2),
+    color
+  });
+  if (smokes.length > 8) smokes.shift();
+  addParticles("dust", p.x, p.y, rand(-Math.PI, Math.PI), 18);
+  playSfx("smoke");
+}
+
+function throwSmoke() {
+  if (mode !== "running" || player.smokeCharges <= 0) return;
+  const target = { x: mouse.x, y: mouse.y };
+  if (dist(player, target) > 230) return;
+  if (!hasLineOfSight(player, target)) return;
+  player.smokeCharges -= 1;
+  addSmoke(target.x, target.y, 78, 6.5);
+  addLog("Smoke deployed. It blocks sight. Bullets still pass through.");
+  updateHud();
+}
+
+function updatePickups() {
+  for (let i = pickups.length - 1; i >= 0; i--) {
+    const pickup = pickups[i];
+    pickup.t -= 1;
+    if (pickup.t <= 0) {
+      pickups.splice(i, 1);
+      continue;
+    }
+
+    if (dist(player, pickup) <= player.r + pickup.r + 7) {
+      const before = player.hp;
+      player.hp = clamp(player.hp + pickup.heal * (1 + powerRank("medSense") * 0.12), 0, player.maxHp);
+      floatText.push({ x: player.x, y: player.y - 24, text: `+${Math.round(player.hp - before)}`, t: 0.8 });
+      pickups.splice(i, 1);
+      continue;
+    }
+
+    const woundedBot = bots.find(bot => bot.alive && bot.hp < bot.maxHp * 0.62 && dist(bot, pickup) <= bot.r + pickup.r + 8);
+    if (woundedBot) {
+      const before = woundedBot.hp;
+      woundedBot.hp = clamp(woundedBot.hp + pickup.heal * 0.78, 0, woundedBot.maxHp);
+      woundedBot.panic = Math.max(0, woundedBot.panic - 0.35);
+      floatText.push({ x: woundedBot.x, y: woundedBot.y - 26, text: `+${Math.round(woundedBot.hp - before)}`, t: 0.8 });
+      pickups.splice(i, 1);
+    }
+  }
+}
+
+function damageBreakable(item, dmg, hitPoint = item, angle = 0, weapon = currentWeapon()) {
+  item.hp -= dmg;
+  item.wobble += rand(-0.4, 0.4);
+  floatText.push({ x: item.x, y: item.y - 18, text: "crack", t: 0.45 });
+  addImpact("breakable", hitPoint.x, hitPoint.y, angle, weapon);
+
+  if (item.hp > 0) return;
+
+  item.alive = false;
+
+  if (item.type === "smoke") {
+    addSmoke(item.x, item.y, 82, 7.0);
+    floatText.push({ x: item.x, y: item.y - 26, text: "smoke", t: 0.8 });
+  } else {
+    pickups.push({
+      x: item.x,
+      y: item.y,
+      r: 9,
+      heal: 24 + Math.min(16, currentFloor * 2),
+      t: 900
+    });
+    floatText.push({ x: item.x, y: item.y - 26, text: "med", t: 0.8 });
+  }
+
+  addParticles("wood", item.x, item.y, angle, 12);
+  addParticles("spark", item.x, item.y, angle, 5);
+}
+
+function lineCircleHit(entity, a, b, padding = 4) {
+  const p = closestPointOnLine(entity, a, b);
+  const d = Math.hypot(entity.x - p.x, entity.y - p.y);
+  if (d > entity.r + padding) return null;
+  return dist(a, p);
+}
+
+function isStealthBoss(bot) {
+  return bot?.profile?.bossKit === "flicker";
+}
+
+function revealStealth(bot, seconds = 1.0) {
+  if (!isStealthBoss(bot)) return;
+  bot.stealthReveal = Math.max(bot.stealthReveal || 0, seconds);
+}
+
+function stealthVisibilityAlpha(bot) {
+  if (!isStealthBoss(bot)) return 1;
+  if (showDebug) return 1;
+
+  const pulseReveal = player.pulseActive > 0 && dist(player, bot) < runStats.pulseRange;
+  if (pulseReveal) return 0.95;
+
+  if ((bot.stealthReveal || 0) > 0) {
+    return clamp(0.32 + bot.stealthReveal * 0.46, 0.32, 0.9);
+  }
+
+  const visual = hasVisualLineOfSight(player, bot);
+  if (visual) return 0.16;
+
+  return 0;
+}
+
+function botFullyRevealed(bot) {
+  if (!isStealthBoss(bot)) return true;
+  if (showDebug) return true;
+  if (player.pulseActive > 0 && dist(player, bot) < runStats.pulseRange) return true;
+  return (bot.stealthReveal || 0) > 0.18;
+}
+
+function addMovementTrace(x, y, angle, opts = {}) {
+  movementTraces.push({
+    x,
+    y,
+    angle,
+    t: opts.t || 3.0,
+    maxT: opts.t || 3.0,
+    color: opts.color || "#d8f6ff",
+    fake: !!opts.fake,
+    boss: !!opts.boss,
+    owner: opts.owner || "bot",
+    kind: opts.kind || "footprint",
+    size: opts.size || 1,
+    side: opts.side || 1,
+    seenBy: new Set()
+  });
+  if (movementTraces.length > 180) movementTraces.splice(0, movementTraces.length - 180);
+}
+
+function maybeLeavePlayerFootprint(movedDistance, sneaking) {
+  if (mode !== "running" || movedDistance < 0.9) return;
+
+  const now = nowSec();
+  const spacing = sneaking ? 0.68 : 0.34;
+  if (now - lastPlayerTraceAt < spacing) return;
+
+  lastPlayerTraceAt = now;
+  playerTraceSide *= -1;
+  const sideOffset = playerTraceSide * 4.2;
+  const back = 8;
+  const px = player.x - Math.cos(player.angle) * back + Math.cos(player.angle + Math.PI / 2) * sideOffset;
+  const py = player.y - Math.sin(player.angle) * back + Math.sin(player.angle + Math.PI / 2) * sideOffset;
+
+  addMovementTrace(px, py, player.angle + rand(-0.08, 0.08), {
+    t: sneaking ? 2.1 : 4.4,
+    color: sneaking ? "#aab2c9" : "#d8f6ff",
+    owner: "player",
+    size: sneaking ? 0.56 : 0.82,
+    side: playerTraceSide
+  });
+}
+
+function maybeLeaveMovementTrace(bot, movedDistance) {
+  if (!bot.alive || mode !== "running") return;
+
+  const loudMove = bot.state === "attack" || bot.speedBurst > 0 || movedDistance > 2.4;
+  const stealthBoss = isStealthBoss(bot);
+  if (!stealthBoss && !loudMove) return;
+
+  const now = nowSec();
+  const spacing = stealthBoss ? 0.2 : 0.44;
+  if (bot.lastTraceAt && now - bot.lastTraceAt < spacing) return;
+  bot.lastTraceAt = now;
+  bot.traceSide = (bot.traceSide || 1) * -1;
+
+  const sideOffset = bot.traceSide * 4.4;
+  addMovementTrace(
+    bot.x - Math.cos(bot.angle) * 7 + Math.cos(bot.angle + Math.PI / 2) * sideOffset + rand(-1.5, 1.5),
+    bot.y - Math.sin(bot.angle) * 7 + Math.sin(bot.angle + Math.PI / 2) * sideOffset + rand(-1.5, 1.5),
+    bot.angle + rand(-0.12, 0.12),
+    {
+      t: stealthBoss ? 3.6 : 2.6,
+      color: stealthBoss ? "#8cf4ff" : "#d8f6ff",
+      owner: "bot",
+      boss: stealthBoss,
+      size: stealthBoss ? 1.05 : 0.76,
+      side: bot.traceSide
+    }
+  );
+
+  if (stealthBoss && bot.hp < bot.maxHp * 0.38 && now - (bot.lastFakeTraceAt || 0) > 3.2 && Math.random() < 0.08) {
+    bot.lastFakeTraceAt = now;
+    const fakeAngle = bot.angle + (Math.random() < 0.5 ? 1 : -1) * rand(0.9, 1.5);
+    const fakePoint = safePointNear(bot.x + Math.cos(fakeAngle) * rand(45, 90), bot.y + Math.sin(fakeAngle) * rand(45, 90), 38);
+    addMovementTrace(fakePoint.x, fakePoint.y, fakeAngle, {
+      t: 2.4,
+      color: "#ff5c7a",
+      owner: "bot",
+      boss: true,
+      fake: true,
+      size: 0.9
+    });
+  }
+}
+
+function traceVisibleToPlayer(trace) {
+  if (showDebug) return true;
+  if (!viewportVisible(trace, 72)) return false;
+  if (trace.owner === "player") return hasLineOfSight(player, trace);
+  return hasLineOfSight(player, trace);
+}
+
+function botCanReadTrace(bot, trace) {
+  if (!bot.alive || trace.owner !== "player") return false;
+  if (trace.t <= 0 || trace.t / trace.maxT < 0.18) return false;
+  if (dist(bot, trace) > (bot.role === "boss" ? 460 : 330)) return false;
+  return hasVisualLineOfSight(bot, trace);
+}
+
+function consumeVisibleFootprints(bot) {
+  if (bot.lastSeen && nowSec() - bot.lastSeen.t < 0.7) return;
+
+  let best = null;
+  let bestScore = -Infinity;
+
+  for (const trace of movementTraces) {
+    if (!botCanReadTrace(bot, trace)) continue;
+    const age = 1 - trace.t / trace.maxT;
+    const score = trace.t * 12 - dist(bot, trace) * 0.025 - age * 8;
+    if (score > bestScore) {
+      best = trace;
+      bestScore = score;
+    }
+  }
+
+  if (!best) return;
+
+  bot.suspicion = Math.max(bot.suspicion, bot.role === "boss" ? 46 : 32);
+  bot.lastHeard = {
+    x: best.x + Math.cos(best.angle) * rand(18, 46),
+    y: best.y + Math.sin(best.angle) * rand(18, 46),
+    t: nowSec()
+  };
+  bot.state = bot.state === "patrol" ? "search" : bot.state;
+  bot.thinkPause = Math.max(bot.thinkPause || 0, bot.role === "boss" ? 0.04 : 0.1);
+}
+
+function drawMovementTraces() {
+  for (const trace of movementTraces) {
+    if (!traceVisibleToPlayer(trace)) continue;
+
+    const pct = clamp(trace.t / trace.maxT, 0, 1);
+    const fade = Math.sin(pct * Math.PI);
+    const alpha = clamp(pct * 0.55 + fade * 0.12, 0, 1) * (trace.fake ? 0.18 : trace.boss ? 0.36 : trace.owner === "player" ? 0.16 : 0.24);
+
+    ctx.save();
+    ctx.translate(trace.x, trace.y);
+    ctx.rotate(trace.angle);
+
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = trace.fake ? "rgba(255,92,122,0.78)" : hexToRgba(trace.color, 0.9);
+
+    const side = trace.side || 1;
+    ctx.beginPath();
+    ctx.ellipse(-4.5 * trace.size, side * 2.8 * trace.size, 4.2 * trace.size, 8.5 * trace.size, 0.05, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = alpha * 0.55;
+    ctx.beginPath();
+    ctx.ellipse(5.5 * trace.size, -side * 2.2 * trace.size, 3.3 * trace.size, 6.4 * trace.size, -0.08, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (trace.boss || trace.fake) {
+      ctx.globalAlpha = alpha * 0.42;
+      ctx.strokeStyle = trace.fake ? "rgba(255,92,122,0.9)" : hexToRgba(trace.color, 0.95);
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-16 * trace.size, 0);
+      ctx.lineTo(12 * trace.size, 0);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function botVisibleToPlayer(bot) {
+  if (showDebug) return true;
+  if (isStealthBoss(bot)) return stealthVisibilityAlpha(bot) > 0.05;
+  const pulseReveal = player.pulseActive > 0 && dist(player, bot) < runStats.pulseRange;
+  return hasVisualLineOfSight(player, bot) || pulseReveal;
+}
+
+function botVisionVisibleToPlayer(bot) {
+  if (showDebug) return true;
+  if (isStealthBoss(bot) && !botFullyRevealed(bot)) return false;
+  return hasVisualLineOfSight(player, bot);
+}
+
+function stageFootstepMaterial() {
+  return activeStage?.material || "concrete";
+}
+
+function footstepKeysForMaterial(material) {
+  const map = {
+    concrete: ["footstep_concrete_1", "footstep_concrete_2", "footstep_concrete_3", "footstep_concrete_4"],
+    wood: ["footstep_wood_1", "footstep_wood_2", "footstep_wood_3", "footstep_wood_4"],
+    snow: ["footstep_snow_1", "footstep_snow_2", "footstep_snow_3", "footstep_snow_4"],
+    nature: ["footstep_nature_1", "footstep_nature_2", "footstep_nature_3", "footstep_nature_4"],
+    gravel: ["footstep_gravel_1", "footstep_gravel_2", "footstep_gravel_3", "footstep_gravel_4"],
+    laminate: ["footstep_laminate_1", "footstep_laminate_2", "footstep_laminate_3", "footstep_laminate_4"]
+  };
+  return map[material] || map.concrete;
+}
+
+function maybePlayPlayerFootstep(sneaking, movedDistance) {
+  if (mode !== "running" || movedDistance < 0.75) return;
+  const t = nowSec();
+  const interval = sneaking ? 0.58 : 0.31;
+  if (t - lastPlayerFootstepAt < interval) return;
+  lastPlayerFootstepAt = t;
+  playFootstepSound(stageFootstepMaterial(), sneaking, 1);
+}
+
+function maybePlayBotFootstep(bot, movedDistance) {
+  if (mode !== "running" || !bot.alive || movedDistance < 0.65) return;
+
+  const t = nowSec();
+  const interval = bot.role === "boss" || bot.role === "duelist" ? 0.34 : 0.39;
+  if (bot.lastFootstepAt && t - bot.lastFootstepAt < interval) return;
+
+  const d = dist(player, bot);
+  if (d > 390) return;
+
+  bot.lastFootstepAt = t;
+  const sneaking = bot.state === "search" && bot.suspicion < 44;
+  const distanceScale = clamp(1 - d / 420, 0.12, 0.72);
+  const stateBoost = bot.state === "attack" ? 1.18 : sneaking ? 0.55 : 0.85;
+  playFootstepSound(stageFootstepMaterial(), sneaking, distanceScale * stateBoost, Math.random() < 0.16);
+}
+
+function updatePlayer(dt) {
+  let x = 0;
+  let y = 0;
+  if (keys.has("w")) y -= 1;
+  if (keys.has("s")) y += 1;
+  if (keys.has("a")) x -= 1;
+  if (keys.has("d")) x += 1;
+
+  const moving = x || y;
+  player.moveIntent = moving ? 1 : 0;
+  const sneaking = keys.has("shift");
+  const speed = player.baseSpeed * runStats.moveMult * (sneaking ? 0.55 : 1);
+  if (moving) {
+    resumeAudio();
+    const l = len(x, y);
+    const movedDistance = moveEntity(player, (x / l) * speed * dt, (y / l) * speed * dt);
+    player.noise = sneaking ? 44 * runStats.sneakNoiseMult : 112;
+    maybePlayPlayerFootstep(sneaking, movedDistance);
+    maybeLeavePlayerFootprint(movedDistance, sneaking);
+  } else {
+    player.noise = 10;
+  }
+
+  updatePickups();
+
+  mouse.x = screenMouseX() + camera.x;
+  mouse.y = screenMouseY() + camera.y;
+  player.angle = angleTo(player, mouse);
+  player.shotCd = Math.max(0, player.shotCd - dt);
+  player.fireBuffer = Math.max(0, player.fireBuffer - dt);
+  player.nearMissCd = Math.max(0, player.nearMissCd - dt);
+  player.pulseCd = Math.max(0, player.pulseCd - dt);
+  player.pulseActive = Math.max(0, player.pulseActive - dt);
+  player.spotted = Math.max(0, player.spotted - dt);
+
+  if (player.reload > 0) {
+    player.reload -= dt;
+    if (player.reload <= 0) {
+      player.ammo = player.maxAmmo;
+      addLog("Reload complete.");
+    }
+  }
+
+  echoes.push({ x: player.x, y: player.y, t: nowSec(), kind: "player" });
+  while (echoes.length > 180) echoes.shift();
+
+  if (mouse.down || player.fireBuffer > 0) shootPlayer();
+}
+
+function shootPlayer() {
+  if (player.shotCd > 0 || player.reload > 0 || gameOver || mode !== "running") return;
+
+  if (player.ammo <= 0) {
+    playAssetSfx("gun_empty", 0.32);
+    startReload();
+    return;
+  }
+
+  const weapon = currentWeapon();
+  const firingAngle = aimAssistAngle(player.angle, weapon);
+  player.fireBuffer = 0;
+  player.ammo -= 1;
+  player.shotCd = weapon.fireDelay;
+  player.noise = weapon.noise;
+  player.shots += 1;
+  player.recoil = Math.max(player.recoil, weapon.recoil);
+  player.weaponHeat = Math.min(1, player.weaponHeat + (weapon.id === "smg" ? 0.09 : weapon.id === "lmg" ? 0.07 : 0.035) * (runStats.heatMult || 1));
+  addShake(weapon.shake);
+  addScreenFlash(0.025);
+  playSfx("shot", weapon.shake, weapon.shotSfx);
+
+  const muzzle = playerBarrelPoint(firingAngle);
+  addMuzzleFlash(muzzle.x, muzzle.y, firingAngle, weapon);
+  addShellCasing(firingAngle, weapon);
+
+  let hitBot = false;
+  for (let i = 0; i < weapon.pellets; i++) {
+    const spreadRadius = Math.max(0.006, weapon.spread + player.weaponHeat * weapon.heatSpread);
+    const pelletSpread = rand(-spreadRadius, spreadRadius);
+    const pelletAngle = firingAngle + pelletSpread;
+    const didHitBot = firePlayerBullet(pelletAngle, weapon, muzzle);
+    hitBot = hitBot || didHitBot;
+  }
+
+  for (const bot of bots) {
+    if (!bot.alive) continue;
+    bot.memory.shotsHeard += 1;
+    if (dist(bot, player) < 365) {
+      bot.lastHeard = safePointNear(player.x, player.y, 48);
+      bot.suspicion = Math.max(bot.suspicion, weapon.id === "smg" ? 56 : 42);
+      if (bot.state === "patrol") {
+        bot.state = "search";
+        bot.thinkPause = Math.max(bot.thinkPause || 0, rand(0.05, 0.18));
+      }
+      if (weapon.id === "smg" && bot.state === "attack" && Math.random() < 0.35) {
+        bot.flinch = Math.max(bot.flinch, 0.05);
+      }
+      if (currentFloor >= 2) queueIntel(bot, player.x, player.y, 0.45, "shot sound", rand(0.18, 0.65));
+    }
+  }
+
+  if (hitBot && currentFloor >= 2) {
+    queueIntel(null, player.x, player.y, 0.7, "hit confirmed", rand(0.12, 0.5));
+  }
+
+  if (player.ammo <= 0) startReload();
+}
+
+function firePlayerBullet(ang, weapon, muzzle) {
+  const range = weapon.id === "shotgun" ? 510 : 900;
+  const end = rayBlocked(player, ang, range);
+  const wallHit = dist(player, end) < range - 4;
+
+  let hitTarget = null;
+  let hitKind = "";
+  let hitDist = wallHit ? dist(player, end) : Infinity;
+
+  for (const item of breakables) {
+    if (!item.alive) continue;
+    const along = lineCircleHit(item, player, end, 5);
+    if (along !== null && along < hitDist && hasLineOfSight(player, item)) {
+      hitTarget = item;
+      hitKind = "breakable";
+      hitDist = along;
+    }
+  }
+
+  for (const bot of bots) {
+    if (!bot.alive) continue;
+    const along = lineCircleHit(bot, player, end, 4);
+    if (along !== null && along < hitDist && hasLineOfSight(player, bot)) {
+      hitTarget = bot;
+      hitKind = "bot";
+      hitDist = along;
+    }
+  }
+
+  const hitPoint = hitKind
+    ? closestPointOnLine(hitTarget, player, end)
+    : end;
+
+  bullets.push({
+    x1: muzzle.x,
+    y1: muzzle.y,
+    x2: hitPoint.x,
+    y2: hitPoint.y,
+    t: weapon.tracerTime,
+    maxT: weapon.tracerTime,
+    owner: "player",
+    color: weapon.color,
+    width: weapon.id === "shotgun" ? 1.4 : weapon.id === "smg" ? 1.2 : 1.8
+  });
+
+  suppressBotsAlongLine(player, hitPoint, weapon, hitKind === "bot" ? hitTarget : null);
+
+  if (hitKind === "bot") {
+    const dmg = rand(weapon.damage[0], weapon.damage[1]) * runStats.damageMult;
+    damageBot(hitTarget, dmg, ang, weapon, hitPoint);
+    tryPierceBot(hitTarget, hitPoint, ang, weapon);
+    player.hits += 1;
+    shareIntel(hitTarget, player.x, player.y, 0.85, "shot contact");
+    return true;
+  }
+
+  if (hitKind === "breakable") {
+    damageBreakable(hitTarget, rand(weapon.damage[0], weapon.damage[1]) * runStats.damageMult, hitPoint, ang, weapon);
+    return false;
+  }
+
+  if (wallHit) {
+    addImpact("wall", hitPoint.x, hitPoint.y, ang, weapon);
+    tryRicochet(player, hitPoint, ang, weapon);
+  }
+
+  return false;
+}
+
+function closestPointOnLine(p, a, b) {
+  const ax = p.x - a.x;
+  const ay = p.y - a.y;
+  const bx = b.x - a.x;
+  const by = b.y - a.y;
+  const denom = bx * bx + by * by || 1;
+  const t = clamp((ax * bx + ay * by) / denom, 0, 1);
+  return { x: a.x + bx * t, y: a.y + by * t };
+}
+
+function startReload() {
+  if (player.reload > 0 || player.ammo === player.maxAmmo || mode !== "running") return;
+  player.reload = currentWeapon().reloadTime * runStats.reloadMult;
+  player.noise = Math.max(player.noise, 85);
+  addLog("Reloading.");
+  if (currentFloor >= 3) {
+    for (const bot of bots) {
+      if (!bot.alive) continue;
+      if (dist(bot, player) < 470) queueIntel(bot, player.x, player.y, 0.5, "reload heard", rand(0.25, 0.9));
+    }
+  }
+}
+
+function pulse() {
+  if (player.pulseCd > 0 || gameOver || mode !== "running") return;
+  player.pulseCd = 6.5 * runStats.pulseCdMult;
+  player.pulseActive = 1.45 + Math.min(1.1, runStats.echoDuration - 2.6);
+  addLog("Pulse used. Echoes revealed.");
+  for (const bot of bots) {
+    if (!bot.alive) continue;
+    if (dist(player, bot) < runStats.pulseRange) {
+      revealStealth(bot, 1.65);
+      floatText.push({ x: bot.x, y: bot.y - 18, text: "echo", t: 1.0 });
+    }
+  }
+}
+
+function damageBot(bot, dmg, angle = angleTo(player, bot), weapon = currentWeapon(), hitPoint = bot) {
+  bot.hp -= dmg;
+  bot.panic = Math.max(bot.panic, bot.role === "boss" ? 0.62 : 1.0);
+  bot.recentlyHit = 0.45;
+  bot.flash = 0.12;
+  revealStealth(bot, weapon.id === "shotgun" || weapon.id === "dmr" ? 1.75 : 1.35);
+  bot.flinch = Math.max(bot.flinch, weapon.id === "shotgun" ? 0.2 : 0.11);
+  bot.stagger = Math.max(bot.stagger, dmg > 40 || weapon.id === "shotgun" ? 0.16 : 0);
+  bot.thinkPause = Math.max(bot.thinkPause || 0, bot.role === "boss" ? 0.05 : rand(0.06, 0.16));
+  bot.suppressed = Math.max(bot.suppressed || 0, weapon.suppression ? 0.28 : 0);
+  bot.suspicion = 100;
+  bot.lastSeen = { x: player.x, y: player.y, t: nowSec() };
+  bot.lastHeard = safePointNear(player.x, player.y, 42);
+  bot.state = bot.hp < bot.maxHp * 0.45 ? "search" : "attack";
+  bot.coverTimer = 0;
+  applyKnockback(bot, angle, weapon.knockback);
+  addImpact("bot", hitPoint.x, hitPoint.y, angle, weapon);
+  addParticles("blood", hitPoint.x, hitPoint.y, angle, weapon.id === "shotgun" || weapon.id === "breacher" ? 10 : 5);
+  if (dmg > 45 || weapon.id === "shotgun" || weapon.id === "dmr") addDecal("blood", hitPoint.x, hitPoint.y, angle, 10);
+  playSfx("hit", Math.min(2, dmg / 35));
+  if (weapon.dot) applyDamageOverTime(bot, weapon.dot);
+  floatText.push({ x: bot.x, y: bot.y - 20, text: Math.round(dmg).toString(), t: 0.65 });
+
+  if (bot.hp <= 0) {
+    bot.alive = false;
+    bot.flash = 0;
+    player.kills += 1;
+    addParticles("blood", bot.x, bot.y, angle, weapon.id === "shotgun" || weapon.id === "breacher" ? 34 : 20);
+    addParticles("spark", bot.x, bot.y, angle, weapon.id === "dmr" || weapon.id === "revolver" ? 14 : 6);
+    addDecal("blood", bot.x, bot.y, angle, weapon.id === "shotgun" || weapon.id === "breacher" ? 30 : 18);
+    addDecal("blood", bot.x + rand(-10, 10), bot.y + rand(-10, 10), angle, weapon.id === "dmr" ? 22 : 14);
+    addLog(`${bot.name} down.`);
+    if (bots.every(b => !b.alive)) startFinalKillReplay(bot, angle, weapon, hitPoint);
+  }
+}
+
+function applyDamageOverTime(bot, dot) {
+  if (!bot.alive) return;
+  for (let i = 1; i <= dot.ticks; i++) {
+    setTimeout(() => {
+      if (!bot.alive || mode !== "running") return;
+      bot.hp -= dot.damage;
+      bot.flash = Math.max(bot.flash, 0.06);
+      addParticles("spark", bot.x, bot.y, rand(-Math.PI, Math.PI), 2);
+      floatText.push({ x: bot.x, y: bot.y - 20, text: Math.round(dot.damage).toString(), t: 0.45 });
+      if (bot.hp <= 0) {
+        bot.alive = false;
+        player.kills += 1;
+        addLog(`${bot.name} down.`);
+        if (bots.every(b => !b.alive)) startFinalKillReplay(bot, rand(-Math.PI, Math.PI), currentWeapon(), bot);
+      }
+    }, dot.interval * i * 1000);
+  }
+}
+
+function damagePlayer(dmg, botName) {
+  const attacker = bots.find(bot => bot.name === botName);
+  const bossReadMult = attacker?.role === "boss" ? Math.max(0.78, 1 - powerRank("bossRead") * 0.055) : 1;
+  dmg *= Math.max(0.7, 1 - powerRank("armor") * 0.06) * bossReadMult;
+
+  if (player.reflexReady > 0) {
+    player.reflexReady -= 1;
+    dmg *= 0.3;
+    addLog("Reflex Buffer softened the hit.");
+  }
+
+  player.hp = Math.max(0, player.hp - dmg);
+  player.spotted = 0.65;
+  addShake(2.2);
+  addScreenFlash(0.08);
+  addParticles("spark", player.x, player.y, rand(-Math.PI, Math.PI), 4);
+  floatText.push({ x: player.x, y: player.y - 22, text: `-${Math.round(dmg)}`, t: 0.7 });
+
+  if (player.hp <= 0) {
+    endTower(false, botName);
+  }
+}
+
+function startFinalKillReplay(bot, angle, weapon, hitPoint = bot) {
+  if (mode === "killReplay" || mode === "floorClear") return;
+
+  running = false;
+  mode = "killReplay";
+  killReplayClearQueued = false;
+  killReplay = {
+    start: nowSec(),
+    duration: 1.9,
+    x: bot.x,
+    y: bot.y,
+    hitX: hitPoint.x,
+    hitY: hitPoint.y,
+    fromX: player.x,
+    fromY: player.y,
+    angle,
+    weaponName: weapon.name,
+    weaponColor: weapon.color,
+    botName: bot.name,
+    botColor: bot.color,
+    sprite: bot.profile?.sprite || (bot.role === "boss" ? "boss_vanta" : "enemy_vanta"),
+    boss: bot.role === "boss"
+  };
+
+  addShake(5.2 + weapon.shake * 0.7);
+  addScreenFlash(0.16);
+  addHitStop(0.06);
+  playSfx("explosion");
+  addParticles("fire", bot.x, bot.y, angle, bot.role === "boss" ? 34 : 22);
+  addParticles("spark", bot.x, bot.y, angle, bot.role === "boss" ? 26 : 16);
+  addParticles("blood", bot.x, bot.y, angle, bot.role === "boss" ? 20 : 12);
+  addDecal("blood", bot.x, bot.y, angle, bot.role === "boss" ? 22 : 16);
+}
+
+function updateKillReplay(rawDt) {
+  if (!killReplay) return;
+
+  const elapsed = nowSec() - killReplay.start;
+  const p = clamp(elapsed / killReplay.duration, 0, 1);
+
+  cameraShake = Math.max(cameraShake, (1 - p) * 3.4);
+  screenFlash = Math.max(screenFlash, Math.max(0, 0.12 - p * 0.16));
+
+  if (Math.random() < 0.8) {
+    addParticles(Math.random() < 0.5 ? "fire" : "spark", killReplay.x + rand(-10, 10), killReplay.y + rand(-10, 10), rand(-Math.PI, Math.PI), 1);
+  }
+
+  if (elapsed >= killReplay.duration && !killReplayClearQueued) {
+    killReplayClearQueued = true;
+    const replayName = killReplay.botName;
+    killReplay = null;
+    addLog(`Final hit replay: ${replayName}.`);
+    clearFloor();
+  }
+}
+
+function drawKillReplayOverlay() {
+  if (!killReplay) return;
+
+  const elapsed = nowSec() - killReplay.start;
+  const p = clamp(elapsed / killReplay.duration, 0, 1);
+  const ring = 18 + p * 96;
+  const alpha = 1 - p;
+  const from = worldToScreen({ x: killReplay.fromX, y: killReplay.fromY });
+  const hit = worldToScreen({ x: killReplay.hitX, y: killReplay.hitY });
+  const center = worldToScreen({ x: killReplay.x, y: killReplay.y });
+
+  ctx.save();
+
+  ctx.strokeStyle = hexToRgba(killReplay.weaponColor, 0.75 * alpha);
+  ctx.lineWidth = 3;
+  ctx.shadowColor = killReplay.weaponColor;
+  ctx.shadowBlur = 14;
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.lineTo(hit.x, hit.y);
+  ctx.stroke();
+
+  ctx.shadowBlur = 22;
+  ctx.strokeStyle = `rgba(255, 211, 90, ${0.85 * alpha})`;
+  ctx.lineWidth = 3 + p * 4;
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, ring, 0, Math.PI * 2);
+  ctx.stroke();
+
+  const sprite = imageAsset(killReplay.sprite);
+  if (sprite && p < 0.72) {
+    const size = (killReplay.boss ? 42 : 34) * (1 + p * 0.55);
+    ctx.globalAlpha = 0.75 * (1 - p * 0.7);
+    ctx.translate(center.x, center.y);
+    ctx.rotate(killReplay.angle + p * 1.2);
+    ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "rgba(0,0,0,0.58)";
+  ctx.fillRect(0, 0, W, 54);
+  ctx.fillRect(0, H - 54, W, 54);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ffd35a";
+  ctx.font = "900 26px ui-monospace, SFMono-Regular, Menlo, monospace";
+  ctx.shadowColor = "rgba(255, 92, 122, 0.75)";
+  ctx.shadowBlur = 10;
+  ctx.fillText("FINAL HIT", W / 2, 37);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "rgba(240,242,255,0.86)";
+  ctx.font = "700 13px ui-monospace, SFMono-Regular, Menlo, monospace";
+  ctx.fillText(`${killReplay.weaponName} eliminated ${killReplay.botName}`, W / 2, H - 23);
+
+  ctx.restore();
+}
+
+function clearFloor() {
+  killReplay = null;
+  running = false;
+  mode = "floorClear";
+  const routeBonus = activeRouteType === "cache" ? 1 : isBossFloor(currentFloor) ? 3 : 0;
+  const reward = currentFloor + routeBonus + Math.max(0, Math.floor((player.hp / player.maxHp) * 2)) + powerRank("luck") + powerRank("contractPay");
+  runStats.clearStreak += 1;
+  save.shards += reward;
+  save.bestFloor = Math.max(save.bestFloor, currentFloor);
+  save.totalClears += 1;
+  saveGame();
+
+  pendingFloorReward = {
+    floor: currentFloor,
+    reward,
+    hpBonus: Math.max(0, Math.floor((player.hp / player.maxHp) * 2)),
+    cacheFloor: isWeaponCacheFloor(currentFloor),
+    towerClear: currentFloor >= 8
+  };
+
+  addLog(`Floor ${currentFloor} clear. +${reward} shards.`);
+  playSfx("reward");
+  showFloorClearCelebration(pendingFloorReward);
+}
+
+function isWeaponCacheFloor(floor = currentFloor) {
+  return activeRouteType === "cache" || floor === 1;
+}
+
+function showFloorClearCelebration(info) {
+  const confetti = Array.from({ length: 54 }, (_, i) => {
+    const left = Math.round(rand(3, 97));
+    const delay = rand(0, 1.2).toFixed(2);
+    const duration = rand(1.6, 3.0).toFixed(2);
+    const hue = choice(["#ffd35a", "#7cc7ff", "#7dffb2", "#ff5c7a", "#c77dff", "#ffffff"]);
+    return `<i style="--x:${left}vw; --d:${delay}s; --t:${duration}s; --c:${hue}; --r:${Math.round(rand(-360,360))}deg"></i>`;
+  }).join("");
+
+  const jackpotText = info.cacheFloor ? "WEAPON CACHE FOUND" : isBossFloor(info.floor) ? "BOSS DEFEATED" : "FLOOR CLEAR";
+  const subText = info.towerClear ? "Tower route complete." : `Route choice unlocked for floor ${info.floor + 1}.`;
+
+  openOverlay(`
+    <div class="vsScreen framedScreen celebrationScreen">
+      <div class="confettiLayer">${confetti}</div>
+      ${renderTopStrip(`Floor ${info.floor} Clear`, "backMenu")}
+      <div class="vsPanel celebrationPanel">
+        <div class="slotHeader">${jackpotText}</div>
+        <div class="slotReels">
+          <div class="slotReel"><span>+${info.reward}</span><small>SHARDS</small></div>
+          <div class="slotReel"><span>${player.kills}</span><small>KILLS</small></div>
+          <div class="slotReel"><span>${Math.round(player.hp)}</span><small>HP LEFT</small></div>
+        </div>
+        <h2>${info.towerClear ? "TOWER CLEAR" : "NICE CLEANUP"}</h2>
+        <p class="panelLead">${subText} ${info.cacheFloor ? "Cache floors can change the whole run." : "Pick one reward and keep climbing."}</p>
+        <div class="celebrationPayout">
+          <b>+${info.reward} shards banked</b>
+          <span>${info.hpBonus > 0 ? `Survival bonus: +${info.hpBonus}` : "No survival bonus"}</span>
+        </div>
+        <div class="menuActions">
+          <button class="vsButton green jackpotButton" data-action="claimFloorReward">${info.towerClear ? "CLAIM TOWER" : "CLAIM AND CHOOSE ROUTE"}</button>
+        </div>
+      </div>
+    </div>
+  `, "celebrationMenu");
+}
+
+function claimFloorReward() {
+  if (!pendingFloorReward) return;
+  if (pendingFloorReward.towerClear) {
+    endTower(true);
+    return;
+  }
+  showRewardChoices();
+}
+
+function showRewardChoices() {
+  offeredRewards = pickRewardChoices();
+  offeredUpgrades = offeredRewards.filter(reward => reward.type === "upgrade").map(reward => reward.data);
+
+  const cards = offeredRewards.map((reward, index) => {
+    if (reward.type === "weapon") return weaponRewardCard(reward.data, index);
+    return upgradeRewardCard(reward.data, index);
+  }).join("");
+
+  const cacheFloor = isWeaponCacheFloor(currentFloor);
+  const title = cacheFloor ? "Weapon Cache" : "Run Reward";
+  const lead = cacheFloor
+    ? `Choose one cache find before climbing to floor ${currentFloor + 1}. Weapons are rare and change the whole run.`
+    : `Choose one temporary tool before climbing to floor ${currentFloor + 1}.`;
+
+  openOverlay(`
+    <div class="vsScreen framedScreen levelUpScreen rewardChoiceScreen">
+      ${renderTopStrip(`Floor ${currentFloor} Reward`, "backMenu")}
+      <div class="vsPanel levelPanel">
+        <h2>${title}</h2>
+        <p class="panelLead">${lead}</p>
+        <div class="upgradeGrid">${cards}</div>
+        <div class="vsDetailBar">
+          <div class="powerIcon big">${cacheFloor ? "W" : "+"}</div>
+          <div>
+            <b>${cacheFloor ? "Supply room" : "Post floor choice"}</b>
+            <p>Most rewards improve your tools. Weapons mostly come from supply rooms, so finding one matters.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `, "levelUpMenu");
+}
+
+function pickRewardChoices() {
+  const cacheFloor = isWeaponCacheFloor(currentFloor);
+  const rewards = [];
+  const weaponPool = weightedWeaponPool(cacheFloor);
+  const upgradePool = [...RUN_UPGRADES];
+
+  const rareWeapon = !cacheFloor && weaponPool.length && Math.random() < Math.min(0.22, 0.08 + currentFloor * 0.018);
+  const weaponCount = cacheFloor ? 1 : rareWeapon ? 1 : 0;
+
+  while (rewards.length < weaponCount && weaponPool.length) {
+    const index = Math.floor(Math.random() * weaponPool.length);
+    rewards.push({ type: "weapon", data: weaponPool.splice(index, 1)[0] });
+  }
+
+  while (rewards.length < 3 && upgradePool.length) {
+    const index = Math.floor(Math.random() * upgradePool.length);
+    rewards.push({ type: "upgrade", data: upgradePool.splice(index, 1)[0] });
+  }
+
+  return rewards.sort(() => Math.random() - 0.5);
+}
+
+function weightedWeaponPool(cacheFloor) {
+  const held = new Set(runStats.weapons || []);
+  const floor = currentFloor;
+  const pool = [];
+
+  for (const weapon of WEAPONS) {
+    if (held.has(weapon.id)) continue;
+
+    const unlockFloor = {
+      smg: 2,
+      shotgun: 2,
+      carbine: 3,
+      revolver: 3,
+      needler: 4,
+      dmr: 5,
+      breacher: 6,
+      lmg: 6
+    }[weapon.id] || 1;
+
+    if (floor < unlockFloor) continue;
+
+    const weight = cacheFloor ? 2.4 : 0.45;
+    for (let i = 0; i < Math.ceil(weight * 2); i++) pool.push(weapon);
+  }
+
+  return [...new Map(pool.map(weapon => [weapon.id, weapon])).values()];
+}
+
+function chooseReward(index) {
+  const reward = offeredRewards[index];
+  if (!reward || mode !== "floorClear") return;
+
+  if (reward.type === "weapon") {
+    acquireWeapon(reward.data.id);
+  } else {
+    reward.data.apply();
+    runStats.upgrades.push(reward.data.name);
+    addLog(`Upgrade acquired: ${reward.data.name}.`);
+  }
+
+  pendingFloorReward = null;
+  showRouteChoices(currentFloor + 1);
+}
+
+function showUpgradeChoices() {
+  showRewardChoices();
+}
+
+function pickUpgradeChoices() {
+  const pool = [...RUN_UPGRADES];
+  const picks = [];
+  while (picks.length < 3 && pool.length) {
+    const i = Math.floor(Math.random() * pool.length);
+    picks.push(pool.splice(i, 1)[0]);
+  }
+  return picks;
+}
+
+function chooseUpgrade(index) {
+  const upgrade = offeredUpgrades[index];
+  if (!upgrade || mode !== "floorClear") return;
+  upgrade.apply();
+  runStats.upgrades.push(upgrade.name);
+  addLog(`Upgrade acquired: ${upgrade.name}.`);
+  showRouteChoices(currentFloor + 1);
+}
+
+function showRouteChoices(nextFloor) {
+  if (nextFloor > 8) {
+    endTower(true);
+    return;
+  }
+
+  mode = "routeChoice";
+  const routes = buildRouteChoices(nextFloor);
+  const cards = routes.map(route => `
+    <button class="routeCard ${route.kind}" data-action="chooseRoute" data-route="${route.kind}">
+      <span class="routeTag">${route.tag}</span>
+      <b>${route.name}</b>
+      <p>${route.desc}</p>
+      <small>${route.read}</small>
+    </button>
+  `).join("");
+
+  openOverlay(`
+    <div class="vsScreen framedScreen routeChoiceScreen">
+      ${renderTopStrip(`Floor ${nextFloor} Route`, "backMenu")}
+      <div class="vsPanel levelPanel routePanel">
+        <h2>Choose Next Floor</h2>
+        <p class="panelLead">${activeStoryMode ? "Choose the next floor. Some paths are safer, some have supplies, and some lead to a boss." : "Choose the next floor. Safe fight, supply room, or hard fight."}</p>
+        <div class="routeGrid">${cards}</div>
+        <div class="vsDetailBar">
+          <div class="powerIcon big">?</div>
+          <div>
+            <b>Floor choice</b>
+            <p>Read the reward, danger, and floor type before moving on.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `, "routeMenu");
+}
+
+function buildRouteChoices(nextFloor) {
+  if (BOSS_FLOORS.has(nextFloor)) {
+    return [
+      {
+        kind: "boss",
+        tag: "BOSS",
+        name: "Boss Door",
+        desc: "One boss blocks the stairs to the next part of the tower.",
+        read: "Reward: stairs open. Danger: stronger weapon and better aim."
+      }
+    ];
+  }
+
+  return [
+    {
+      kind: "standard",
+      tag: "SAFE",
+      name: "Normal Floor",
+      desc: "A regular fight with normal cover and a steady shard reward.",
+      read: "Reward: regular shards. Danger: basic guards."
+    },
+    {
+      kind: "cache",
+      tag: "SUPPLY",
+      name: "Supply Room",
+      desc: "A guarded room with a better chance to find a weapon.",
+      read: "Reward: weapon pick and shards. Danger: tighter room."
+    },
+    {
+      kind: "rival",
+      tag: "HARD",
+      name: "Hard Fight",
+      desc: "A stronger enemy stands between you and the next floor.",
+      read: "Reward: more shards. Danger: sharper aim, smoke, and better cover use."
+    }
+  ];
+}
+
+function chooseRoute(kind) {
+  const valid = new Set(["standard", "cache", "rival", "boss"]);
+  nextRouteType = valid.has(kind) ? kind : "standard";
+  lastRouteChoice = nextRouteType;
+  addLog(`Path selected: ${nextRouteType}.`);
+  startFloor(currentFloor + 1);
+}
+
+
+function endTower(won, killer = "") {
+  running = false;
+  gameOver = true;
+  towerCleared = won;
+  mode = "gameOver";
+  message = won ? "Tower clear." : `Killed by ${killer}.`;
+
+  if (won) {
+    save.bestFloor = Math.max(save.bestFloor, currentFloor);
+    save.shards += 8 + (activeStoryMode ? 4 : 0);
+    if (activeStoryMode) {
+      save.storyClears = (save.storyClears || 0) + 1;
+      if (!save.completedChapters.includes(activeStoryChapterId)) save.completedChapters.push(activeStoryChapterId);
+    }
+    saveGame();
+    playAssetSfx("voice_you_win", 0.36);
+    playAssetSfx("bonus_chime", 0.36);
+  } else {
+    playAssetSfx("game_over_balanced", 0.42);
+    playAssetSfx("voice_game_over", 0.18);
+  }
+
+  openOverlay(`
+    <div class="vsScreen framedScreen resultScreen">
+      ${renderTopStrip(won ? "Tower Clear" : "Run Failed", "backMenu")}
+      <div class="vsPanel resultPanel">
+        <h2>${won ? "Tower clear" : "Run failed"}</h2>
+        <p class="panelLead">${won && activeStoryMode ? "Chapter cleared. Mira is one door closer." : won ? "You cleared the current tower. Next step is tighter arenas and better bosses." : "You died. Review the angle, route, weapon, and timing."}</p>
+        <div class="menuStats">
+          <div><span>Reached</span><b>Floor ${currentFloor}</b></div>
+          <div><span>Best</span><b>${save.bestFloor}</b></div>
+          <div><span>Shards</span><b>${save.shards}</b></div>
+          <div><span>Upgrades</span><b>${runStats.upgrades.length}</b></div>
+        </div>
+        <div class="menuActions">
+          <button class="vsButton blue" data-action="startTower">START NEW TOWER</button>
+          <button class="vsButton red" data-action="backMenu">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+  `, "resultMenu");
+
+  addLog(message);
+}
+
+function updateBots(dt) {
+  processPendingIntel();
+
+  for (const bot of bots) {
+    if (!bot.alive) continue;
+
+    bot.shotCd = Math.max(0, bot.shotCd - dt);
+    bot.maskDelay = Math.max(0, bot.maskDelay - dt);
+    bot.pathPause = Math.max(0, bot.pathPause - dt);
+    bot.panic = Math.max(0, bot.panic - dt * 0.7);
+    bot.recentlyHit = Math.max(0, bot.recentlyHit - dt);
+    bot.flinch = Math.max(0, bot.flinch - dt);
+    bot.flash = Math.max(0, bot.flash - dt);
+    bot.stagger = Math.max(0, bot.stagger - dt);
+    bot.thinkPause = Math.max(0, (bot.thinkPause || 0) - dt);
+    bot.suppressed = Math.max(0, (bot.suppressed || 0) - dt);
+    bot.speedBurst = Math.max(0, (bot.speedBurst || 0) - dt);
+    bot.bossAbilityTimer = Math.max(0, (bot.bossAbilityTimer || 0) - dt);
+    bot.tauntTimer = Math.max(0, (bot.tauntTimer || 0) - dt);
+    bot.stealthReveal = Math.max(0, (bot.stealthReveal || 0) - dt);
+
+    const seesPlayer = withinVisionCone(bot, player);
+    const distanceToPlayer = dist(bot, player);
+    const hearsPlayer = player.noise > 25 && distanceToPlayer < player.noise;
+
+    if (seesPlayer) {
+      bot.lastSeen = { x: player.x, y: player.y, t: nowSec() };
+      bot.suspicion = clamp(bot.suspicion + dt * (70 + currentFloor * 3 + (bot.role === "boss" ? 12 : 0)), 0, 100);
+      if (bot.suspicion > bot.reaction * 100) bot.state = "attack";
+      if (currentFloor >= 3 && !isBossFloor(currentFloor)) queueIntel(bot, player.x, player.y, 0.72, "visual", bot.reaction * 0.55);
+    } else {
+      const decay = bot.state === "patrol" ? 9 : 4;
+      bot.suspicion = clamp(bot.suspicion - dt * (decay + runStats.suspicionBleed), 0, 100);
+    }
+
+    if (hearsPlayer) {
+      bot.lastHeard = safePointNear(player.x, player.y, keys.has("shift") ? 94 : 44);
+      bot.suspicion = clamp(bot.suspicion + dt * 36, 0, 100);
+      if (bot.state === "patrol") bot.state = "search";
+      if (currentFloor >= 3 && !isBossFloor(currentFloor)) queueIntel(bot, player.x, player.y, 0.42, "sound", rand(0.35, 1.0));
+    }
+
+    maybeUseBotSmoke(bot, seesPlayer);
+    pressureTick(bot, dt);
+    consumeTeamIntel(bot);
+    updateBossBehavior(bot, seesPlayer);
+
+    if (bot.suspicion > 72) player.spotted = Math.max(player.spotted, 0.2);
+
+    if (bot.thinkPause <= 0) {
+      chooseBotTarget(bot);
+      moveBot(bot, dt);
+      botAimAndShoot(bot, seesPlayer);
+    } else if (bot.lastSeen) {
+      bot.angle = smoothAngle(bot.angle, angleTo(bot, bot.lastSeen), dt * 2.2);
+    }
+    echoes.push({ x: bot.x, y: bot.y, t: nowSec(), kind: "bot", bot });
+  }
+}
+
+
+function bossSummonCount() {
+  return bots.filter(bot => bot.alive && bot.role === "summon").length;
+}
+
+function summonWeakFlanker(boss) {
+  if (bossSummonCount() >= 2) return false;
+
+  const side = Math.random() < 0.5 ? -1 : 1;
+  const a = angleTo(player, boss) + side * rand(1.0, 1.8);
+  const p = nearestFreePoint(player.x + Math.cos(a) * rand(145, 220), player.y + Math.sin(a) * rand(145, 220), 18);
+  if (dist(p, player) < 110 || hasVisualLineOfSight(player, p)) return false;
+
+  const base = BOT_PROFILES[4] || BOT_PROFILES[0];
+  const profile = {
+    ...base,
+    name: "Husk",
+    callSign: "Weak Flanker",
+    color: "#b6ff9c",
+    sprite: "enemy_null",
+    weaponId: "pistol",
+    aim: 0.46,
+    aggression: 0.82,
+    coverBias: 0.4,
+    smokeBias: 0
+  };
+  const summon = makeBot("Husk", p.x, p.y, "summon", "#b6ff9c", currentFloor, profile);
+  summon.maxHp = 48 + currentFloor * 3;
+  summon.hp = summon.maxHp;
+  summon.speed *= 1.08;
+  summon.suspicion = 64;
+  summon.lastSeen = { x: player.x, y: player.y, t: nowSec() };
+  summon.target = flankPointAround(player, side);
+  summon.bossSummon = true;
+  bots.push(summon);
+  addParticles("spark", p.x, p.y, rand(-Math.PI, Math.PI), 24, "#b6ff9c");
+  floatText.push({ x: boss.x - 26, y: boss.y - 38, text: "behind you", t: 1.0 });
+  return true;
+}
+
+function updateBossBehavior(bot, seesPlayer) {
+  if (bot.role !== "boss" || mode !== "running") return;
+
+  const profile = bot.profile || {};
+  const kit = profile.bossKit || "mirror";
+
+  if (bot.tauntTimer <= 0 && (seesPlayer || bot.hp < bot.maxHp * 0.55)) {
+    bot.tauntTimer = rand(4.2, 7.2);
+    const bark = choice(profile.barks || ["move", "again?", "peek"]);
+    floatText.push({ x: bot.x - 24, y: bot.y - 34, text: bark, t: 1.1 });
+    addScreenFlash(0.018);
+  }
+
+  if (bot.bossAbilityTimer > 0) return;
+
+  if (kit === "poison") {
+    bot.bossAbilityTimer = rand(3.0, 4.7);
+    const lead = player.moveIntent ? pointFromAngle(player, player.angle, rand(42, 86)) : player;
+    const p = safePointNear(lead.x + rand(-40, 40), lead.y + rand(-40, 40), 42);
+    addPoisonPuddle(p.x, p.y, bot.hp < bot.maxHp * 0.5 ? 92 : 72, 6.2, bot.color);
+    bot.target = chooseCoverPoint(bot) || safePointNear(bot.x + rand(-160, 160), bot.y + rand(-160, 160), 110);
+    bot.state = "attack";
+    bot.maskDelay = Math.max(bot.maskDelay, 0.16);
+    return;
+  }
+
+  if (kit === "necro") {
+    bot.bossAbilityTimer = rand(4.2, 6.2);
+    if (summonWeakFlanker(bot)) {
+      bot.target = chooseCoverPoint(bot) || safePointNear(bot.x + rand(-120, 120), bot.y + rand(-120, 120), 110);
+      bot.state = "search";
+      bot.maskDelay = Math.max(bot.maskDelay, 0.18);
+      return;
+    }
+  }
+
+  bot.bossAbilityTimer = kit === "smoke" || kit === "flicker" ? rand(3.4, 5.4) : rand(2.7, 4.3);
+
+  if (kit === "flicker") {
+    if (bot.smokeCharges > 0 && (seesPlayer || bot.hp < bot.maxHp * 0.7)) {
+      bot.smokeCharges -= 1;
+      const p = safePointNear(bot.x + rand(-50, 50), bot.y + rand(-50, 50), 50);
+      addSmoke(p.x, p.y, 118, 6.8, bot.color);
+    }
+
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const a = angleTo(player, bot) + side * Math.PI * 0.58 + rand(-0.38, 0.38);
+    const fake = safePointNear(bot.x + Math.cos(a + side * 0.7) * rand(60, 110), bot.y + Math.sin(a + side * 0.7) * rand(60, 110), 42);
+    addMovementTrace(fake.x, fake.y, a + side * 0.7, { t: 2.2, color: "#ff5c7a", owner: "bot", boss: true, fake: true, size: 1.0 });
+
+    bot.target = chooseCoverPoint(bot) || nearestFreePoint(bot.x + Math.cos(a) * rand(100, 170), bot.y + Math.sin(a) * rand(100, 170), bot.r + 8);
+    bot.speedBurst = Math.max(bot.speedBurst, 0.52);
+    bot.maskDelay = Math.max(bot.maskDelay, 0.18);
+    bot.state = seesPlayer ? "attack" : "search";
+    return;
+  }
+
+  if (kit === "smoke") {
+    const shouldSmoke = bot.smokeCharges > 0 && (seesPlayer || bot.hp < bot.maxHp * 0.72);
+    if (shouldSmoke) {
+      bot.smokeCharges -= 1;
+      const a = angleTo(bot, player) + rand(-0.35, 0.35);
+      const p = pointFromAngle(bot, a, rand(70, 115));
+      addSmoke(p.x, p.y, 108, 7.2, bot.color);
+      bot.target = chooseCoverPoint(bot) || safePointNear(bot.x + rand(-150, 150), bot.y + rand(-150, 150), 90);
+      bot.state = "search";
+      bot.maskDelay = Math.max(bot.maskDelay, 0.34);
+      bot.thinkPause = Math.max(bot.thinkPause, 0.1);
+      return;
+    }
+  }
+
+  const side = Math.random() < 0.5 ? -1 : 1;
+  const a = angleTo(player, bot) + side * Math.PI * 0.5 + rand(-0.25, 0.25);
+  bot.target = nearestFreePoint(bot.x + Math.cos(a) * rand(90, 150), bot.y + Math.sin(a) * rand(90, 150), bot.r + 8);
+  bot.speedBurst = Math.max(bot.speedBurst, 0.42);
+  bot.maskDelay = Math.max(bot.maskDelay, 0.1);
+  bot.state = "attack";
+}
+
+function queueIntel(bot, x, y, confidence, reason, delay) {
+  if (currentFloor < 2) return;
+  pendingIntel.push({
+    x,
+    y,
+    confidence,
+    reason,
+    source: bot?.name || "player",
+    at: nowSec() + delay
+  });
+}
+
+function processPendingIntel() {
+  const t = nowSec();
+  for (let i = pendingIntel.length - 1; i >= 0; i--) {
+    const intel = pendingIntel[i];
+    if (intel.at > t) continue;
+    shareIntel(null, intel.x, intel.y, intel.confidence, intel.reason, intel.source);
+    pendingIntel.splice(i, 1);
+  }
+}
+
+function shareIntel(bot, x, y, confidence, reason, sourceName = "") {
+  if (currentFloor < 2) return;
+  const roughness = 130 - confidence * 70;
+  teamPing = {
+    x: x + rand(-roughness, roughness),
+    y: y + rand(-roughness, roughness),
+    confidence,
+    reason,
+    source: sourceName || bot?.name || "team",
+    t: nowSec()
+  };
+
+  if (showDebug && Math.random() < 0.35) {
+    addLog(`Team ping: ${reason}.`);
+  }
+}
+
+function consumeTeamIntel(bot) {
+  if (!teamPing || nowSec() - teamPing.t > 4.5) return;
+  if (bot.lastSeen && nowSec() - bot.lastSeen.t < 0.9) return;
+
+  const age = nowSec() - teamPing.t;
+  const value = teamPing.confidence * (1 - age / 4.5);
+  if (value <= 0.12) return;
+
+  bot.suspicion = Math.max(bot.suspicion, 22 + value * 45);
+  if (bot.role === "flanker" && currentFloor >= 3) {
+    bot.pressureHint = flankPointAround(teamPing, bot.flankSide);
+    bot.maskDelay = Math.max(bot.maskDelay, rand(0.2, 0.55));
+    bot.state = "search";
+    return;
+  }
+
+  if (bot.role === "support" && currentFloor >= 4) {
+    bot.pressureHint = safePointNear(teamPing.x, teamPing.y, 160);
+    bot.state = "search";
+    return;
+  }
+
+  if (!bot.pressureHint || Math.random() < 0.25) {
+    bot.pressureHint = safePointNear(teamPing.x, teamPing.y, 90);
+    bot.state = bot.state === "patrol" ? "search" : bot.state;
+  }
+}
+
+function flankPointAround(point, side) {
+  const fromPlayer = angleTo(player, point);
+  const a = fromPlayer + side * Math.PI * 0.5;
+  return safePointNear(point.x + Math.cos(a) * 130, point.y + Math.sin(a) * 130, 70);
+}
+
+function maybeUseBotSmoke(bot, seesPlayer) {
+  if (bot.smokeCharges <= 0 || mode !== "running") return;
+  const profile = bot.profile || BOT_PROFILES[0];
+  const hurt = bot.hp < bot.maxHp * 0.55;
+  const lostSight = !seesPlayer && bot.lastSeen && nowSec() - bot.lastSeen.t < 2.2;
+  const wantsSmoke = hurt || lostSight || (bot.role === "boss" && player.reload <= 0 && Math.random() < profile.smokeBias * 0.01);
+  if (!wantsSmoke) return;
+
+  const between = {
+    x: bot.x + (player.x - bot.x) * rand(0.32, 0.58),
+    y: bot.y + (player.y - bot.y) * rand(0.32, 0.58)
+  };
+
+  if (!hasLineOfSight(bot, between)) return;
+  bot.smokeCharges -= 1;
+  addSmoke(between.x, between.y, bot.role === "boss" ? 94 : 82, bot.role === "boss" ? 7.4 : 6.4, bot.color);
+  bot.target = chooseCoverPoint(bot) || safePointNear(bot.x + rand(-110, 110), bot.y + rand(-110, 110), 75);
+  bot.state = "search";
+  bot.maskDelay = Math.max(bot.maskDelay, 0.28);
+  addLog(`${bot.name} broke vision with smoke.`);
+}
+
+
+function pressureTick(bot, dt) {
+  bot.pressureTimer -= dt;
+  if (bot.pressureTimer > 0) return;
+
+  const floorPressure = Math.max(0, currentFloor - 1);
+  const base = bot.role === "hunter" ? 1.45 : bot.role === "baiter" ? 2.05 : 2.5;
+  bot.pressureTimer = rand(Math.max(0.8, base - floorPressure * 0.1), base + 1.4);
+
+  const closeEnough = dist(bot, player) < 500 + currentFloor * 18;
+  const pressureMoment = player.reload > 0 || player.hp < 45 || bot.memory.shotsHeard >= 2 || teamPing;
+  const recentlyLost = bot.lastSeen && nowSec() - bot.lastSeen.t < 5.5;
+  const chance = 0.38 + currentFloor * 0.035;
+
+  if (!closeEnough || (!pressureMoment && !recentlyLost && Math.random() > chance)) return;
+
+  const roughness = Math.max(48, 120 - currentFloor * 8);
+  const hint = safePointNear(player.x, player.y, roughness);
+  const wrong = safePointNear(player.x + rand(-170, 170), player.y + rand(-170, 170), 65);
+
+  bot.pressureHint = { x: hint.x, y: hint.y, t: nowSec() };
+  bot.wrongCheck = wrong;
+  bot.maskDelay = rand(0.28, Math.max(0.42, 1.0 - currentFloor * 0.06));
+  bot.suspicion = Math.max(bot.suspicion, bot.suspicionBase + rand(12, 34));
+
+  if (player.reload > 0 && Math.random() < 0.7) {
+    bot.suspicion = Math.max(bot.suspicion, 66);
+  }
+
+  if (currentFloor >= 4 && !isBossFloor(currentFloor) && Math.random() < 0.22) {
+    queueIntel(bot, player.x, player.y, 0.48, "pressure", rand(0.35, 0.85));
+  }
+
+  if (showDebug) {
+    addLog(`${bot.name} changed pressure.`);
+  }
+}
+
+function chooseBotTarget(bot) {
+  bot.decisionTimer = Math.max(0, bot.decisionTimer - 0.016);
+
+  const medPickup = nearestBotHealthPickup(bot);
+  if (medPickup) {
+    bot.state = "search";
+    bot.target = medPickup;
+    bot.maskDelay = Math.max(bot.maskDelay, bot.role === "boss" ? 0.06 : 0.16);
+    bot.panic = Math.max(bot.panic, 0.35);
+    return;
+  }
+
+  if (bot.state === "attack" && bot.lastSeen) {
+    const cover = currentFloor >= 2 ? chooseCoverPoint(bot) : null;
+    const profile = bot.profile || BOT_PROFILES[0];
+    const hurt = bot.hp < bot.maxHp * 0.62;
+    const playerReloading = player.reload > 0;
+    const alone = bots.filter(b => b.alive).length === 1;
+    const shouldUseCover = cover && (
+      bot.role === "boss" ||
+      bot.role === "duelist" ||
+      bot.role === "anchor" ||
+      bot.role === "support" ||
+      bot.role === "coward" ||
+      hurt ||
+      bot.suppressed > 0 ||
+      (!playerReloading && Math.random() < profile.coverBias * 0.16)
+    );
+
+    if (shouldUseCover) {
+      bot.target = cover;
+      return;
+    }
+
+    if (playerReloading && profile.aggression > 0.6 && hasClearMovementPath(bot, player, bot.r + 4)) {
+      bot.target = safePointNear(player.x, player.y, bot.role === "duelist" ? 52 : 42);
+      bot.maskDelay = bot.role === "duelist" ? Math.max(bot.maskDelay, 0.12) : bot.maskDelay;
+      return;
+    }
+
+    if ((bot.role === "duelist" || bot.role === "boss") && hasVisualLineOfSight(bot, player) && bot.decisionTimer <= 0) {
+      bot.decisionTimer = rand(0.18, 0.45) * (1.15 - (profile.peekBias || 0.5) * 0.35);
+      const side = bot.flankSide * (Math.random() < 0.48 ? -1 : 1);
+      const ring = bot.role === "boss" ? rand(85, 145) : rand(58, 125);
+      bot.target = nearestFreePoint(bot.x + Math.cos(angleTo(player, bot) + side * Math.PI * 0.5) * ring, bot.y + Math.sin(angleTo(player, bot) + side * Math.PI * 0.5) * ring, bot.r + 6);
+      bot.flankSide = side;
+      return;
+    }
+
+    if (bot.role === "flanker" && currentFloor >= 3) {
+      bot.target = flankPointAround(bot.lastSeen, bot.flankSide);
+      return;
+    }
+
+    if (alone && !isBossFloor(currentFloor) && hurt) {
+      bot.target = cover || safePointNear(bot.x + rand(-120, 120), bot.y + rand(-120, 120), 90);
+      bot.panic = Math.max(bot.panic, 0.6);
+      return;
+    }
+
+    bot.target = { x: bot.lastSeen.x, y: bot.lastSeen.y };
+    return;
+  }
+
+  if (bot.maskDelay > 0 && bot.wrongCheck) {
+    bot.state = bot.state === "patrol" ? "search" : bot.state;
+    bot.target = bot.wrongCheck;
+    return;
+  }
+
+  if (bot.pressureHint && nowSec() - bot.pressureHint.t < 5.5) {
+    bot.state = "search";
+    bot.target = bot.pressureHint;
+    return;
+  }
+
+  if (bot.lastHeard && bot.suspicion > 16) {
+    bot.state = "search";
+    bot.target = bot.lastHeard;
+    return;
+  }
+
+  if (bot.lastSeen && nowSec() - bot.lastSeen.t < 5) {
+    bot.state = "search";
+    bot.target = safePointNear(bot.lastSeen.x, bot.lastSeen.y, 58);
+    return;
+  }
+
+  if (!bot.target || dist(bot, bot.target) < 28 || bot.pathPause <= 0) {
+    bot.pathPause = rand(1.0, 2.8) * (bot.profile?.patience || 1);
+    bot.target = patrolPointFor(bot);
+  }
+
+  bot.state = "patrol";
+}
+
+function patrolPointFor(bot) {
+  if (bot.role === "hunter") return safePointNear(worldW * 0.72, worldH * 0.22, 260);
+  if (bot.role === "coward") return safePointNear(worldW * 0.75, worldH * 0.75, 240);
+  if (bot.role === "flanker") return safePointNear(worldW * (bot.flankSide > 0 ? 0.78 : 0.22), worldH * 0.5, 260);
+  if (bot.role === "support") return safePointNear(worldW * 0.35, worldH * 0.35, 260);
+  return safePointNear(worldW * 0.52, worldH * 0.52, 260);
+}
+
+function moveBot(bot, dt) {
+  if (!bot.target) return;
+
+  const tooClose = dist(bot, player) < (bot.role === "boss" ? 96 : bot.role === "duelist" ? 84 : 72) && bot.state === "attack";
+  let target = bot.target;
+
+  if (tooClose && bot.role !== "hunter") {
+    const away = angleTo(player, bot);
+    target = nearestFreePoint(bot.x + Math.cos(away) * 105, bot.y + Math.sin(away) * 105, bot.r + 4);
+    bot.panic = Math.max(bot.panic, 0.5);
+  }
+
+  const movePoint = getBotMovePoint(bot, target);
+  const moveAngle = angleTo(bot, movePoint);
+  const facePoint = bot.state === "attack" && hasVisualLineOfSight(bot, player) ? player : movePoint;
+  const faceAngle = angleTo(bot, facePoint);
+  const jitter = Math.sin(nowSec() * 2.7 + bot.moveJitter) * 0.08;
+  bot.angle = smoothAngle(bot.angle, faceAngle + jitter, dt * (bot.state === "attack" ? 5.2 : 2.8));
+
+  let speed = bot.speed;
+  if (bot.maskDelay > 0) speed *= 0.62;
+  if (bot.state === "attack") speed *= bot.role === "coward" ? 0.82 : 1.08;
+  if (bot.role === "anchor" && bot.state !== "attack") speed *= 0.78;
+  if (bot.panic > 0.25) speed *= 1.08;
+  if (bot.suppressed > 0) speed *= bot.role === "boss" ? 0.86 : 0.72;
+  if (bot.speedBurst > 0) speed *= 1.45;
+  if (bot.flinch > 0) speed *= 0.35;
+  if (bot.stagger > 0) return;
+
+  if (dist(bot, movePoint) > 12) {
+    const moved = moveEntity(bot, Math.cos(moveAngle) * speed * dt, Math.sin(moveAngle) * speed * dt);
+    maybePlayBotFootstep(bot, moved);
+    maybeLeaveMovementTrace(bot, moved);
+    const progress = Math.hypot(bot.x - bot.lastX, bot.y - bot.lastY);
+    bot.stuckTime = moved < 0.45 && progress < 0.45 ? bot.stuckTime + dt : 0;
+    bot.lastX = bot.x;
+    bot.lastY = bot.y;
+
+    if (bot.stuckTime > 0.35) {
+      bot.path = [];
+      bot.pathRefresh = 0;
+      bot.target = safePointNear(bot.x + rand(-120, 120), bot.y + rand(-120, 120), 70);
+      bot.stuckTime = 0;
+    }
+  }
+}
+
+function smoothAngle(current, target, amount) {
+  const diff = normAngle(target - current);
+  return current + diff * clamp(amount, 0, 1);
+}
+
+function botAimAndShoot(bot, seesPlayer) {
+  const smokeFirePoint = botSmokeFirePoint(bot);
+  const canShootByPressure = bot.pressureHint && nowSec() - bot.pressureHint.t < 1.1 && hasLineOfSight(bot, player);
+  const canEngage = seesPlayer || smokeFirePoint || (bot.suspicion > 84 && canShootByPressure);
+  if (!canEngage || bot.shotCd > 0 || bot.flinch > 0 || bot.stagger > 0) return;
+
+  const profile = bot.profile || BOT_PROFILES[0];
+  const botWeapon = bot.weapon || WEAPON_BY_ID[bot.weaponId] || WEAPON_BY_ID.pistol;
+  const reactionRoll = bot.suspicion / 100 + (profile.reactionBoost || 0) + (bot.role === "hunter" ? 0.12 : 0);
+  if (reactionRoll < bot.reaction) return;
+
+  const playerReloading = player.reload > 0;
+  const lowHealthPush = player.hp < 45 ? -0.08 : 0;
+  const duelBias = bot.role === "duelist" || bot.role === "boss" ? 0.14 : 0;
+  const floorFireRate = Math.min(0.16, currentFloor * 0.014) + duelBias;
+  const cadence = Math.max(0.2, botWeapon.fireDelay * (bot.role === "boss" ? 0.82 : bot.role === "duelist" ? 0.92 : 1.08));
+  bot.shotCd = Math.max(cadence, rand(0.52, 1.05) - floorFireRate + (playerReloading ? -0.12 : 0) + lowHealthPush);
+
+  const aimTarget = smokeFirePoint || player;
+  const targetAngle = angleTo(bot, aimTarget);
+  if (smokeFirePoint) {
+    bot.angle = smoothAngle(bot.angle, targetAngle, 0.35);
+    bot.suspicion = Math.max(bot.suspicion, bot.role === "boss" ? 76 : 64);
+  }
+  const panicMiss = bot.panic > 0 ? rand(-0.08, 0.08) : 0;
+  const skillSpread = bot.aimSpread + (playerReloading ? -0.018 : 0) + (botWeapon.spread || 0.02) * 0.35;
+  const muzzle = pointFromAngle(bot, bot.angle, bot.r + 10);
+  revealStealth(bot, botWeapon.id === "shotgun" || botWeapon.id === "dmr" ? 1.15 : 0.9);
+  playSfx("shot", botWeapon.shake * 0.55, botWeapon.shotSfx);
+  addMuzzleFlash(muzzle.x, muzzle.y, targetAngle, { ...botWeapon, recoil: botWeapon.recoil * 0.7 });
+  addShake(botWeapon.shake * (bot.role === "boss" ? 0.45 : 0.25));
+
+  let landed = false;
+  const pellets = botWeapon.pellets || 1;
+  for (let i = 0; i < pellets; i++) {
+    const miss = rand(-skillSpread, skillSpread) + panicMiss;
+    const ang = targetAngle + miss;
+    const end = rayBlocked(bot, ang, 900);
+
+    enemyShots.push({
+      x1: muzzle.x,
+      y1: muzzle.y,
+      x2: end.x,
+      y2: end.y,
+      t: botWeapon.tracerTime || 0.08,
+      maxT: botWeapon.tracerTime || 0.08,
+      owner: bot.name,
+      color: bot.color || "#ff5c7a",
+      width: bot.role === "boss" ? 2.1 : 1.4
+    });
+
+    const p = closestPointOnLine(player, bot, end);
+    const d = Math.hypot(player.x - p.x, player.y - p.y);
+    const dodgeRadius = playerDodgeRadius();
+    if (d < dodgeRadius && hasLineOfSight(bot, player)) {
+      const dmg = rand(botWeapon.damage[0], botWeapon.damage[1]) * (bot.role === "boss" ? 0.58 : bot.role === "duelist" ? 0.48 : 0.42) + currentFloor * 0.55;
+      addImpact("bot", p.x, p.y, ang, { ...botWeapon, id: "enemy", hitStop: 0.012, shake: 1, color: bot.color || "#ff5c7a" });
+      damagePlayer(dmg, bot.name);
+      landed = true;
+    } else if (d < player.r + 9 && hasVisualLineOfSight(bot, player)) {
+      maybeNearMiss(p, bot.name);
+    } else if (dist(bot, end) < 895) {
+      addImpact("wall", end.x, end.y, ang, { ...botWeapon, id: "enemy", shake: 0.5, color: bot.color || "#ff5c7a" });
+    }
+  }
+
+  if (!landed && (bot.role === "duelist" || bot.role === "boss")) {
+    bot.maskDelay = Math.max(bot.maskDelay, rand(0.08, 0.18));
+  }
+}
+
+
+function updateEffects(dt) {
+  player.recoil = Math.max(0, player.recoil - dt * 28);
+  const heatDecay = currentWeapon().id === "smg" ? 0.45 : currentWeapon().id === "lmg" ? 0.22 : 0.85;
+  player.weaponHeat = Math.max(0, player.weaponHeat - dt * heatDecay);
+  cameraShake = Math.max(0, cameraShake - dt * 11);
+  screenFlash = Math.max(0, screenFlash - dt * 3.6);
+
+  for (const shot of bullets) shot.t -= dt;
+  for (const shot of enemyShots) shot.t -= dt;
+  for (const text of floatText) text.t -= dt;
+  for (const flash of muzzleFlashes) flash.t -= dt;
+
+  for (const shell of shellCasings) {
+    shell.t -= dt;
+    shell.x += shell.vx * dt;
+    shell.y += shell.vy * dt;
+    shell.vx *= Math.pow(0.2, dt);
+    shell.vy *= Math.pow(0.2, dt);
+    shell.rot += shell.spin * dt;
+  }
+
+  for (const p of particles) {
+    p.t -= dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= Math.pow(0.08, dt);
+    p.vy *= Math.pow(0.08, dt);
+  }
+
+  for (const decal of decals) decal.t -= dt;
+  for (const smoke of smokes) smoke.t -= dt;
+  updatePoisonPuddles(dt);
+  for (const trace of movementTraces) trace.t -= dt;
+
+  for (let i = bullets.length - 1; i >= 0; i--) if (bullets[i].t <= 0) bullets.splice(i, 1);
+  for (let i = enemyShots.length - 1; i >= 0; i--) if (enemyShots[i].t <= 0) enemyShots.splice(i, 1);
+  for (let i = floatText.length - 1; i >= 0; i--) if (floatText[i].t <= 0) floatText.splice(i, 1);
+  for (let i = muzzleFlashes.length - 1; i >= 0; i--) if (muzzleFlashes[i].t <= 0) muzzleFlashes.splice(i, 1);
+  for (let i = shellCasings.length - 1; i >= 0; i--) if (shellCasings[i].t <= 0) shellCasings.splice(i, 1);
+  for (let i = particles.length - 1; i >= 0; i--) if (particles[i].t <= 0) particles.splice(i, 1);
+  for (let i = decals.length - 1; i >= 0; i--) if (decals[i].t <= 0) decals.splice(i, 1);
+  for (let i = smokes.length - 1; i >= 0; i--) if (smokes[i].t <= 0) smokes.splice(i, 1);
+  for (let i = movementTraces.length - 1; i >= 0; i--) if (movementTraces[i].t <= 0) movementTraces.splice(i, 1);
+
+  const cutoff = nowSec() - Math.max(3.0, runStats?.echoDuration || 2.6);
+  while (echoes.length && echoes[0].t < cutoff) echoes.shift();
+}
+
+function threatSenseText() {
+  const aliveBots = bots.filter(b => b.alive);
+  const threat = Math.max(0, ...aliveBots.map(b => b.suspicion));
+  const activeTeamPing = teamPing && nowSec() - teamPing.t < 4.5;
+
+  if (runStats?.threatRead && activeTeamPing && threat > 45) return "team converging";
+  if (threat > 82) return "contact has timing";
+  if (threat > 55) return "watched";
+  if (threat > 25) return "noise noticed";
+  return "quiet";
+}
+
+function updateHud() {
+  const pulse = player.pulseCd > 0 ? `${player.pulseCd.toFixed(1)}s` : "ready";
+  const reload = player.reload > 0 ? `${player.reload.toFixed(1)}s` : "none";
+  const hitRate = player.shots ? Math.round((player.hits / player.shots) * 100) + "%" : "n/a";
+  const alive = bots.filter(b => b.alive).length;
+  const floorLabel = mode === "menu" ? "menu" : mode === "countdown" ? `${currentFloor} / 8 matchmaking` : `${currentFloor} / 8`;
+  const stageLabel = activeStage ? activeStage.name : "none";
+  const upgrades = runStats?.upgrades?.length ? runStats.upgrades.join(", ") : "none";
+
+  hudEl.innerHTML = `
+    <div class="hudRow"><span>Floor</span><span>${floorLabel}</span></div>
+    <div class="hudRow"><span>Stage</span><span>${stageLabel}</span></div>
+    <div class="hudRow"><span>Route</span><span>${activeRouteType || "standard"}</span></div>
+    <div class="hudRow"><span>Shards</span><span>${save.shards}</span></div>
+    <div class="hudRow"><span>HP</span><span>${Math.round(player.hp)} / ${player.maxHp}</span></div>
+    <div class="bar"><div class="barFill" style="width:${clamp((player.hp / player.maxHp) * 100, 0, 100)}%; background: ${player.hp < 35 ? "var(--bad)" : "var(--good)"}"></div></div>
+    <div class="hudRow"><span>Weapon</span><span>${currentWeapon().name}</span></div>
+    <div class="hudRow"><span>Ammo</span><span>${player.ammo} / ${player.maxAmmo}</span></div>
+    <div class="hudRow"><span>Smoke</span><span>${player.smokeCharges || 0}</span></div>
+    <div class="hudRow"><span>Reload</span><span>${reload}</span></div>
+    <div class="hudRow"><span>Pulse</span><span>${pulse}</span></div>
+    <div class="hudRow"><span>Bots alive</span><span>${alive}</span></div>
+    <div class="hudRow"><span>Threat Sense</span><span>${threatSenseText()}</span></div>
+    <div class="hudRow"><span>Hits</span><span>${player.hits} / ${player.shots} (${hitRate})</span></div>
+    <div class="hudRow"><span>Debug</span><span>${showDebug ? "on" : "off"}</span></div>
+    <div class="hudRow longHud"><span>Run upgrades</span><span>${upgrades}</span></div>
+  `;
+}
+
+function draw() {
+  const palette = activeStage?.palette || STAGES[0].palette;
+  ctx.clearRect(0, 0, W, H);
+  updateCamera();
+
+  const shake = (mode === "running" || mode === "killReplay") && cameraShake > 0 ? cameraShake : 0;
+  ctx.save();
+  if (shake > 0) ctx.translate(rand(-shake, shake), rand(-shake, shake));
+  ctx.translate(-camera.x, -camera.y);
+
+  drawFloorBase(palette);
+  drawStageGlow(palette);
+  drawDecals("floor");
+  drawGrid(palette);
+  drawPulse(palette);
+  drawEchoes();
+  drawMovementTraces();
+  drawWalls(palette);
+  drawDecals("wall");
+  drawPoisonPuddles();
+  drawSmokes();
+  drawBreakables(palette);
+  drawPickups();
+  drawShellCasings();
+  drawBotVision();
+  drawShots();
+  drawPlayer();
+  drawBots();
+  drawMuzzleFlashes();
+  drawParticles();
+  drawLightingOverlay();
+  drawFloatText();
+
+  if (message) {
+    ctx.fillStyle = "rgba(217,222,234,0.9)";
+    ctx.font = "18px ui-sans-serif, system-ui";
+    ctx.fillText(message, camera.x + 22, camera.y + 34);
+  }
+
+  ctx.restore();
+
+  drawKillReplayOverlay();
+  drawCrosshair();
+  drawAmmoHud();
+  drawUtilityHud();
+  drawCountdownOverlay();
+  drawScreenFlash();
+}
+
+function updateCountdown() {
+  if (mode !== "countdown") return;
+  const remaining = roundStartAt - nowSec();
+  const cue = remaining > 3.1 ? "match" : remaining > 2.5 ? "found" : remaining > 1.8 ? "3" : remaining > 1.2 ? "2" : remaining > 0.6 ? "1" : remaining > 0 ? "fight" : "go";
+  if (cue !== lastCountdownCue) {
+    lastCountdownCue = cue;
+    if (["3", "2", "1"].includes(cue)) playSfx("count");
+    if (cue === "fight") playSfx("fight");
+  }
+  if (remaining <= 0) {
+    mode = "running";
+    running = true;
+    addLog("Fight.");
+    updateHud();
+  }
+}
+
+function drawCountdownOverlay() {
+  if (mode !== "countdown") return;
+  const remaining = roundStartAt - nowSec();
+  let main = "MATCHMAKING";
+  let sub = "searching...";
+
+  if (remaining <= 3.1 && remaining > 2.5) {
+    main = roundMatchLabel;
+    sub = roundOpponentLabel;
+  } else if (remaining <= 2.5 && remaining > 0.6) {
+    main = String(Math.max(1, Math.ceil((remaining - 0.6) / 0.6)));
+    sub = `${roundMatchLabel} · ${roundOpponentLabel}`;
+  } else if (remaining <= 0.6) {
+    main = "FIGHT";
+    sub = "check your corners";
+  }
+
+  ctx.save();
+  ctx.fillStyle = "rgba(3, 5, 10, 0.42)";
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = "center";
+  ctx.shadowColor = "rgba(124,199,255,0.85)";
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = main === "FIGHT" ? "#ff5c7a" : "#d8f6ff";
+  ctx.font = main.length <= 2 ? "900 96px ui-sans-serif, system-ui" : "900 44px ui-sans-serif, system-ui";
+  ctx.fillText(main, W / 2, H / 2 - 18);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "rgba(217,222,234,0.82)";
+  ctx.font = "700 16px ui-sans-serif, system-ui";
+  ctx.fillText(sub, W / 2, H / 2 + 24);
+  ctx.fillStyle = "rgba(255,255,255,0.42)";
+  ctx.font = "12px ui-sans-serif, system-ui";
+  ctx.fillText("E smoke · Q pulse · hold angles", W / 2, H / 2 + 52);
+  ctx.restore();
+}
+
+function drawFloorBase(palette) {
+  const img = imageAsset(stageAssetKey("floor"));
+  if (img) {
+    const pattern = ctx.createPattern(img, "repeat");
+    ctx.fillStyle = pattern || palette.floor;
+    ctx.fillRect(0, 0, worldW, worldH);
+    ctx.fillStyle = hexToRgba(palette.floor, 0.52);
+    ctx.fillRect(0, 0, worldW, worldH);
+    return;
+  }
+
+  ctx.fillStyle = palette.floor;
+  ctx.fillRect(0, 0, worldW, worldH);
+}
+
+function fillWallRectWithTexture(wall, palette) {
+  const img = imageAsset(stageAssetKey("wall"));
+  if (!img) {
+    ctx.fillStyle = palette.wall;
+    ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+    return;
+  }
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(wall.x, wall.y, wall.w, wall.h);
+  ctx.clip();
+  const pattern = ctx.createPattern(img, "repeat");
+  ctx.fillStyle = pattern || palette.wall;
+  ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+  ctx.fillStyle = wall.cover ? "rgba(0,0,0,0.1)" : hexToRgba(palette.wall, 0.32);
+  ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+  ctx.restore();
+}
+
+function drawStageGlow(palette) {
+  ctx.fillStyle = hexToRgba(palette.pulse, 0.035);
+  ctx.fillRect(0, 0, worldW, worldH);
+
+  ctx.fillStyle = "rgba(255,255,255,0.018)";
+  for (let y = 0; y < worldH; y += 96) {
+    ctx.fillRect(0, y, worldW, 1);
+  }
+}
+
+function drawGrid(palette) {
+  ctx.strokeStyle = palette.grid;
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= worldW; x += 32) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, worldH);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= worldH; y += 32) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(worldW, y);
+    ctx.stroke();
+  }
+}
+
+function drawWalls(palette) {
+  for (const wall of walls) {
+    fillWallRectWithTexture(wall, palette);
+    ctx.strokeStyle = palette.wallLine;
+    ctx.lineWidth = wall.cover ? 1.5 : 1;
+    ctx.strokeRect(wall.x + 0.5, wall.y + 0.5, wall.w - 1, wall.h - 1);
+    if (wall.cover) {
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      ctx.fillRect(wall.x + 2, wall.y + 2, Math.max(0, wall.w - 4), 2);
+      ctx.strokeStyle = "rgba(255, 211, 90, 0.24)";
+      ctx.setLineDash([5, 6]);
+      ctx.strokeRect(wall.x - 3.5, wall.y - 3.5, wall.w + 7, wall.h + 7);
+      ctx.setLineDash([]);
+    }
+  }
+}
+
+function drawBreakables(palette) {
+  for (const item of breakables) {
+    if (!item.alive) continue;
+
+    const hpPct = clamp(item.hp / item.maxHp, 0, 1);
+    ctx.save();
+    ctx.translate(item.x, item.y);
+    ctx.rotate(Math.sin(nowSec() * 1.3 + item.wobble) * 0.04);
+    const smoke = item.type === "smoke";
+    ctx.fillStyle = smoke ? "rgba(160,172,190,0.16)" : "rgba(255, 211, 90, 0.14)";
+    ctx.beginPath();
+    ctx.arc(0, 0, item.r + 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = smoke ? "#394253" : "#253047";
+    ctx.strokeStyle = smoke ? "#9aa6bb" : palette.wallLine;
+    ctx.lineWidth = 2;
+    ctx.fillRect(-item.r, -item.r, item.r * 2, item.r * 2);
+    ctx.strokeRect(-item.r + 0.5, -item.r + 0.5, item.r * 2 - 1, item.r * 2 - 1);
+
+    if (smoke) {
+      ctx.fillStyle = "rgba(230,235,245,0.7)";
+      ctx.beginPath();
+      ctx.arc(0, -3, 3, 0, Math.PI * 2);
+      ctx.arc(-5, 4, 2, 0, Math.PI * 2);
+      ctx.arc(5, 5, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = hpPct < 0.45 ? "#ff5c7a" : smoke ? "#aab2c9" : "#ffd166";
+    ctx.fillRect(-item.r, item.r + 4, item.r * 2 * hpPct, 4);
+    ctx.restore();
+  }
+}
+
+function drawPickups() {
+  for (const pickup of pickups) {
+    const pulse = 1 + Math.sin(nowSec() * 6) * 0.12;
+    ctx.save();
+    ctx.translate(pickup.x, pickup.y);
+    ctx.scale(pulse, pulse);
+
+    ctx.fillStyle = "rgba(125,255,178,0.15)";
+    ctx.beginPath();
+    ctx.arc(0, 0, pickup.r + 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#7dffb2";
+    ctx.fillRect(-pickup.r, -3, pickup.r * 2, 6);
+    ctx.fillRect(-3, -pickup.r, 6, pickup.r * 2);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.78)";
+    ctx.strokeRect(-pickup.r - 2, -pickup.r - 2, pickup.r * 2 + 4, pickup.r * 2 + 4);
+    ctx.restore();
+  }
+}
+
+function drawSmokes() {
+  const t = nowSec();
+  for (const smoke of smokes) {
+    const pct = clamp(smoke.t / smoke.maxT, 0, 1);
+    const breathe = Math.sin(t * 2.2 + smoke.wobble) * 5;
+    const r = smoke.r + breathe;
+    const smokeColor = smoke.color || "#7cc7ff";
+    const g = ctx.createRadialGradient(smoke.x, smoke.y, r * 0.1, smoke.x, smoke.y, r);
+    g.addColorStop(0, hexToRgba(smokeColor, 0.48 * pct));
+    g.addColorStop(0.42, `rgba(210, 222, 245, ${0.38 * pct})`);
+    g.addColorStop(0.78, hexToRgba(smokeColor, 0.2 * pct));
+    g.addColorStop(1, "rgba(80, 90, 110, 0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(smoke.x, smoke.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = hexToRgba(smokeColor, 0.5 * pct);
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.arc(smoke.x, smoke.y, r * 0.92, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = `rgba(255,255,255,${0.16 * pct})`;
+    for (let i = 0; i < 6; i++) {
+      const a = smoke.wobble + i * 1.047 + t * 0.28;
+      const px = smoke.x + Math.cos(a) * r * 0.38;
+      const py = smoke.y + Math.sin(a * 1.2) * r * 0.26;
+      ctx.beginPath();
+      ctx.arc(px, py, 8 + Math.sin(t * 2 + i) * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawPulse(palette) {
+  if (player.pulseActive <= 0) return;
+  const p = 1 - player.pulseActive / (1.45 + Math.min(1.1, runStats.echoDuration - 2.6));
+  ctx.strokeStyle = hexToRgba(palette.pulse, 0.5 * (1 - p));
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, 60 + p * runStats.pulseRange, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawEchoes() {
+  const t = nowSec();
+  for (const e of echoes) {
+    const age = t - e.t;
+    if (e.kind === "player" && age < 0.8) {
+      ctx.fillStyle = `rgba(216,246,255,${0.12 * (1 - age / 0.8)})`;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (e.kind === "bot" && player.pulseActive > 0 && age < runStats.echoDuration) {
+      ctx.strokeStyle = `rgba(124,199,255,${0.38 * (1 - age / runStats.echoDuration)})`;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, 14 + age * 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawBotVision() {
+  for (const bot of bots) {
+    if (!bot.alive || !botVisionVisibleToPlayer(bot)) continue;
+    const left = bot.angle - Math.PI * 0.46;
+    const right = bot.angle + Math.PI * 0.46;
+    const range = 245 + Math.min(currentFloor, 7) * 13;
+    const a = rayBlocked(bot, left, range);
+    const b = rayBlocked(bot, right, range);
+
+    ctx.fillStyle = bot.suspicion > 70 ? "rgba(255,92,122,0.10)" : "rgba(255,255,255,0.035)";
+    ctx.beginPath();
+    ctx.moveTo(bot.x, bot.y);
+    ctx.lineTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.closePath();
+    ctx.fill();
+
+    if (showDebug && bot.target) {
+      ctx.strokeStyle = "rgba(255,255,255,0.18)";
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath();
+      ctx.moveTo(bot.x, bot.y);
+      ctx.lineTo(bot.target.x, bot.target.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+}
+
+function drawPlayer() {
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.rotate(player.angle);
+
+  drawPlayerModel();
+  ctx.restore();
+
+  drawPlayerHealthBar();
+
+  if (player.spotted > 0) {
+    ctx.strokeStyle = "rgba(255,92,122,0.6)";
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.r + 8, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = `rgba(216,246,255,${keys.has("shift") ? 0.08 : 0.18})`;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.noise, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawPlayerHealthBar() {
+  if (!activeStage || mode === "menu") return;
+
+  const width = 36;
+  const height = 5;
+  const x = Math.round(player.x - width / 2);
+  const y = Math.round(player.y + player.r + 8);
+  const hpPct = clamp(player.hp / player.maxHp, 0, 1);
+
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.72)";
+  ctx.fillRect(x - 1, y - 1, width + 2, height + 2);
+
+  ctx.fillStyle = "#6f0b19";
+  ctx.fillRect(x, y, width, height);
+
+  ctx.fillStyle = hpPct < 0.3 ? "#ff3b57" : "#d8142f";
+  ctx.fillRect(x, y, Math.round(width * hpPct), height);
+
+  ctx.strokeStyle = "rgba(255,255,255,0.42)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x - 0.5, y - 0.5, width + 1, height + 1);
+  ctx.restore();
+}
+
+function drawPlayerModel() {
+  const color = colorById(save.selectedColor).value;
+  const kick = player.recoil;
+  const spriteKey = shapeById(save.selectedShape).sprite || "player_marine";
+  const sprite = imageAsset(spriteKey);
+
+  if (sprite) {
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.drawImage(sprite, -15, -15, 30, 30);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = hexToRgba(color, 0.75);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, player.r + 4, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const weapon = currentWeapon();
+    const weaponImg = imageAsset(weapon.asset);
+    if (weaponImg) {
+      ctx.translate(15 - kick, 0);
+      ctx.rotate(0.02 * Math.sin(nowSec() * 18));
+      ctx.drawImage(weaponImg, -5, -7, 22, 14);
+    } else {
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(-kick * 0.55, 0);
+      ctx.lineTo(20 - kick, 0);
+      ctx.stroke();
+    }
+    ctx.restore();
+    return;
+  }
+
+  ctx.fillStyle = color;
+  drawShape(save.selectedShape, 0, 0, player.r);
+
+  ctx.fillStyle = "rgba(255,255,255,0.18)";
+  ctx.beginPath();
+  ctx.arc(-4, -6, 4, 0, Math.PI * 2);
+  ctx.arc(-4, 6, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,255,255,0.95)";
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(-kick * 0.55, 0);
+  ctx.lineTo(20 - kick, 0);
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(216,246,255,0.74)";
+  ctx.fillRect(4 - kick, -2, 10, 4);
+}
+
+function drawShape(shape, x, y, r) {
+  ctx.beginPath();
+  if (shape === "diamond") {
+    ctx.moveTo(x, y - r);
+    ctx.lineTo(x + r, y);
+    ctx.lineTo(x, y + r);
+    ctx.lineTo(x - r, y);
+    ctx.closePath();
+  } else if (shape === "triangle") {
+    ctx.moveTo(x + r + 2, y);
+    ctx.lineTo(x - r, y - r * 0.85);
+    ctx.lineTo(x - r, y + r * 0.85);
+    ctx.closePath();
+  } else if (shape === "hex") {
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 6 + i * Math.PI / 3;
+      const px = x + Math.cos(a) * r;
+      const py = y + Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+  } else {
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+  }
+  ctx.fill();
+}
+
+function drawBots() {
+  for (const bot of bots) {
+    if (!botVisibleToPlayer(bot)) continue;
+
+    if (!bot.alive) {
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      ctx.beginPath();
+      ctx.arc(bot.x, bot.y, bot.r, 0, Math.PI * 2);
+      ctx.fill();
+      continue;
+    }
+
+    const visibilityAlpha = stealthVisibilityAlpha(bot);
+    ctx.save();
+    ctx.translate(bot.x, bot.y);
+    ctx.rotate(bot.angle);
+
+    const flinchScale = bot.flinch > 0 ? 1.12 : 1;
+    ctx.scale(flinchScale, flinchScale);
+    ctx.globalAlpha = visibilityAlpha * (bot.recentlyHit > 0 ? 0.82 : 1);
+    drawBotModel(bot);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    if (botFullyRevealed(bot)) {
+      drawBotHealth(bot);
+      if (bot.role === "boss" || bot.role === "duelist") drawBotNameplate(bot);
+    }
+
+    if (showDebug) {
+      ctx.fillStyle = "rgba(217,222,234,0.85)";
+      ctx.font = "11px ui-sans-serif, system-ui";
+      ctx.fillText(`${bot.name} ${bot.role} ${bot.state} ${Math.round(bot.suspicion)}`, bot.x - 48, bot.y - 24);
+      if (bot.pressureHint && nowSec() - bot.pressureHint.t < 5.5) {
+        ctx.strokeStyle = "rgba(255,209,102,0.5)";
+        ctx.beginPath();
+        ctx.arc(bot.pressureHint.x, bot.pressureHint.y, 18, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (bot.wrongCheck && bot.maskDelay > 0) {
+        ctx.strokeStyle = "rgba(255,255,255,0.35)";
+        ctx.beginPath();
+        ctx.arc(bot.wrongCheck.x, bot.wrongCheck.y, 13, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+  }
+
+  if (showDebug && teamPing && nowSec() - teamPing.t < 4.5) {
+    ctx.strokeStyle = "rgba(255,209,102,0.65)";
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.arc(teamPing.x, teamPing.y, 24, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function drawBotModel(bot) {
+  const color = bot.flash > 0 ? "#ffffff" : bot.color;
+  const r = bot.r;
+  const stealthy = isStealthBoss(bot) && !botFullyRevealed(bot);
+  ctx.lineWidth = 2;
+
+  if (stealthy) {
+    ctx.save();
+    ctx.globalAlpha *= 0.55;
+    ctx.strokeStyle = hexToRgba(bot.color, 0.75);
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r + 7, r + 3, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  const spriteKey = bot.profile?.sprite || (bot.role === "boss" ? "boss_vanta" : "enemy_vanta");
+  const sprite = imageAsset(spriteKey);
+  if (sprite) {
+    const size = bot.role === "boss" ? 38 : 30;
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = bot.role === "boss" ? 14 : 8;
+    ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+    ctx.shadowBlur = 0;
+
+    if (bot.flash > 0) {
+      ctx.globalAlpha = 0.52;
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.strokeStyle = bot.role === "boss" ? "rgba(255,255,255,0.9)" : hexToRgba(color, 0.82);
+    ctx.lineWidth = bot.role === "boss" ? 2.5 : 1.8;
+    ctx.beginPath();
+    ctx.arc(0, 0, r + (bot.role === "boss" ? 7 : 4), 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.82)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(r + 8, 0);
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+
+  if (bot.model === "shield") {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(r + 4, 0);
+    ctx.lineTo(2, r + 5);
+    ctx.lineTo(-r, r * 0.65);
+    ctx.lineTo(-r, -r * 0.65);
+    ctx.lineTo(2, -r - 5);
+    ctx.closePath();
+    ctx.fill();
+  } else if (bot.model === "split") {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(-4, -4, r * 0.68, 0, Math.PI * 2);
+    ctx.arc(-4, 4, r * 0.68, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (bot.model === "anchor") {
+    ctx.fillStyle = color;
+    ctx.fillRect(-r, -r, r * 1.55, r * 2);
+    ctx.fillRect(0, -5, r + 7, 10);
+  } else if (bot.model === "needle") {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(r + 7, 0);
+    ctx.lineTo(-r, -r * 0.55);
+    ctx.lineTo(-r * 0.5, 0);
+    ctx.lineTo(-r, r * 0.55);
+    ctx.closePath();
+    ctx.fill();
+  } else if (bot.model === "boss_blade") {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(r + 9, 0);
+    ctx.lineTo(0, r + 7);
+    ctx.lineTo(-r - 4, 0);
+    ctx.lineTo(0, -r - 7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.62)";
+    ctx.stroke();
+  } else if (bot.model === "boss_eye") {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r + 7, r, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.beginPath();
+    ctx.arc(5, 0, 4, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.strokeStyle = "rgba(255,255,255,0.82)";
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(r + 8, 0);
+  ctx.stroke();
+}
+
+function drawBotNameplate(bot) {
+  const label = bot.role === "boss" ? (bot.profile?.title || bot.callSign || "Boss") : (bot.callSign || bot.role);
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = bot.role === "boss" ? "rgba(255, 211, 90, 0.92)" : "rgba(235,241,255,0.68)";
+  ctx.shadowColor = "rgba(0,0,0,0.85)";
+  ctx.shadowBlur = 4;
+  ctx.fillText(label.toUpperCase(), bot.x, bot.y - 28);
+  ctx.restore();
+}
+
+function drawBotHealth(bot) {
+  const w = 32;
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fillRect(bot.x - w / 2, bot.y + 18, w, 4);
+  ctx.fillStyle = bot.hp < 35 ? "#ff5c7a" : "#ffd166";
+  ctx.fillRect(bot.x - w / 2, bot.y + 18, w * clamp(bot.hp / bot.maxHp, 0, 1), 4);
+}
+
+function drawShots() {
+  for (const shot of [...bullets, ...enemyShots]) {
+    const alpha = clamp(shot.t / (shot.maxT || 0.09), 0, 1);
+    const color = shot.color || (shot.owner === "player" ? "#d8f6ff" : "#ff5c7a");
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = (shot.width || 1.5) + 1.2;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 9;
+    ctx.beginPath();
+    ctx.moveTo(shot.x1, shot.y1);
+    ctx.lineTo(shot.x2, shot.y2);
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = alpha * 0.65;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = Math.max(1, shot.width || 1.2);
+    ctx.beginPath();
+    ctx.moveTo(shot.x1, shot.y1);
+    ctx.lineTo(shot.x2, shot.y2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawDecals(layer) {
+  for (const decal of decals) {
+    const isWall = decal.kind === "bullet" || decal.kind === "chip";
+    if ((layer === "wall") !== isWall) continue;
+
+    const alpha = clamp(decal.t / decal.maxT, 0, 1);
+    ctx.save();
+    ctx.translate(decal.x, decal.y);
+    ctx.rotate(decal.angle);
+
+    if (decal.kind === "blood") {
+      ctx.fillStyle = `rgba(120, 7, 25, ${0.42 * alpha})`;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, decal.size * 1.2, decal.size * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(190, 18, 47, ${0.24 * alpha})`;
+      ctx.beginPath();
+      ctx.arc(decal.ox, decal.oy, decal.size * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (decal.kind === "chip") {
+      ctx.strokeStyle = `rgba(210,161,93,${0.6 * alpha})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-decal.size, 0);
+      ctx.lineTo(decal.size, 0);
+      ctx.moveTo(0, -decal.size * 0.5);
+      ctx.lineTo(0, decal.size * 0.5);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = `rgba(0,0,0,${0.7 * alpha})`;
+      ctx.beginPath();
+      ctx.arc(0, 0, decal.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(255,209,102,${0.22 * alpha})`;
+      ctx.beginPath();
+      ctx.arc(0, 0, decal.size + 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+}
+
+function drawShellCasings() {
+  for (const shell of shellCasings) {
+    const alpha = clamp(shell.t / shell.maxT, 0, 1);
+    ctx.save();
+    ctx.translate(shell.x, shell.y);
+    ctx.rotate(shell.rot);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#d6a64a";
+    ctx.fillRect(-2, -1, 4, 2);
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.fillRect(1, -1, 1, 2);
+    ctx.restore();
+  }
+}
+
+function drawMuzzleFlashes() {
+  for (const flash of muzzleFlashes) {
+    const alpha = clamp(flash.t / flash.maxT, 0, 1);
+    ctx.save();
+    ctx.translate(flash.x, flash.y);
+    ctx.rotate(flash.angle);
+    ctx.globalAlpha = alpha;
+
+    ctx.fillStyle = flash.color;
+    ctx.shadowColor = flash.color;
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(flash.size, -flash.size * 0.42);
+    ctx.lineTo(flash.size * 1.8, 0);
+    ctx.lineTo(flash.size, flash.size * 0.42);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.globalAlpha = alpha * 0.75;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(flash.size * 0.9, -flash.size * 0.22);
+    ctx.lineTo(flash.size * 1.25, 0);
+    ctx.lineTo(flash.size * 0.9, flash.size * 0.22);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    const alpha = clamp(p.t / p.maxT, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawScreenFlash() {
+  if (screenFlash <= 0 || mode !== "running") return;
+  ctx.save();
+  ctx.fillStyle = `rgba(255,255,255,${Math.min(0.12, screenFlash)})`;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+function drawFloatText() {
+  for (const text of floatText) {
+    ctx.globalAlpha = clamp(text.t, 0, 1);
+    if (text.sprite && imageAsset(text.sprite)) {
+      const size = 24 + (1 - text.t) * 12;
+      ctx.drawImage(imageAsset(text.sprite), text.x - size / 2, text.y - size / 2, size, size);
+    } else {
+      ctx.fillStyle = "#d9deea";
+      ctx.font = "13px ui-sans-serif, system-ui";
+      ctx.fillText(text.text, text.x, text.y - (1 - text.t) * 16);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+
+function drawLightingOverlay() {
+  if (!(mode === "running" || mode === "countdown" || mode === "killReplay")) return;
+
+  const bossAlive = bots.some(bot => bot.alive && bot.role === "boss");
+
+  ctx.save();
+
+  for (const wall of walls) {
+    ctx.fillStyle = wall.cover ? "rgba(0,0,0,0.20)" : "rgba(0,0,0,0.12)";
+    ctx.fillRect(wall.x + 10, wall.y + 12, wall.w, wall.h);
+  }
+
+  for (const smoke of smokes) {
+    const r = smoke.r * 0.9;
+    const g = ctx.createRadialGradient(smoke.x, smoke.y, 8, smoke.x, smoke.y, r);
+    g.addColorStop(0, "rgba(210,230,255,0.07)");
+    g.addColorStop(1, "rgba(0,0,0,0.10)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(smoke.x, smoke.y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  for (const flash of muzzleFlashes) {
+    const r = 70 * clamp(flash.t / flash.maxT, 0, 1);
+    const g = ctx.createRadialGradient(flash.x, flash.y, 4, flash.x, flash.y, r);
+    g.addColorStop(0, hexToRgba(flash.color, 0.18));
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(flash.x, flash.y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (bossAlive) {
+    ctx.fillStyle = "rgba(255,30,80,0.045)";
+    ctx.fillRect(camera.x, camera.y, W, H);
+  }
+
+  ctx.restore();
+}
+
+
+function drawCrosshair() {
+  const sx = screenMouseX();
+  const sy = screenMouseY();
+  const img = imageAsset("fx_crosshair");
+  if (img) {
+    ctx.save();
+    ctx.globalAlpha = 0.72;
+    ctx.drawImage(img, sx - 12, sy - 12, 24, 24);
+    ctx.restore();
+    return;
+  }
+
+  ctx.strokeStyle = "rgba(217,222,234,0.55)";
+  ctx.beginPath();
+  ctx.moveTo(sx - 6, sy);
+  ctx.lineTo(sx + 6, sy);
+  ctx.moveTo(sx, sy - 6);
+  ctx.lineTo(sx, sy + 6);
+  ctx.stroke();
+}
+
+function drawAmmoHud() {
+  if (!activeStage || mode !== "running") return;
+
+  const x = W - 34;
+  const y = H - 30;
+  const isReloading = player.reload > 0;
+  const isEmpty = player.ammo <= 0;
+  const weapon = currentWeapon();
+
+  ctx.save();
+  ctx.textAlign = "right";
+  ctx.textBaseline = "bottom";
+  ctx.shadowColor = "rgba(0,0,0,0.85)";
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 2;
+
+  ctx.font = "700 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = "rgba(235,241,255,0.64)";
+  ctx.fillText(weapon.name.toUpperCase(), x, y - 48);
+
+  const heatWidth = 84;
+  ctx.globalAlpha = 0.75;
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(x - heatWidth, y - 43, heatWidth, 4);
+  ctx.fillStyle = weapon.color;
+  ctx.fillRect(x - heatWidth, y - 43, heatWidth * clamp(player.weaponHeat, 0, 1), 4);
+  ctx.globalAlpha = 1;
+
+  ctx.font = "700 34px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = isEmpty || isReloading ? "#ffd166" : "rgba(235,241,255,0.92)";
+  ctx.fillText(String(player.ammo), x - 48, y);
+
+  ctx.font = "700 22px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = "rgba(235,241,255,0.52)";
+  ctx.fillText("/", x - 32, y - 2);
+
+  ctx.font = "700 26px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = "rgba(235,241,255,0.72)";
+  ctx.fillText(String(player.maxAmmo), x, y);
+
+  if (isReloading) {
+    ctx.font = "700 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+    ctx.fillStyle = "rgba(255,209,102,0.86)";
+    ctx.fillText("RELOAD", x, y - 32);
+  }
+
+  ctx.restore();
+}
+
+function drawUtilityHud() {
+  if (!activeStage || !(mode === "running" || mode === "countdown")) return;
+
+  const baseX = 28;
+  const baseY = H - 28;
+  const pulseReady = player.pulseCd <= 0;
+  const pulseCount = pulseReady ? 1 : 0;
+  const pulseLabel = pulseReady ? "READY" : `${player.pulseCd.toFixed(1)}s`;
+
+  ctx.save();
+  ctx.textBaseline = "middle";
+  ctx.shadowColor = "rgba(0,0,0,0.8)";
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 2;
+
+  drawUtilityBox(baseX, baseY - 44, "E", "SMOKE", String(player.smokeCharges || 0), "#d8dbe8");
+  drawUtilityBox(baseX, baseY, "Q", "PULSE", String(pulseCount), pulseReady ? "#7cc7ff" : "#ffd166", pulseLabel);
+
+  ctx.restore();
+}
+
+function drawUtilityBox(x, y, key, label, count, color, sub = "") {
+  ctx.save();
+  ctx.globalAlpha = 0.84;
+  ctx.fillStyle = "rgba(0,0,0,0.62)";
+  ctx.fillRect(x, y - 24, 142, 36);
+  ctx.strokeStyle = "rgba(240,242,255,0.22)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y - 23.5, 141, 35);
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = "rgba(12,17,30,0.95)";
+  ctx.fillRect(x + 7, y - 17, 26, 24);
+  ctx.strokeStyle = color;
+  ctx.strokeRect(x + 7.5, y - 16.5, 25, 23);
+
+  ctx.font = "700 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = "rgba(246,248,255,0.92)";
+  ctx.textAlign = "center";
+  ctx.fillText(key, x + 20, y - 4);
+
+  ctx.textAlign = "left";
+  ctx.font = "700 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = "rgba(235,241,255,0.74)";
+  ctx.fillText(label, x + 42, y - 9);
+
+  ctx.font = "700 24px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = color;
+  ctx.textAlign = "right";
+  ctx.fillText(count, x + 132, y - 5);
+
+  if (sub) {
+    ctx.font = "700 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+    ctx.fillStyle = "rgba(235,241,255,0.62)";
+    ctx.textAlign = "left";
+    ctx.fillText(sub, x + 42, y + 6);
+  }
+
+  ctx.restore();
+}
+
+
+function hexToRgba(hex, a) {
+  const clean = hex.replace("#", "");
+  const n = parseInt(clean, 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function loop(t) {
+  const rawDt = Math.min(0.035, (t - lastTime) / 1000);
+  lastTime = t;
+
+  if (hitStop > 0) {
+    hitStop = Math.max(0, hitStop - rawDt);
+  }
+
+  const dt = hitStop > 0 ? 0 : rawDt;
+
+  if (mode === "countdown") {
+    updateCountdown();
+    if (dt > 0) updateEffects(dt);
+    updateHud();
+  }
+
+  if (mode === "killReplay") {
+    updateKillReplay(rawDt);
+    updateEffects(rawDt * 0.32);
+    updateHud();
+  }
+
+  if (running && !gameOver && mode === "running") {
+    if (dt > 0) {
+      updatePlayer(dt);
+      updateBots(dt);
+      updateEffects(dt);
+    }
+    updateHud();
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function canvasPos(event) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = (event.clientX - rect.left) * (canvas.width / rect.width);
+  const sy = (event.clientY - rect.top) * (canvas.height / rect.height);
+  return {
+    x: sx + camera.x,
+    y: sy + camera.y,
+    screenX: sx,
+    screenY: sy
+  };
+}
+
+window.addEventListener("keydown", e => {
+  resumeAudio();
+  const key = e.key.toLowerCase();
+  keys.add(key);
+
+  if (key === "1") setWeapon("pistol");
+  if (key === "2") setWeapon("smg");
+  if (key === "3") setWeapon("shotgun");
+  if (key === "4") setWeapon("carbine");
+  if (key === "5") setWeapon("revolver");
+  if (key === "6") setWeapon("dmr");
+  if (key === "7") setWeapon("lmg");
+  if (key === "8") setWeapon("needler");
+  if (key === "9") setWeapon("breacher");
+  if (key === "e") throwSmoke();
+  if (key === "r") startReload();
+  if (key === "q") pulse();
+  if (key === "h") {
+    showDebug = !showDebug;
+    addLog(`Debug ${showDebug ? "enabled" : "disabled"}.`);
+    updateHud();
+  }
+  if (key === "enter") {
+    if (mode === "menu") startTower();
+    else if (mode === "gameOver") startTower();
+    else if (mode === "bossIntro") beginRoundCountdown();
+    else if (mode === "storyBriefing") continueStoryBriefing();
+    else if (mode === "storyScene") continueStoryScene();
+  }
+  if (key === "escape") renderMenu();
+});
+
+window.addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
+
+canvas.addEventListener("mousemove", e => {
+  const p = canvasPos(e);
+  mouse.x = p.x;
+  mouse.y = p.y;
+  mouse.screenX = p.screenX;
+  mouse.screenY = p.screenY;
+});
+
+canvas.addEventListener("mousedown", e => {
+  resumeAudio();
+  if (e.button === 0) {
+    mouse.down = true;
+    player.fireBuffer = Math.max(player.fireBuffer, 0.16);
+  }
+});
+
+window.addEventListener("mouseup", e => {
+  if (e.button === 0) mouse.down = false;
+});
+
+overlay.addEventListener("click", e => {
+  const button = e.target.closest("button[data-action]");
+  if (!button) return;
+
+  resumeAudio();
+  playAssetSfx("ui_button_click", 0.36);
+  const action = button.dataset.action;
+  if (action === "noop") return;
+
+  const actions = {
+    startTower: () => startTower(),
+    openStory: () => renderStorySelect(),
+    startStoryChapter: () => startStoryChapter(button.dataset.id),
+    continueStoryBriefing: () => continueStoryBriefing(),
+    continueStoryScene: () => continueStoryScene(),
+    beginBossIntro: () => beginRoundCountdown(),
+    backMenu: () => renderMenu(),
+    openUnlocks: () => renderUnlockList(),
+    openCollection: () => renderCollection(),
+    openPowerUps: () => renderPowerUps(),
+    openUnlockList: () => renderUnlockList(),
+    openOptions: () => renderOptions(),
+    toggleDebugMenu: () => {
+      showDebug = !showDebug;
+      renderOptions();
+    },
+    resetSave: () => resetSave(),
+    refundPowerups: () => refundPowerups(),
+    buyPowerup: () => buyPowerup(button.dataset.id),
+    claimFloorReward: () => claimFloorReward(),
+    chooseReward: () => chooseReward(Number(button.dataset.index)),
+    chooseUpgrade: () => chooseUpgrade(Number(button.dataset.index)),
+    chooseRoute: () => chooseRoute(button.dataset.route),
+    buy: () => buyUnlock(button.dataset.type, button.dataset.id),
+    equip: () => equipUnlock(button.dataset.type, button.dataset.id)
+  };
+
+  if (actions[action]) actions[action]();
+});
+
+overlay.addEventListener("input", e => {
+  const input = e.target.closest("input[data-volume]");
+  if (!input) return;
+  const name = input.dataset.volume;
+  const value = Number(input.value) / 100;
+  setVolumeSetting(name, value);
+  const label = overlay.querySelector(`[data-volume-value="${name}"]`);
+  if (label) label.textContent = `${Math.round(value * 100)}%`;
+});
+
+renderLog();
+renderMenu();
+requestAnimationFrame(loop);

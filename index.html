@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Veyr Arena Tower V2.9</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app">
+    <aside id="panel">
+      <div class="brand">
+        <div class="mark"></div>
+        <div>
+          <h1>Veyr Arena</h1>
+          <p>V4.1 story prototype</p>
+        </div>
+      </div>
+
+      <section>
+        <h2>Controls</h2>
+        <ul>
+          <li><b>WASD</b> move</li>
+          <li><b>Shift</b> sneak</li>
+          <li><b>Mouse</b> aim</li>
+          <li><b>Left click</b> shoot</li>
+          <li><b>R</b> reload</li>
+          <li><b>1 to 9</b> switch found weapons</li>
+          <li><b>E</b> throw smoke</li>
+          <li><b>Q</b> Pulse reveal echoes</li>
+          <li><b>H</b> toggle debug overlay</li>
+          <li><b>Enter</b> start or restart tower</li>
+          <li><b>Esc</b> main menu</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Status</h2>
+        <div id="hud"></div>
+      </section>
+
+      <section>
+        <h2>Run log</h2>
+        <div id="log"></div>
+      </section>
+
+      <section>
+        <h2>Test target</h2>
+        <p>
+          Clear floors, learn the arena, and choose safer paths,
+          supply rooms, or harder fights.
+        </p>
+      </section>
+    </aside>
+
+    <main>
+      <canvas id="game" width="960" height="640"></canvas>
+      <div id="overlay">
+        <div id="titleCard">
+          <h2>Veyr Arena</h2>
+          <p>Climb the tower, unlock suits and trace tints, and survive harder floors.</p>
+          <button data-action="startTower">START</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
