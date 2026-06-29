@@ -170,3 +170,44 @@ Footsteps are intentionally readable. Running is louder and faster. Sneaking wit
 - Story chapter selection plays the uploaded intro sting.
 - Failed runs play the uploaded defeat outro.
 - Reward picks use the uploaded upgrade sound.
+
+
+## Desktop app builds
+
+This project can be wrapped as a desktop app with Electron.
+
+Install Node.js LTS first.
+
+### Run as a desktop app
+
+macOS:
+
+```bash
+npm install
+npm run app:mac
+```
+
+Windows:
+
+```powershell
+npm install
+npm run app:win
+```
+
+### Build installers
+
+macOS:
+
+```bash
+npm run dist:mac
+```
+
+Windows:
+
+```powershell
+npm run dist:win
+```
+
+Windows outputs a setup EXE and a portable EXE in `dist`. macOS outputs a DMG and ZIP in `dist`.
+
+See `MAC_APP_BUILD_NOTES.md` and `WINDOWS_APP_BUILD_NOTES.md`.

@@ -1,10 +1,96 @@
 {
-  "name": "veyr-arena-v1",
+  "name": "veyr-runner",
   "version": "0.1.0",
   "private": true,
-  "description": "Minimal playable Veyr Arena V1 browser prototype",
+  "description": "Veyr Runner desktop prototype",
+  "main": "electron-main.js",
+  "author": "Luvvydev",
+  "license": "UNLICENSED",
   "scripts": {
     "start": "python3 -m http.server 5173",
-    "start:win": "py -m http.server 5173"
+    "start:win": "py -m http.server 5173",
+    "app": "electron .",
+    "app:mac": "electron .",
+    "app:win": "electron .",
+    "dist:mac": "electron-builder --mac",
+    "dist:mac:dir": "electron-builder --mac dir",
+    "dist:mac:arm64": "electron-builder --mac --arm64",
+    "dist:mac:x64": "electron-builder --mac --x64",
+    "dist:win": "electron-builder --win nsis portable",
+    "dist:win:installer": "electron-builder --win nsis",
+    "dist:win:portable": "electron-builder --win portable",
+    "dist:win:dir": "electron-builder --win dir"
+  },
+  "devDependencies": {
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.luvvydev.veyr.runner",
+    "productName": "Veyr Runner",
+    "files": [
+      "index.html",
+      "styles.css",
+      "src/**/*",
+      "assets/**/*",
+      "electron-main.js",
+      "README.md",
+      "CREDITS.md",
+      "MAC_APP_BUILD_NOTES.md",
+      "WINDOWS_APP_BUILD_NOTES.md"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.games",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "identity": null
+    },
+    "dmg": {
+      "title": "Veyr Runner",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Veyr Runner"
+    },
+    "portable": {
+      "artifactName": "Veyr Runner Portable ${version}.${ext}"
+    }
   }
 }
