@@ -157,3 +157,12 @@ Footsteps are intentionally readable. Running is louder and faster. Sneaking wit
 - Boss dialogue was rewritten as villain fight lines instead of behavior-analysis callouts.
 - Main menu buttons were rebuilt as one uniform centered stack.
 - Collection, Power Up, Unlocks, and Options menu functions were restored after the broken story pass.
+
+
+## v4.2 campaign audio and progress pass
+
+- Campaign mode now shows a small floor tracker during fights.
+- Boss floors use the uploaded boss fight music.
+- Story chapter selection plays the uploaded intro sting.
+- Failed runs play the uploaded defeat outro.
+- Reward picks use the uploaded upgrade sound.

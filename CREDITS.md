@@ -123,3 +123,13 @@ Generated locally for this prototype from the already included project textures 
 ## v3.8 notes
 
 No new third-party assets were imported in this patch. The update uses the existing project story backdrops and sprite assets, with layout and scene pacing inspired by the uploaded example projects.
+
+
+## v4.2 additional user supplied audio
+
+The following files were provided by the user and copied into `/assets/sfx` for local prototype use. Licenses should be checked before public release.
+
+- kucinskyphotos-game-intro-345507.mp3 -> assets/sfx/music_intro.mp3
+- u_98a917e4i7-boss-fight-ahh-music-490611.mp3 -> assets/sfx/music_boss.mp3
+- phatphrogstudio-defeat-outros-game-sounds-collection-477823.mp3 -> assets/sfx/defeat_outro.mp3
+- cartoon-music-game-sfx-cartoon-game-upgrade-494470.mp3 -> assets/sfx/cache_upgrade.mp3

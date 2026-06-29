@@ -106,6 +106,10 @@ const ASSET_PATHS = {
     game_over_balanced: "./assets/sfx/game_over_balanced.mp3",
     music_menu: "./assets/sfx/music_menu.mp3",
     music_run: "./assets/sfx/music_run.mp3",
+    music_boss: "./assets/sfx/music_boss.mp3",
+    music_intro: "./assets/sfx/music_intro.mp3",
+    defeat_outro: "./assets/sfx/defeat_outro.mp3",
+    cache_upgrade: "./assets/sfx/cache_upgrade.mp3",
     footstep_platformer: "./assets/sfx/footstep_platformer.ogg",
     footstep_concrete_1: "./assets/sfx/footstep_concrete_1.mp3",
     footstep_concrete_2: "./assets/sfx/footstep_concrete_2.mp3",
@@ -146,6 +150,7 @@ const ASSET_PATHS = {
 
 const assetImages = {};
 const assetAudio = {};
+const activeOneShotAudio = new Set();
 
 function loadGameAssets() {
   if (typeof Image !== "undefined") {
@@ -192,23 +197,39 @@ function audioCategoryForKey(key, fallback = "sfx") {
   return fallback;
 }
 
+function muteWhenUnfocusedEnabled() {
+  return (save.settings?.muteUnfocused ?? DEFAULT_SAVE.settings.muteUnfocused) !== false;
+}
+
+function audioShouldMuteForFocus() {
+  if (!muteWhenUnfocusedEnabled()) return false;
+  if (typeof document === "undefined") return false;
+  return document.hidden || (typeof document.hasFocus === "function" && !document.hasFocus());
+}
+
 function volumeFor(category = "sfx") {
   const settings = save.settings || DEFAULT_SAVE.settings;
   const master = settings.master ?? 0.75;
   const value = settings[category] ?? settings.sfx ?? 0.7;
-  return clamp(master * value, 0, 1);
+  const focusScale = audioShouldMuteForFocus() ? 0 : 1;
+  return clamp(master * value * focusScale, 0, 1);
 }
 
 function playAssetSfx(key, volume = 0.45, category = "sfx") {
   resumeAudio();
   const src = assetAudio[key];
   if (!src) return false;
+  if (audioShouldMuteForFocus()) return true;
 
   try {
     const audio = src.cloneNode();
     const resolvedCategory = audioCategoryForKey(key, category);
+    audio._veyrBaseVolume = volume;
+    audio._veyrCategory = resolvedCategory;
     audio.volume = clamp(volume * volumeFor(resolvedCategory), 0, 0.85);
-    audio.play().catch(() => {});
+    activeOneShotAudio.add(audio);
+    audio.addEventListener("ended", () => activeOneShotAudio.delete(audio), { once: true });
+    audio.play().catch(() => activeOneShotAudio.delete(audio));
     return true;
   } catch {
     return false;
@@ -228,6 +249,22 @@ function stopMusic() {
 function updateMusicVolume() {
   if (!musicAudio) return;
   musicAudio.volume = clamp(0.55 * volumeFor("music"), 0, 0.65);
+}
+
+function updateOneShotAudioVolumes() {
+  for (const audio of [...activeOneShotAudio]) {
+    if (!audio || audio.ended) {
+      activeOneShotAudio.delete(audio);
+      continue;
+    }
+    const base = audio._veyrBaseVolume ?? 0.45;
+    const category = audio._veyrCategory || "sfx";
+    try {
+      audio.volume = clamp(base * volumeFor(category), 0, 0.85);
+    } catch {
+      activeOneShotAudio.delete(audio);
+    }
+  }
 }
 
 function startMusic(key) {
@@ -593,7 +630,8 @@ const DEFAULT_SAVE = {
     sfx: 0.7,
     voice: 0.42,
     music: 0.22,
-    footsteps: 0.8
+    footsteps: 0.8,
+    muteUnfocused: true
   }
 };
 
@@ -1181,6 +1219,49 @@ const RUN_UPGRADES = [
   }
 ];
 
+const BOSS_ABILITY_REWARDS = {
+  smoke: {
+    id: "vanta_smoke_step",
+    name: "Smoke Step",
+    tag: "Boss ability",
+    bossAbility: true,
+    desc: "Your dodge cools down faster and leaves a short smoke cloud. Lasts one floor or three hits.",
+    apply: () => grantBossAbility("vanta_smoke_step", "Smoke Step")
+  },
+  flicker: {
+    id: "null_flicker",
+    name: "Flicker Step",
+    tag: "Boss ability",
+    bossAbility: true,
+    desc: "Your dodge travels farther and cools down faster. Lasts one floor or three hits.",
+    apply: () => grantBossAbility("null_flicker", "Flicker Step")
+  },
+  poison: {
+    id: "venom_rounds",
+    name: "Venom Rounds",
+    tag: "Boss ability",
+    bossAbility: true,
+    desc: "Your shots add a small poison tick. Lasts one floor or three hits.",
+    apply: () => grantBossAbility("venom_rounds", "Venom Rounds")
+  },
+  necro: {
+    id: "graves_guard",
+    name: "Old Guard",
+    tag: "Boss ability",
+    bossAbility: true,
+    desc: "The first hits next floor hurt less. Lasts one floor or three hits.",
+    apply: () => grantBossAbility("graves_guard", "Old Guard")
+  },
+  mirror: {
+    id: "mirror_step",
+    name: "Mirror Step",
+    tag: "Boss ability",
+    bossAbility: true,
+    desc: "Your dodge cools down faster after the boss fight. Lasts one floor or three hits.",
+    apply: () => grantBossAbility("mirror_step", "Mirror Step")
+  }
+};
+
 let runStats = null;
 
 const STAGES = [
@@ -1606,6 +1687,10 @@ const player = {
   smokeCharges: 0,
   fireBuffer: 0,
   nearMissCd: 0,
+  dashCd: 0,
+  dashTime: 0,
+  dashInvuln: 0,
+  dashAngle: 0,
   moveIntent: 0
 };
 
@@ -1641,6 +1726,30 @@ function loadSave() {
 
 function saveGame() {
   localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+}
+
+function setVolumeSetting(name, value) {
+  const allowed = new Set(["master", "sfx", "voice", "music", "footsteps"]);
+  if (!allowed.has(name)) return;
+  save.settings = {
+    ...structuredClone(DEFAULT_SAVE.settings),
+    ...(save.settings || {})
+  };
+  save.settings[name] = clamp(value, 0, 1);
+  saveGame();
+  updateMusicVolume();
+  updateOneShotAudioVolumes();
+}
+
+function setMuteUnfocused(enabled) {
+  save.settings = {
+    ...structuredClone(DEFAULT_SAVE.settings),
+    ...(save.settings || {})
+  };
+  save.settings.muteUnfocused = !!enabled;
+  saveGame();
+  updateMusicVolume();
+  updateOneShotAudioVolumes();
 }
 
 function resetSave() {
@@ -1876,6 +1985,8 @@ function storyArchiveRows() {
 }
 
 function startStoryChapter(id) {
+  stopMusic();
+  playAssetSfx("music_intro", 0.55, "music");
   showStoryBriefing(id, 0);
 }
 
@@ -2083,6 +2194,10 @@ function renderOptions() {
           ${slider("footsteps", "Footsteps")}
           ${slider("voice", "Voice")}
           ${slider("music", "Music")}
+        </div>
+        <div class="toggleRow">
+          <span>Mute when unfocused</span>
+          <button class="vsButton ${muteWhenUnfocusedEnabled() ? "green" : "blue"}" data-action="toggleMuteUnfocused">${muteWhenUnfocusedEnabled() ? "ON" : "OFF"}</button>
         </div>
         <h2>Tools</h2>
         <div class="optionsActions">
@@ -2547,8 +2662,77 @@ function playerDodgeRadius() {
   const moving = player.moveIntent > 0;
   const sneaking = keys.has("shift");
   const base = player.r * 0.58;
+  if (player.dashInvuln > 0) return player.r * 0.28;
   if (sneaking) return base * 0.92;
   return moving ? base : player.r * 0.72;
+}
+
+function bossAbilityActive(id = "") {
+  const ability = runStats?.bossAbility;
+  if (!ability || ability.pending) return false;
+  return !id || ability.id === id;
+}
+
+function bossAbilityDashMult() {
+  if (bossAbilityActive("vanta_smoke_step") || bossAbilityActive("null_flicker") || bossAbilityActive("mirror_step")) return 0.68;
+  return 1;
+}
+
+function grantBossAbility(id, name) {
+  if (!runStats) return;
+  runStats.bossAbility = {
+    id,
+    name,
+    pending: true,
+    activeFloor: 0,
+    hitsLeft: 3,
+    hitsMax: 3
+  };
+  addLog(`${name} ready for the next floor.`);
+}
+
+function expireBossAbility(text = "Boss ability faded.") {
+  if (!runStats?.bossAbility) return;
+  addLog(text);
+  runStats.bossAbility = null;
+}
+
+function activatePendingBossAbilityForFloor(floor) {
+  const ability = runStats?.bossAbility;
+  if (!ability) return;
+  if (ability.pending) {
+    ability.pending = false;
+    ability.activeFloor = floor;
+    ability.hitsLeft = ability.hitsMax || 3;
+    addLog(`${ability.name} active this floor.`);
+    return;
+  }
+  if (ability.activeFloor && ability.activeFloor !== floor) {
+    expireBossAbility(`${ability.name} faded.`);
+  }
+}
+
+function bossAbilityRewardForFloor(floor) {
+  const profile = bossProfileForFloor(floor);
+  const kit = profile?.bossKit || "mirror";
+  return BOSS_ABILITY_REWARDS[kit] || BOSS_ABILITY_REWARDS.mirror;
+}
+
+function chipBossAbilityFromHit() {
+  const ability = runStats?.bossAbility;
+  if (!ability || ability.pending) return;
+  ability.hitsLeft -= 1;
+  if (ability.hitsLeft <= 0) {
+    expireBossAbility(`${ability.name} broke after taking too many hits.`);
+  }
+}
+
+function dashCooldownTime() {
+  return 1.05 * (runStats?.dashCdMult || 1) * bossAbilityDashMult();
+}
+
+function playerDashSpeed() {
+  return bossAbilityActive("null_flicker") ? 650 : 530;
 }
 
 function maybeNearMiss(point, shooterName) {
@@ -2849,8 +3033,9 @@ function weaponRewardCard(weapon, index) {
 }
 
 function upgradeRewardCard(upgrade, index) {
+  const cardClass = upgrade.bossAbility ? "upgradeCard bossAbilityRewardCard" : "upgradeCard";
   return `
-    <button class="upgradeCard" data-action="chooseReward" data-index="${index}">
+    <button class="${cardClass}" data-action="chooseReward" data-index="${index}">
       <span>${upgrade.tag}</span>
       <b>${upgrade.name}</b>
       <p>${upgrade.desc}</p>
@@ -2880,6 +3065,8 @@ function startTower(options = {}) {
     threatRead: 0,
     smokeBonus: powerRank("smokeKit"),
     heatMult: 1,
+    dashCdMult: 1,
+    bossAbility: null,
     upgrades: [],
     weapons: ["pistol"],
     weaponFinds: 0,
@@ -3085,6 +3272,10 @@ function startFloor(floor) {
   player.pulseActive = 0;
   player.noise = 0;
   player.spotted = 0;
+  player.dashTime = 0;
+  player.dashInvuln = 0;
+  player.dashCd = Math.min(player.dashCd || 0, 0.35);
+  activatePendingBossAbilityForFloor(floor);
   player.reflexReady = runStats.reflexBuffer;
   player.smokeCharges = (isBossFloor(floor) ? 2 : activeRouteType === "cache" ? 1 : 1) + (runStats.smokeBonus || 0);
 
@@ -3096,7 +3287,7 @@ function startFloor(floor) {
   floorStartTime = nowSec();
   running = false;
   gameOver = false;
-  startMusic("music_run");
+  startMusic(isBossFloor(floor) ? "music_boss" : "music_run");
 
   roundOpponentLabel = bots.length === 1
     ? botIntroName(bots[0])
@@ -3131,6 +3322,8 @@ function beginRoundCountdown() {
   closeOverlay();
   mode = "countdown";
   running = false;
+  mouse.down = false;
+  player.fireBuffer = 0;
   roundStartAt = nowSec() + 4.2;
   lastCountdownCue = "";
 }
@@ -3297,6 +3490,8 @@ function makeBot(name, x, y, role, color, floor, profile = null) {
     thinkPause: 0,
     suppressed: 0,
     speedBurst: 0,
+    dodgeCd: rand(0.15, isBoss ? 0.65 : 1.25),
+    dodgeInvuln: 0,
     bossAbilityTimer: isBoss ? rand(1.1, 2.2) : 99,
     tauntTimer: isBoss ? rand(1.8, 3.4) : 99,
     audioTauntCd: isBoss ? 0 : 99,
@@ -4242,9 +4437,18 @@ function updatePlayer(dt) {
   const moving = x || y;
   player.moveIntent = moving ? 1 : 0;
   const sneaking = keys.has("shift");
-  const speed = player.baseSpeed * runStats.moveMult * (sneaking ? 0.55 : 1);
-  if (moving) {
+  player.dashCd = Math.max(0, (player.dashCd || 0) - dt);
+  player.dashInvuln = Math.max(0, (player.dashInvuln || 0) - dt);
+
+  if (player.dashTime > 0) {
     resumeAudio();
+    const movedDistance = moveEntity(player, Math.cos(player.dashAngle) * playerDashSpeed() * dt, Math.sin(player.dashAngle) * playerDashSpeed() * dt);
+    player.dashTime = Math.max(0, player.dashTime - dt);
+    player.noise = 170;
+    if (movedDistance > 1.2 && Math.random() < 0.85) addMovementTrace(player.x, player.y, player.dashAngle, { t: 0.7, color: "#7cc7ff", owner: "player", kind: "dash", size: 1.15 });
+  } else if (moving) {
+    resumeAudio();
+    const speed = player.baseSpeed * runStats.moveMult * (sneaking ? 0.55 : 1);
     const l = len(x, y);
     const movedDistance = moveEntity(player, (x / l) * speed * dt, (y / l) * speed * dt);
     player.noise = sneaking ? 44 * runStats.sneakNoiseMult : 112;
@@ -4279,6 +4483,29 @@ function updatePlayer(dt) {
 
   if (mouse.down || player.fireBuffer > 0) shootPlayer();
 }
+
+function doPlayerDash() {
+  if (mode !== "running" || gameOver || player.dashCd > 0 || player.dashTime > 0) return;
+
+  let x = 0;
+  let y = 0;
+  if (keys.has("w")) y -= 1;
+  if (keys.has("s")) y += 1;
+  if (keys.has("a")) x -= 1;
+  if (keys.has("d")) x += 1;
+
+  player.dashAngle = x || y ? Math.atan2(y, x) : player.angle;
+  player.dashTime = bossAbilityActive("null_flicker") ? 0.18 : 0.15;
+  player.dashInvuln = 0.24;
+  player.dashCd = dashCooldownTime();
+  player.noise = 170;
+  addMovementTrace(player.x, player.y, player.dashAngle, { t: 1.0, color: "#7cc7ff", owner: "player", kind: "dash", size: 1.35 });
+  addParticles("dust", player.x, player.y, player.dashAngle, 16);
+  addScreenFlash(0.022);
+  playAssetSfx("fps_weapon_change", 0.28);
+  if (bossAbilityActive("vanta_smoke_step")) addSmoke(player.x, player.y, 72, 2.2, "#7cc7ff");
+}
+
 
 function shootPlayer() {
   if (player.shotCd > 0 || player.reload > 0 || gameOver || mode !== "running") return;
@@ -4339,6 +4566,30 @@ function shootPlayer() {
   if (player.ammo <= 0) startReload();
 }
 
+function tryBotDodge(bot, shotAngle, weapon) {
+  if (!bot.alive || bot.dodgeCd > 0 || bot.stagger > 0 || bot.flinch > 0.08) return false;
+  const baseChance = bot.role === "boss" ? 0.34 : bot.role === "duelist" ? 0.24 : currentFloor >= 4 ? 0.09 : 0.035;
+  const weaponPenalty = weapon.id === "shotgun" || weapon.id === "breacher" ? 0.55 : 1;
+  if (Math.random() > baseChance * weaponPenalty) return false;
+
+  const side = Math.random() < 0.5 ? -1 : 1;
+  const angle = shotAngle + side * Math.PI * 0.5 + rand(-0.25, 0.25);
+  const sx = bot.x;
+  const sy = bot.y;
+  const moved = moveEntity(bot, Math.cos(angle) * rand(38, bot.role === "boss" ? 74 : 58), Math.sin(angle) * rand(38, bot.role === "boss" ? 74 : 58));
+  if (moved < 8) return false;
+
+  bot.dodgeCd = bot.role === "boss" ? rand(0.72, 1.08) : rand(1.1, 1.75);
+  bot.dodgeInvuln = 0.2;
+  bot.speedBurst = Math.max(bot.speedBurst || 0, 0.18);
+  bot.panic = Math.max(bot.panic || 0, 0.28);
+  bot.target = safePointNear(bot.x + Math.cos(angle) * 70, bot.y + Math.sin(angle) * 70, 46);
+  addMovementTrace(sx, sy, angle, { t: 1.0, color: bot.color || "#ff5c7a", owner: "bot", kind: "dash", boss: bot.role === "boss", size: bot.role === "boss" ? 1.25 : 1 });
+  addParticles("dust", bot.x, bot.y, angle, bot.role === "boss" ? 12 : 7);
+  floatText.push({ x: bot.x, y: bot.y - 24, text: "dodge", t: 0.55 });
+  return true;
+}
+
 function firePlayerBullet(ang, weapon, muzzle) {
   const range = weapon.id === "shotgun" ? 510 : 900;
   const end = rayBlocked(player, ang, range);
@@ -4387,6 +4638,7 @@ function firePlayerBullet(ang, weapon, muzzle) {
   suppressBotsAlongLine(player, hitPoint, weapon, hitKind === "bot" ? hitTarget : null);
 
   if (hitKind === "bot") {
+    if (hitTarget.dodgeInvuln > 0 || tryBotDodge(hitTarget, ang, weapon)) return false;
     const dmg = rand(weapon.damage[0], weapon.damage[1]) * runStats.damageMult;
     damageBot(hitTarget, dmg, ang, weapon, hitPoint);
     tryPierceBot(hitTarget, hitPoint, ang, weapon);
@@ -4467,6 +4719,7 @@ function damageBot(bot, dmg, angle = angleTo(player, bot), weapon = currentWeapo
   if (dmg > 45 || weapon.id === "shotgun" || weapon.id === "dmr") addDecal("blood", hitPoint.x, hitPoint.y, angle, 10);
   playSfx("hit", Math.min(2, dmg / 35));
   if (weapon.dot) applyDamageOverTime(bot, weapon.dot);
+  if (bossAbilityActive("venom_rounds")) applyDamageOverTime(bot, { damage: 4, ticks: 2, interval: 0.45 });
   floatText.push({ x: bot.x, y: bot.y - 20, text: Math.round(dmg).toString(), t: 0.65 });
 
   if (bot.hp <= 0) {
@@ -4502,9 +4755,16 @@ function applyDamageOverTime(bot, dot) {
 }
 
 function damagePlayer(dmg, botName) {
+  if (player.dashInvuln > 0) {
+    maybeNearMiss(player, botName);
+    floatText.push({ x: player.x + rand(-14, 14), y: player.y - 30, text: "dodged", t: 0.45 });
+    return;
+  }
+
   const attacker = bots.find(bot => bot.name === botName);
   const bossReadMult = attacker?.role === "boss" ? Math.max(0.78, 1 - powerRank("bossRead") * 0.055) : 1;
-  dmg *= Math.max(0.7, 1 - powerRank("armor") * 0.06) * bossReadMult;
+  const guardMult = bossAbilityActive("graves_guard") ? 0.72 : 1;
+  dmg *= Math.max(0.7, 1 - powerRank("armor") * 0.06) * bossReadMult * guardMult;
 
   if (player.reflexReady > 0) {
     player.reflexReady -= 1;
@@ -4513,6 +4773,7 @@ function damagePlayer(dmg, botName) {
   }
 
   player.hp = Math.max(0, player.hp - dmg);
+  chipBossAbilityFromHit();
   player.spotted = 0.65;
   addShake(2.2);
   addScreenFlash(0.08);
@@ -4646,6 +4907,7 @@ function clearFloor() {
   const routeBonus = activeRouteType === "cache" ? 1 : isBossFloor(currentFloor) ? 3 : 0;
   const reward = currentFloor + routeBonus + Math.max(0, Math.floor((player.hp / player.maxHp) * 2)) + powerRank("luck") + powerRank("contractPay");
   runStats.clearStreak += 1;
+  if (runStats.bossAbility && !runStats.bossAbility.pending) expireBossAbility(`${runStats.bossAbility.name} faded after the floor.`);
   save.shards += reward;
   save.bestFloor = Math.max(save.bestFloor, currentFloor);
   save.totalClears += 1;
@@ -4668,14 +4930,32 @@ function isWeaponCacheFloor(floor = currentFloor) {
   return activeRouteType === "cache" || floor === 1;
 }
 
-function showFloorClearCelebration(info) {
-  const confetti = Array.from({ length: 54 }, (_, i) => {
+function makeConfettiLayer(count = 54) {
+  return Array.from({ length: count }, () => {
     const left = Math.round(rand(3, 97));
     const delay = rand(0, 1.2).toFixed(2);
     const duration = rand(1.6, 3.0).toFixed(2);
     const hue = choice(["#ffd35a", "#7cc7ff", "#7dffb2", "#ff5c7a", "#c77dff", "#ffffff"]);
     return `<i style="--x:${left}vw; --d:${delay}s; --t:${duration}s; --c:${hue}; --r:${Math.round(rand(-360,360))}deg"></i>`;
   }).join("");
+}
+
+function makeTreasureSparkles(count = 72) {
+  return Array.from({ length: count }, () => {
+    const angle = rand(-Math.PI * 0.92, -Math.PI * 0.08);
+    const distance = rand(70, 250);
+    const x = Math.round(Math.cos(angle) * distance);
+    const y = Math.round(Math.sin(angle) * distance);
+    const delay = rand(0, 1.1).toFixed(2);
+    const duration = rand(0.95, 1.8).toFixed(2);
+    const size = Math.round(rand(3, 9));
+    const color = choice(["#fff8cc", "#ffd35a", "#ff8adb", "#8cf4ff", "#7dffb2", "#ffffff"]);
+    return `<i style="--tx:${x}px; --ty:${y}px; --d:${delay}s; --t:${duration}s; --s:${size}px; --c:${color}"></i>`;
+  }).join("");
+}
+
+function showFloorClearCelebration(info) {
+  const confetti = makeConfettiLayer(54);
 
   const jackpotText = info.cacheFloor ? "WEAPON CACHE FOUND" : isBossFloor(info.floor) ? "BOSS DEFEATED" : "FLOOR CLEAR";
   const subText = info.towerClear ? "Tower route complete." : `Route choice unlocked for floor ${info.floor + 1}.`;
@@ -4724,23 +5004,37 @@ function showRewardChoices() {
   }).join("");
 
   const cacheFloor = isWeaponCacheFloor(currentFloor);
-  const title = cacheFloor ? "Weapon Cache" : "Run Reward";
+  const title = cacheFloor ? "Weapon Cache" : isBossFloor(currentFloor) ? "Boss Reward" : "Run Reward";
   const lead = cacheFloor
-    ? `Choose one cache find before climbing to floor ${currentFloor + 1}. Weapons are rare and change the whole run.`
-    : `Choose one temporary tool before climbing to floor ${currentFloor + 1}.`;
+    ? `Pick one prize before floor ${currentFloor + 1}. Weapons are rare, so this room matters.`
+    : isBossFloor(currentFloor)
+      ? `Pick one reward. Boss abilities last for the next floor or until you take three hits.`
+      : `Choose one temporary tool before climbing to floor ${currentFloor + 1}.`;
+  const confetti = cacheFloor ? `<div class="confettiLayer cacheConfetti">${makeConfettiLayer(64)}</div>` : "";
+  const slotStrip = cacheFloor ? `
+    <div class="cacheTreasureBox">
+      <div class="cacheTreasureTitle">Treasure Found!</div>
+      <div class="cacheTreasureGlow"></div>
+      <div class="cacheTreasureSparkles">${makeTreasureSparkles(90)}</div>
+      <div class="cacheTreasureChest"><i></i><b></b><em></em></div>
+      <div class="cachePrizeRibbon">Pick one prize before floor ${currentFloor + 1}</div>
+    </div>
+  ` : "";
 
   openOverlay(`
-    <div class="vsScreen framedScreen levelUpScreen rewardChoiceScreen">
+    <div class="vsScreen framedScreen levelUpScreen rewardChoiceScreen ${cacheFloor ? "cacheChoiceScreen" : ""}">
+      ${confetti}
       ${renderTopStrip(`Floor ${currentFloor} Reward`, "backMenu")}
       <div class="vsPanel levelPanel">
         <h2>${title}</h2>
+        ${slotStrip}
         <p class="panelLead">${lead}</p>
         <div class="upgradeGrid">${cards}</div>
         <div class="vsDetailBar">
-          <div class="powerIcon big">${cacheFloor ? "W" : "+"}</div>
+          <div class="powerIcon big">${cacheFloor ? "W" : isBossFloor(currentFloor) ? "B" : "+"}</div>
           <div>
-            <b>${cacheFloor ? "Supply room" : "Post floor choice"}</b>
-            <p>Most rewards improve your tools. Weapons mostly come from supply rooms, so finding one matters.</p>
+            <b>${cacheFloor ? "Pick a prize" : isBossFloor(currentFloor) ? "Boss power" : "Post floor choice"}</b>
+            <p>${cacheFloor ? "Choose the strongest card for this run. A weapon pick can change every fight after this." : "Most rewards improve your tools for the current climb."}</p>
           </div>
         </div>
       </div>
@@ -4748,14 +5042,20 @@ function showRewardChoices() {
   `, "levelUpMenu");
 }
 
+
 function pickRewardChoices() {
   const cacheFloor = isWeaponCacheFloor(currentFloor);
   const rewards = [];
   const weaponPool = weightedWeaponPool(cacheFloor);
   const upgradePool = [...RUN_UPGRADES];
 
+  if (isBossFloor(currentFloor)) {
+    const bossReward = bossAbilityRewardForFloor(currentFloor);
+    if (bossReward) rewards.push({ type: "upgrade", data: bossReward });
+  }
+
   const rareWeapon = !cacheFloor && weaponPool.length && Math.random() < Math.min(0.22, 0.08 + currentFloor * 0.018);
-  const weaponCount = cacheFloor ? 1 : rareWeapon ? 1 : 0;
+  const weaponCount = cacheFloor ? Math.min(2, weaponPool.length) : rareWeapon ? 1 : 0;
 
   while (rewards.length < weaponCount && weaponPool.length) {
     const index = Math.floor(Math.random() * weaponPool.length);
@@ -4769,6 +5069,7 @@ function pickRewardChoices() {
 
   return rewards.sort(() => Math.random() - 0.5);
 }
+
 
 function weightedWeaponPool(cacheFloor) {
   const held = new Set(runStats.weapons || []);
@@ -4802,12 +5103,14 @@ function chooseReward(index) {
   const reward = offeredRewards[index];
   if (!reward || mode !== "floorClear") return;
 
+  playAssetSfx(isWeaponCacheFloor(currentFloor) ? "cache_upgrade" : "bonus_chime", isWeaponCacheFloor(currentFloor) ? 0.58 : 0.28);
+
   if (reward.type === "weapon") {
     acquireWeapon(reward.data.id);
   } else {
     reward.data.apply();
     runStats.upgrades.push(reward.data.name);
-    addLog(`Upgrade acquired: ${reward.data.name}.`);
+    addLog(`${reward.data.bossAbility ? "Boss ability" : "Upgrade"} acquired: ${reward.data.name}.`);
   }
 
   pendingFloorReward = null;
@@ -4927,6 +5230,8 @@ function endTower(won, killer = "") {
   mode = "gameOver";
   message = won ? "Tower clear." : `Killed by ${killer}.`;
 
+  stopMusic();
+
   if (won) {
     save.bestFloor = Math.max(save.bestFloor, currentFloor);
     save.shards += 8 + (activeStoryMode ? 4 : 0);
@@ -4938,7 +5243,8 @@ function endTower(won, killer = "") {
     playAssetSfx("voice_you_win", 0.36);
     playAssetSfx("bonus_chime", 0.36);
   } else {
-    playAssetSfx("game_over_balanced", 0.42);
+    playAssetSfx("defeat_outro", 0.42);
+    playAssetSfx("game_over_balanced", 0.24);
     playAssetSfx("voice_game_over", 0.18);
   }
 
@@ -4982,6 +5288,8 @@ function updateBots(dt) {
     bot.thinkPause = Math.max(0, (bot.thinkPause || 0) - dt);
     bot.suppressed = Math.max(0, (bot.suppressed || 0) - dt);
     bot.speedBurst = Math.max(0, (bot.speedBurst || 0) - dt);
+    bot.dodgeCd = Math.max(0, (bot.dodgeCd || 0) - dt);
+    bot.dodgeInvuln = Math.max(0, (bot.dodgeInvuln || 0) - dt);
     bot.bossAbilityTimer = Math.max(0, (bot.bossAbilityTimer || 0) - dt);
     bot.tauntTimer = Math.max(0, (bot.tauntTimer || 0) - dt);
     bot.stealthReveal = Math.max(0, (bot.stealthReveal || 0) - dt);
@@ -5641,6 +5949,7 @@ function draw() {
   drawCrosshair();
   drawAmmoHud();
   drawUtilityHud();
+  drawStoryProgressHud();
   drawCountdownOverlay();
   drawScreenFlash();
 }
@@ -5655,6 +5964,8 @@ function updateCountdown() {
     if (cue === "fight") playSfx("fight");
   }
   if (remaining <= 0) {
+    mouse.down = false;
+    player.fireBuffer = 0;
     mode = "running";
     running = true;
     addLog("Fight.");
@@ -6477,6 +6788,94 @@ function drawCrosshair() {
   ctx.stroke();
 }
 
+
+function drawStoryProgressHud() {
+  if (!activeStoryMode || !activeStage) return;
+  if (!(mode === "running" || mode === "countdown" || mode === "pauseRequest" || mode === "paused" || mode === "killReplay")) return;
+
+  const totalFloors = 8;
+  const floor = clamp(currentFloor || 1, 1, totalFloors);
+  const left = Math.max(0, totalFloors - floor);
+  const x = W - 188;
+  const y = 58;
+  const w = 156;
+  const h = 34;
+  const pipGap = 13;
+  const startX = x + 14;
+  const lineY = y + 23;
+
+  ctx.save();
+  ctx.textBaseline = "middle";
+  ctx.shadowColor = "rgba(0,0,0,0.65)";
+  ctx.shadowBlur = 3;
+  ctx.shadowOffsetX = 1;
+  ctx.shadowOffsetY = 1;
+
+  ctx.globalAlpha = 0.48;
+  ctx.fillStyle = "rgba(0,0,0,0.50)";
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = "rgba(240,242,255,0.16)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  ctx.globalAlpha = 0.82;
+
+  ctx.textAlign = "left";
+  ctx.font = "800 9px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = "rgba(235,241,255,0.58)";
+  ctx.fillText("STORY", x + 10, y + 10);
+
+  ctx.textAlign = "right";
+  ctx.font = "900 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = "rgba(235,241,255,0.86)";
+  ctx.fillText(`${floor}/${totalFloors}`, x + w - 10, y + 10);
+
+  ctx.font = "800 8px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = "rgba(235,241,255,0.45)";
+  ctx.fillText(left === 0 ? "FINAL" : `${left} LEFT`, x + w - 10, y + 24);
+
+  ctx.strokeStyle = "rgba(124,199,255,0.13)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(startX, lineY);
+  ctx.lineTo(startX + pipGap * (totalFloors - 1), lineY);
+  ctx.stroke();
+
+  for (let i = 1; i <= totalFloors; i++) {
+    const px = startX + (i - 1) * pipGap;
+    const done = i < floor;
+    const active = i === floor;
+    const boss = BOSS_FLOORS.has(i);
+    const cache = i === 1;
+    const radius = boss ? 2.7 : 2.3;
+    const fill = active
+      ? "rgba(255,211,90,0.92)"
+      : done
+        ? "rgba(125,255,178,0.50)"
+        : boss
+          ? "rgba(255,92,122,0.32)"
+          : cache
+            ? "rgba(124,199,255,0.28)"
+            : "rgba(235,241,255,0.18)";
+
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.arc(px, lineY, active ? radius + 1.7 : radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = active
+      ? "rgba(255,211,90,0.82)"
+      : boss
+        ? "rgba(255,92,122,0.38)"
+        : "rgba(235,241,255,0.16)";
+    ctx.lineWidth = active ? 1.5 : 1;
+    ctx.beginPath();
+    ctx.arc(px, lineY, active ? radius + 4 : radius + 2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 function drawAmmoHud() {
   if (!activeStage || mode !== "running") return;
 
@@ -6535,6 +6934,8 @@ function drawUtilityHud() {
   const pulseReady = player.pulseCd <= 0;
   const pulseCount = pulseReady ? 1 : 0;
   const pulseLabel = pulseReady ? "READY" : `${player.pulseCd.toFixed(1)}s`;
+  const dodgeReady = player.dashCd <= 0;
+  const dodgeLabel = dodgeReady ? "READY" : `${player.dashCd.toFixed(1)}s`;
 
   ctx.save();
   ctx.textBaseline = "middle";
@@ -6543,11 +6944,33 @@ function drawUtilityHud() {
   ctx.shadowOffsetX = 2;
   ctx.shadowOffsetY = 2;
 
+  drawUtilityBox(baseX, baseY - 88, "SPC", "DODGE", dodgeReady ? "1" : "0", dodgeReady ? "#7dffb2" : "#ffd166", dodgeLabel);
   drawUtilityBox(baseX, baseY - 44, "E", "SMOKE", String(player.smokeCharges || 0), "#d8dbe8");
   drawUtilityBox(baseX, baseY, "Q", "PULSE", String(pulseCount), pulseReady ? "#7cc7ff" : "#ffd166", pulseLabel);
+  drawBossAbilityHud(baseX, baseY - 132);
 
   ctx.restore();
 }
+
+function drawBossAbilityHud(x, y) {
+  const ability = runStats?.bossAbility;
+  if (!ability || ability.pending) return;
+  ctx.save();
+  ctx.globalAlpha = 0.88;
+  ctx.fillStyle = "rgba(20,6,28,0.72)";
+  ctx.fillRect(x, y - 22, 190, 34);
+  ctx.strokeStyle = "rgba(255, 211, 90, 0.72)";
+  ctx.strokeRect(x + 0.5, y - 21.5, 189, 33);
+  ctx.fillStyle = "#ffd35a";
+  ctx.font = "900 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.textAlign = "left";
+  ctx.fillText("BOSS", x + 8, y - 7);
+  ctx.fillStyle = "rgba(246,248,255,0.9)";
+  ctx.font = "700 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillText(`${ability.name}  ${ability.hitsLeft}`, x + 52, y - 7);
+  ctx.restore();
+}
+
 
 function drawUtilityBox(x, y, key, label, count, color, sub = "") {
   ctx.save();
@@ -6564,7 +6987,7 @@ function drawUtilityBox(x, y, key, label, count, color, sub = "") {
   ctx.strokeStyle = color;
   ctx.strokeRect(x + 7.5, y - 16.5, 25, 23);
 
-  ctx.font = "700 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.font = `700 ${key.length > 1 ? 10 : 13}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
   ctx.fillStyle = "rgba(246,248,255,0.92)";
   ctx.textAlign = "center";
   ctx.fillText(key, x + 20, y - 4);
@@ -6658,6 +7081,11 @@ window.addEventListener("keydown", e => {
     else if (mode === "paused") resumeFight();
     return;
   }
+  if (key === " " || key === "spacebar") {
+    e.preventDefault();
+    doPlayerDash();
+    return;
+  }
   keys.add(key);
 
   if (key === "1") setWeapon("pistol");
@@ -6706,7 +7134,7 @@ canvas.addEventListener("mousemove", e => {
 
 canvas.addEventListener("mousedown", e => {
   resumeAudio();
-  if (e.button === 0) {
+  if (e.button === 0 && mode === "running" && !gameOver) {
     mouse.down = true;
     player.fireBuffer = Math.max(player.fireBuffer, 0.16);
   }
@@ -6742,6 +7170,10 @@ overlay.addEventListener("click", e => {
       showDebug = !showDebug;
       renderOptions();
     },
+    toggleMuteUnfocused: () => {
+      setMuteUnfocused(!muteWhenUnfocusedEnabled());
+      renderOptions();
+    },
     resetSave: () => resetSave(),
     refundPowerups: () => refundPowerups(),
     buyPowerup: () => buyPowerup(button.dataset.id),
@@ -6766,6 +7198,15 @@ overlay.addEventListener("input", e => {
   const label = overlay.querySelector(`[data-volume-value="${name}"]`);
   if (label) label.textContent = `${Math.round(value * 100)}%`;
 });
+
+function updateFocusAudioMute() {
+  updateMusicVolume();
+  updateOneShotAudioVolumes();
+}
+
+window.addEventListener("blur", updateFocusAudioMute);
+window.addEventListener("focus", updateFocusAudioMute);
+document.addEventListener("visibilitychange", updateFocusAudioMute);
 
 renderLog();
 renderMenu();
