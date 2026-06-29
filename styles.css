@@ -3025,8 +3025,17 @@ body[data-screen="game"] #pauseButton {
   border-color: rgba(125, 255, 178, 0.7);
 }
 
-.pauseResume {
-  width: min(330px, 82vw);
+.pauseActions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  max-width: min(340px, 82vw);
+  margin: 0 auto;
+}
+
+.pauseResume,
+.pauseEnd {
+  width: 100%;
 }
 
 .pauseCard small {

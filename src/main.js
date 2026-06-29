@@ -1804,11 +1804,33 @@ function showPauseOverlay(accepted = false) {
   titleCard.innerHTML = `
     <div class="pauseCard">
       <div class="pauseTag">PAUSE REQUEST</div>
-      <h2>${accepted ? "Pause accepted" : "Waiting for opponent"}</h2>
-      <p>${accepted ? "The other side accepted the pause. The fight is frozen until you resume." : "Your pause request was sent to the other side. AI opponents always accept after a short delay."}</p>
-      <div class="pauseStatus ${accepted ? "accepted" : "pending"}">${accepted ? "ACCEPTED" : "REQUEST SENT"}</div>
-      ${accepted ? `<button class="vsButton green pauseResume" data-action="resumeFight">RESUME FIGHT</button>` : `<button class="vsButton blue pauseResume" data-action="noop">WAITING...</button>`}
-      <small>P resumes after acceptance.</small>
+      <h2>${accepted ? "Paused" : "Asking to pause"}</h2>
+      <p>${accepted ? "The fight is frozen. Resume when you are ready, or end the run from here." : "Pause request sent. The other side is accepting it now."}</p>
+      <div class="pauseStatus ${accepted ? "accepted" : "pending"}">${accepted ? "ACCEPTED" : "WAITING"}</div>
+      <div class="pauseActions">
+        ${accepted ? `<button class="vsButton green pauseResume" data-action="resumeFight">RESUME</button>` : `<button class="vsButton blue pauseResume" data-action="noop">WAITING...</button>`}
+        <button class="vsButton red pauseEnd" data-action="confirmEndRun">END RUN</button>
+      </div>
+      <small>Esc or P pauses. End Run is here so Escape does not throw away a run.</small>
+    </div>
+  `;
+}
+
+function showEndRunConfirm() {
+  if (!(mode === "paused" || mode === "pauseRequest")) return;
+  overlay.style.display = "grid";
+  overlay.className = "overlayScreen pauseMenu";
+  document.body.dataset.screen = "game";
+  titleCard.innerHTML = `
+    <div class="pauseCard">
+      <div class="pauseTag">END RUN</div>
+      <h2>Leave this run?</h2>
+      <p>This sends you back to the main menu. Current floor progress from this run is lost.</p>
+      <div class="pauseActions">
+        <button class="vsButton green pauseResume" data-action="resumeFight">KEEP PLAYING</button>
+        <button class="vsButton red pauseEnd" data-action="abandonRun">END RUN</button>
+      </div>
+      <small>Use this when you want to quit the current fight. Escape only pauses.</small>
     </div>
   `;
 }
@@ -1867,6 +1889,19 @@ function resumeFight() {
   resumeRunAudio();
   addLog("Fight resumed.");
   updateHud();
+}
+
+function abandonRun() {
+  if (!(mode === "paused" || mode === "pauseRequest")) return;
+  running = false;
+  gameOver = false;
+  mouse.down = false;
+  keys.clear();
+  pauseRequestedAt = 0;
+  pauseAcceptedAt = 0;
+  stopMusic();
+  addLog("Run ended from pause menu.");
+  renderMenu();
 }
 
 function renderMenu() {
@@ -7066,10 +7101,11 @@ function canvasPos(event) {
 window.addEventListener("keydown", e => {
   resumeAudio();
   const key = e.key.toLowerCase();
-  if (key === "p") {
+  if (key === "p" || key === "escape") {
     e.preventDefault();
     if (mode === "running") requestFightPause();
     else if (mode === "paused") resumeFight();
+    else if (mode === "pauseRequest") showPauseOverlay(false);
     return;
   }
   if (key === " " || key === "spacebar") {
@@ -7103,7 +7139,6 @@ window.addEventListener("keydown", e => {
     else if (mode === "storyBriefing") continueStoryBriefing();
     else if (mode === "storyScene") continueStoryScene();
   }
-  if (key === "escape") renderMenu();
 });
 
 window.addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
@@ -7181,7 +7216,9 @@ overlay.addEventListener("click", e => {
     chooseRoute: () => chooseRoute(button.dataset.route),
     buy: () => buyUnlock(button.dataset.type, button.dataset.id),
     equip: () => equipUnlock(button.dataset.type, button.dataset.id),
-    resumeFight: () => resumeFight()
+    resumeFight: () => resumeFight(),
+    confirmEndRun: () => showEndRunConfirm(),
+    abandonRun: () => abandonRun()
   };
 
   if (actions[action]) actions[action]();
