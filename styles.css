@@ -4033,9 +4033,9 @@ body[data-screen="game"] #pauseButton {
 .collectionPanel .shopCard { min-height: 174px !important; }
 .collectionPanel .shopGrid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important; }
 .operativePreview, .bigSwatch { width: 82px !important; height: 82px !important; }
-.operativePreview img { width: 70px !important; height: 70px !important; image-rendering: pixelated !important; }
+.operativePreview img { max-width: 70px !important; max-height: 70px !important; width: auto !important; height: auto !important; object-fit: contain !important; image-rendering: pixelated !important; }
 .selectedSpriteBox { width: 82px !important; height: 82px !important; }
-.selectedSpriteBox img { width: 70px !important; height: 70px !important; }
+.selectedSpriteBox img { max-width: 70px !important; max-height: 70px !important; width: auto !important; height: auto !important; object-fit: contain !important; }
 .collectionDetailBar small { display: block; color: rgba(217,222,234,0.72); font: 800 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 5px; }
 .achievementRecordGrid div { min-height: 72px; }
 

@@ -20,6 +20,12 @@ const ASSET_PATHS = {
     player_platform_pink: "./assets/sprites/platformer_pink_front.png",
     player_platform_purple: "./assets/sprites/platformer_purple_front.png",
     player_platform_beige: "./assets/sprites/platformer_beige_front.png",
+    player_human_green: "./assets/sprites/player_human_green.png",
+    player_human_red: "./assets/sprites/player_human_red.png",
+    player_human_blue: "./assets/sprites/player_human_blue.png",
+    player_human_yellow: "./assets/sprites/player_human_yellow.png",
+    player_human_grey: "./assets/sprites/player_human_grey.png",
+    player_human_pine: "./assets/sprites/player_human_pine.png",
     town_maren: "./assets/sprites/town_maren.png",
     town_rowan: "./assets/sprites/town_rowan.png",
     town_tavi: "./assets/sprites/town_tavi.png",
@@ -304,6 +310,15 @@ function drawImageAsset(key, x, y, w, h, angle = 0, alpha = 1) {
   ctx.drawImage(img, -w / 2, -h / 2, w, h);
   ctx.restore();
   return true;
+}
+
+function isHumanTownSprite(key) {
+  return typeof key === "string" && (key.startsWith("town_") || key.startsWith("player_human_"));
+}
+
+function drawCharacterAsset(key, x, y, height = 58, angle = 0, alpha = 1) {
+  if (!isHumanTownSprite(key)) return drawImageAsset(key, x, y, height, height, angle, alpha);
+  return drawImageAsset(key, x, y - height * 0.08, Math.round(height * 0.74), height, angle, alpha);
 }
 
 function audioCategoryForKey(key, fallback = "sfx") {
@@ -962,7 +977,13 @@ const SHAPES = [
   { id: "greenRunner", name: "Green Hopper", cost: 18, req: 3, sprite: "player_platform_green" },
   { id: "pinkRunner", name: "Pink Lantern", cost: 22, req: 4, sprite: "player_platform_pink" },
   { id: "purpleRunner", name: "Purple Jumper", cost: 28, req: 5, sprite: "player_platform_purple" },
-  { id: "beigeRunner", name: "Dust Walker", cost: 34, req: 6, sprite: "player_platform_beige" }
+  { id: "beigeRunner", name: "Dust Walker", cost: 34, req: 6, sprite: "player_platform_beige" },
+  { id: "humanGreen", name: "Village Runner", cost: 18, req: 2, sprite: "player_human_green" },
+  { id: "humanRed", name: "Red Jacket", cost: 24, req: 3, sprite: "player_human_red" },
+  { id: "humanBlue", name: "Street Scout", cost: 30, req: 4, sprite: "player_human_blue" },
+  { id: "humanYellow", name: "Workhand", cost: 36, req: 5, sprite: "player_human_yellow" },
+  { id: "humanGrey", name: "Quiet Traveler", cost: 44, req: 6, sprite: "player_human_grey" },
+  { id: "humanPine", name: "Old Roadhand", cost: 52, req: 7, sprite: "player_human_pine" }
 ];
 
 const COLORS = [
@@ -6425,7 +6446,7 @@ function drawVillageTownfolk() {
     ctx.fill();
     drawTownAsset("town_crate_small", point.x - 38, point.y + 14, 24, 0, 0.82);
     drawTownAsset(npc.icon || "tiny_sign", point.x - 38, point.y - 8, 22, 0, 0.9);
-    if (!drawImageAsset(npc.sprite || "player_alt", point.x, point.y, 44, 44)) {
+    if (!drawCharacterAsset(npc.sprite || "player_alt", point.x, point.y, 58)) {
       ctx.fillStyle = "#ffd35a";
       ctx.beginPath();
       ctx.arc(point.x, point.y, 15, 0, Math.PI * 2);
@@ -6462,7 +6483,7 @@ function drawVillageVisitor() {
   drawTownAsset("town_crate_big", x - 54, y + 14, 34, 0, 0.9);
   drawTownAsset("town_barrel_a", x - 22, y + 12, 28, 0, 0.88);
   drawTownAsset(visitor.type === "seed" ? "tiny_flower" : visitor.type === "miner" ? "tiny_tool_pickaxe" : visitor.type === "fisher" ? "tiny_key" : "tiny_coin", x - 54, y - 12, 24, 0, 0.95);
-  if (!drawImageAsset(visitor.sprite || "rpg_soldier", x, y, 42, 42)) {
+  if (!drawCharacterAsset(visitor.sprite || "rpg_soldier", x, y, 56)) {
     ctx.fillStyle = "#ffd35a";
     ctx.beginPath();
     ctx.arc(x, y, 14, 0, Math.PI * 2);
@@ -6502,7 +6523,7 @@ function drawVillageVillagers() {
       ctx.arc(point.x, point.y, 28, 0, Math.PI * 2);
       ctx.stroke();
     }
-    if (!drawImageAsset(villager.sprite, point.x, point.y, size, size)) {
+    if (!drawCharacterAsset(villager.sprite, point.x, point.y, Math.max(56, size + 8))) {
       ctx.fillStyle = spot.color;
       ctx.beginPath();
       ctx.arc(point.x, point.y, 18, 0, Math.PI * 2);
@@ -6531,10 +6552,10 @@ function drawVillagePlayer() {
       const back = i * 20 * pct;
       const gx = p.x - Math.cos(p.dashAngle) * back;
       const gy = p.y - Math.sin(p.dashAngle) * back + bob;
-      drawImageAsset(sprite, gx, gy, 44, 44, 0, 0.12 * pct * (3 - i));
+      drawCharacterAsset(sprite, gx, gy, 54, 0, 0.12 * pct * (3 - i));
     }
   }
-  if (!drawImageAsset(sprite, p.x, p.y + bob, 44, 44)) {
+  if (!drawCharacterAsset(sprite, p.x, p.y + bob, 54)) {
     ctx.fillStyle = colorById(save.selectedColor).value;
     ctx.beginPath();
     ctx.arc(p.x, p.y + bob, 14, 0, Math.PI * 2);
@@ -11840,7 +11861,11 @@ function drawPlayerModel() {
     ctx.save();
     ctx.shadowColor = color;
     ctx.shadowBlur = 8;
-    ctx.drawImage(sprite, -15, -15, 30, 30);
+    if (isHumanTownSprite(spriteKey)) {
+      ctx.drawImage(sprite, -11, -20, 22, 38);
+    } else {
+      ctx.drawImage(sprite, -15, -15, 30, 30);
+    }
     ctx.shadowBlur = 0;
     ctx.strokeStyle = hexToRgba(color, 0.75);
     ctx.lineWidth = 2;
