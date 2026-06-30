@@ -435,7 +435,7 @@ function saveTowerProgress(reason = "progress") {
   if (!currentFloor || currentFloor < 1) return;
   if (["menu", "village", "villagePaused"].includes(mode)) return;
   save.bestFloor = Math.max(Number(save.bestFloor) || 0, Number(currentFloor) || 1);
-  save.lastTowerProgress = { floor: currentFloor, mode, reason, ts: Date.now() };
+  save.lastTowerProgress = { floor: currentFloor, room: currentRoom, roomTotal: towerRoomsForFloor(currentFloor), mode, reason, ts: Date.now() };
   saveGame();
 }
 
@@ -582,6 +582,10 @@ let worldW = W;
 let worldH = H;
 const camera = { x: 0, y: 0 };
 let currentFloor = 1;
+let currentRoom = 1;
+let currentFloorRoute = 0;
+let activeRoomObjective = null;
+let roomObjectiveClearQueued = false;
 let towerCleared = false;
 let floorStartTime = 0;
 let teamPing = null;
@@ -927,6 +931,10 @@ const DEFAULT_HUB_SAVE = {
 const DEFAULT_SAVE = {
   shards: 0,
   bestFloor: 0,
+  towerCheckpointFloor: 1,
+  towerCheckpoints: {},
+  towerUnlockedFloors: {},
+  towerStableFloors: {},
   totalClears: 0,
   totalWeaponFinds: 0,
   storyClears: 0,
@@ -1822,7 +1830,7 @@ const STAGES = [
 ];
 
 const BOT_COLORS = ["#ff6b6b", "#ffb86b", "#c77dff", "#ffd166", "#ff5c7a", "#a1ffce", "#7cc7ff"];
-const BOSS_FLOORS = new Set([3, 5, 7, 8]);
+const BOSS_FLOORS = new Set([2, 4, 7, 8]);
 
 const BOT_PROFILES = [
   {
@@ -1909,6 +1917,25 @@ const BOT_PROFILES = [
   { name: "Croak", callSign: "Mud Anchor", color: "#7dffb2", model: "guard", sprite: "enemy_frog", weaponId: "shotgun", trait: "holds dirty corners and jumps after contact", patience: 0.9, coverBias: 0.9, aggression: 0.62, aim: 0.6, reactionBoost: 0.0, peekBias: 0.45, smokeBias: 0.12 },
   { name: "Skitter", callSign: "Wall Mouse", color: "#c77dff", model: "runner", sprite: "enemy_mouse", weaponId: "revolver", trait: "takes side paths and punishes slow reloads", patience: 0.72, coverBias: 0.66, aggression: 0.78, aim: 0.66, reactionBoost: 0.03, peekBias: 0.74, smokeBias: 0.08 }
 ];
+
+
+const WITCH_PROFILE = {
+  name: "Witch",
+  callSign: "Curse Sniper",
+  color: "#c77dff",
+  model: "witch",
+  sprite: "enemy_vampire",
+  weaponId: "needler",
+  trait: "marks you from range and punishes standing still",
+  patience: 1.08,
+  coverBias: 0.82,
+  aggression: 0.54,
+  aim: 0.7,
+  reactionBoost: 0.02,
+  peekBias: 0.38,
+  smokeBias: 0.05,
+  witch: true
+};
 
 const BOSS_PROFILES = [
   {
@@ -3803,6 +3830,28 @@ function renderVillageDailyBoard() {
   `, "dailyBoardMenu");
 }
 
+function renderTowerCheckpointPanel() {
+  const key = towerCheckpointKey();
+  const stable = towerCheckpointFloor(key);
+  const unlocked = towerUnlockedFloor(key);
+  const target = towerStabilizeTarget(key);
+  const cost = target ? towerStabilizeCost(target) : null;
+  const hub = ensureHubSave();
+  const button = target
+    ? `<button class="vsButton blue" data-action="stabilizeTowerCheckpoint">Stabilize Floor ${target}<br><small>${cost.supplies} supplies · ${cost.hope} hope</small></button>`
+    : `<button class="vsButton" data-action="noop">Checkpoint stable</button>`;
+  return `
+    <div class="vsDetailBar">
+      <div class="powerIcon big">F</div>
+      <div>
+        <b>Floor checkpoint</b>
+        <p>Start floor ${stable}. Unlocked floor ${unlocked}. ${target ? `Spend supplies and hope to lock floor ${target}. You have ${hub.supplies || 0} supplies and ${hub.hope || 0} hope.` : "Clear more floors to unlock a higher checkpoint."}</p>
+      </div>
+      ${button}
+    </div>
+  `;
+}
+
 function renderVillagePrepTray() {
   const prep = villagePrepSummary();
   const omen = activeVillageOmen();
@@ -3824,6 +3873,7 @@ function renderVillagePrepTray() {
           <div><b>${omen?.name || "No omen"}</b><span>${omen?.text || "The tower is quiet."}</span></div>
           <div><b>How to fill slots</b><span>Meal comes from Maren or crops. Tool comes from Rowan or kitchen jobs. Scout comes from Tavi jobs. Shrine comes from shrine jobs or spent hope.</span></div>
         </div>
+        ${renderTowerCheckpointPanel()}
         <div class="menuActions">
           <button class="vsButton green jackpotButton" data-action="continueTowerGate">${nextLabel}</button>
           <button class="vsButton blue" data-action="openVillageBoard">Daily Board</button>
@@ -8737,6 +8787,175 @@ function upgradeRewardCard(upgrade, index) {
   `;
 }
 
+
+function towerRoomsForFloor(floor = currentFloor) {
+  return clamp(2 + Math.max(1, Number(floor) || 1), 3, 10);
+}
+
+function towerRoomLabel(floor = currentFloor, room = currentRoom) {
+  return `Floor ${floor} · Room ${room}/${towerRoomsForFloor(floor)}`;
+}
+
+function isFinalTowerRoom(floor = currentFloor, room = currentRoom) {
+  return Number(room) >= towerRoomsForFloor(floor);
+}
+
+function isBossAmbushRoom(floor = currentFloor, room = currentRoom) {
+  return Number(floor) >= 6 && Number(room) === 3;
+}
+
+function roomObjectiveFor(floor = currentFloor, room = currentRoom) {
+  if (isBossFloor(floor, room) || isFinalTowerRoom(floor, room)) return { type: "clear", label: "Clear the room", detail: "Eliminate every enemy." };
+  const pick = (floor + room) % 5;
+  if (floor >= 4 && pick === 0) {
+    return { type: "survive", label: "Survive", detail: "Stay alive until the door opens.", duration: clamp(24 + floor * 3, 28, 45), elapsed: 0 };
+  }
+  if (floor >= 3 && pick === 1) {
+    return { type: "crystals", label: "Break the wards", detail: "Destroy 3 ward crystals.", needed: 3 };
+  }
+  if (floor >= 2 && pick === 2) {
+    return { type: "hold", label: "Hold the circle", detail: "Stand in the marked circle.", needed: clamp(9 + floor * 1.4, 11, 22), held: 0, x: 0, y: 0, r: 74 };
+  }
+  return { type: "clear", label: "Clear the room", detail: "Eliminate every enemy." };
+}
+
+function objectiveText(objective = activeRoomObjective) {
+  if (!objective) return "Clear the room";
+  if (objective.type === "survive") return `Survive ${Math.max(0, Math.ceil((objective.duration || 0) - (objective.elapsed || 0)))}s`;
+  if (objective.type === "hold") return `Hold circle ${Math.floor(objective.held || 0)}/${Math.ceil(objective.needed || 1)}s`;
+  if (objective.type === "crystals") return `Break wards ${objectiveCrystalsBroken()}/${objective.needed || 3}`;
+  return bots.filter(bot => bot.alive).length > 0 ? `Clear enemies ${bots.filter(bot => bot.alive).length}` : "Room clear";
+}
+
+function objectiveCrystalsBroken() {
+  const crystals = breakables.filter(item => item.type === "objective_crystal");
+  if (!crystals.length) return 0;
+  return crystals.filter(item => !item.alive).length;
+}
+
+function placeRoomObjective() {
+  const objective = activeRoomObjective;
+  if (!objective) return;
+  if (objective.type === "hold") {
+    const p = randomFreePoint(190);
+    objective.x = p.x;
+    objective.y = p.y;
+    objective.r = 78;
+    return;
+  }
+  if (objective.type === "crystals") {
+    for (let i = 0; i < (objective.needed || 3); i++) {
+      const p = randomFreePoint(170);
+      breakables.push({
+        x: p.x,
+        y: p.y,
+        r: 17,
+        hp: 46 + currentFloor * 5,
+        maxHp: 46 + currentFloor * 5,
+        type: "objective_crystal",
+        alive: true,
+        wobble: rand(0, Math.PI * 2)
+      });
+    }
+  }
+}
+
+function objectiveCanClearAfterAllBotsDead() {
+  if (!activeRoomObjective) return true;
+  return activeRoomObjective.type === "clear" || activeRoomObjective.type === "survive" || activeRoomObjective.done;
+}
+
+function maybeCompleteRoomFromEnemyClear(bot, angle, weapon, hitPoint) {
+  if (!bots.every(b => !b.alive)) return;
+  if (objectiveCanClearAfterAllBotsDead()) startFinalKillReplay(bot, angle, weapon, hitPoint);
+}
+
+function updateRoomObjective(dt) {
+  if (mode !== "running" || gameOver || !activeRoomObjective || roomObjectiveClearQueued) return;
+  const objective = activeRoomObjective;
+  if (objective.type === "survive") {
+    objective.elapsed = (objective.elapsed || 0) + dt;
+    if (objective.elapsed >= objective.duration) objective.done = true;
+  } else if (objective.type === "hold") {
+    const inside = dist(player, objective) <= (objective.r || 78);
+    objective.held = clamp((objective.held || 0) + (inside ? dt : -dt * 0.45), 0, objective.needed || 12);
+    if (inside && Math.random() < 0.08) addParticles("reward", player.x, player.y - 12, -Math.PI / 2, 1);
+    if (objective.held >= objective.needed) objective.done = true;
+  } else if (objective.type === "crystals") {
+    if (objectiveCrystalsBroken() >= (objective.needed || 3)) objective.done = true;
+  }
+  if (!objective.done) return;
+  roomObjectiveClearQueued = true;
+  addLog(`${objective.label} complete.`);
+  floatText.push({ x: player.x - 32, y: player.y - 38, text: "door open", t: 1.2 });
+  clearFloor();
+}
+
+function towerCheckpointKey() {
+  return activeStoryMode ? `story:${activeStoryChapterId || "ledger"}` : "tower";
+}
+
+function towerUnlockedFloor(key = towerCheckpointKey()) {
+  const unlocked = save.towerUnlockedFloors || {};
+  const legacy = save.towerCheckpoints || {};
+  const stored = Number(unlocked[key] ?? legacy[key] ?? save.towerCheckpointFloor ?? 1) || 1;
+  return clamp(stored, 1, 8);
+}
+
+function towerCheckpointFloor(key = towerCheckpointKey()) {
+  const stable = save.towerStableFloors || {};
+  const legacyStable = save.towerStableFloor || 1;
+  const stored = Number(stable[key] ?? legacyStable ?? 1) || 1;
+  return clamp(Math.min(stored, towerUnlockedFloor(key)), 1, 8);
+}
+
+function setTowerCheckpointAfterFloor(floor = currentFloor) {
+  const key = towerCheckpointKey();
+  const next = clamp((Number(floor) || 1) + 1, 1, 8);
+  save.towerUnlockedFloors = save.towerUnlockedFloors || {};
+  save.towerUnlockedFloors[key] = Math.max(Number(save.towerUnlockedFloors[key]) || 1, next);
+  save.towerCheckpoints = save.towerCheckpoints || {};
+  save.towerCheckpoints[key] = Math.max(Number(save.towerCheckpoints[key]) || 1, next);
+  if (key === "tower") save.towerCheckpointFloor = save.towerUnlockedFloors[key];
+  return save.towerUnlockedFloors[key];
+}
+
+function towerStabilizeTarget(key = towerCheckpointKey()) {
+  const stable = towerCheckpointFloor(key);
+  const unlocked = towerUnlockedFloor(key);
+  return unlocked > stable ? unlocked : 0;
+}
+
+function towerStabilizeCost(floor) {
+  const target = clamp(Number(floor) || 1, 1, 8);
+  return { supplies: 6 + target * 5, hope: Math.max(1, Math.ceil(target / 2)) };
+}
+
+function stabilizeTowerCheckpoint() {
+  const key = towerCheckpointKey();
+  const target = towerStabilizeTarget(key);
+  if (!target) {
+    setVillageMessage("Checkpoint", "No higher floor to lock in yet.", 2.4);
+    return;
+  }
+  const cost = towerStabilizeCost(target);
+  const hub = ensureHubSave();
+  if ((hub.supplies || 0) < cost.supplies || (hub.hope || 0) < cost.hope) {
+    setVillageMessage("Checkpoint", `Need ${cost.supplies} supplies and ${cost.hope} hope to stabilize floor ${target}.`, 3.0);
+    renderVillagePrepTray();
+    return;
+  }
+  hub.supplies -= cost.supplies;
+  hub.hope -= cost.hope;
+  save.towerStableFloors = save.towerStableFloors || {};
+  save.towerStableFloors[key] = Math.max(Number(save.towerStableFloors[key]) || 1, target);
+  if (key === "tower") save.towerStableFloor = save.towerStableFloors[key];
+  saveGame();
+  playAssetSfx("cache_upgrade", 0.28);
+  setVillageMessage("Checkpoint", `Floor ${target} stabilized. Future climbs can start there.`, 3.0);
+  renderVillagePrepTray();
+}
+
 function startTower(options = {}) {
   activeStoryMode = Boolean(options.story);
   activeStoryChapterId = options.chapterId || "ledger";
@@ -8791,7 +9010,8 @@ function startTower(options = {}) {
   if (hubProjectRank("garden")) addLog(`Garden ready: +${hubProjectMaxHpBonus()} max HP.`);
   if (hubProjectRank("kitchen")) addLog(`Kitchen meal: +${hubProjectSmokeBonus()} smoke per floor.`);
   if (hubProjectRank("watchpost")) addLog(`Watch Post: +${hubProjectPulseRangeBonus()} Pulse range.`);
-  startFloor(1);
+  const startAt = options.floor ? clamp(Number(options.floor) || 1, 1, 8) : towerCheckpointFloor();
+  startFloor(startAt, 1);
 }
 
 function defaultRouteForFloor(floor) {
@@ -8936,18 +9156,22 @@ function viewportVisible(p, pad = 80) {
   return p.x >= camera.x - pad && p.x <= camera.x + W + pad && p.y >= camera.y - pad && p.y <= camera.y + H + pad;
 }
 
-function startFloor(floor) {
-  currentFloor = floor;
-  activeRouteType = nextRouteType || defaultRouteForFloor(floor);
-  nextRouteType = null;
+function startFloor(floor, room = 1) {
+  currentFloor = clamp(Number(floor) || 1, 1, 8);
+  currentRoom = clamp(Number(room) || 1, 1, towerRoomsForFloor(currentFloor));
+  if (currentRoom <= 1 || currentFloorRoute !== currentFloor || !activeRouteType) {
+    activeRouteType = nextRouteType || defaultRouteForFloor(currentFloor);
+    nextRouteType = null;
+    currentFloorRoute = currentFloor;
+  }
 
-  activeStage = expandStageForFloor(stageForFloor(floor, activeRouteType), floor, activeRouteType);
+  activeStage = expandStageForFloor(stageForFloor(currentFloor, activeRouteType), currentFloor, activeRouteType);
   worldW = activeStage.worldW || W;
   worldH = activeStage.worldH || H;
   NAV_COLS = Math.ceil(worldW / NAV_CELL);
   NAV_ROWS = Math.ceil(worldH / NAV_CELL);
   walls = activeStage.walls.map(w => ({ ...w }));
-  addTacticalCover(floor);
+  addTacticalCover(currentFloor);
   teamPing = null;
   pendingIntel.length = 0;
   bullets.length = 0;
@@ -8960,14 +9184,17 @@ function startFloor(floor) {
   poisonPuddles.length = 0;
   movementTraces.length = 0;
   message = "";
+  activeRoomObjective = roomObjectiveFor(currentFloor, currentRoom);
+  roomObjectiveClearQueued = false;
 
   player.x = activeStage.spawn.x;
   player.y = activeStage.spawn.y;
   camera.x = 0;
   camera.y = 0;
   resolveWallOverlap(player, 12);
+  const previousHp = Number(player.hp) || 0;
   player.maxHp = 100 + runStats.maxHpBonus;
-  player.hp = player.maxHp;
+  player.hp = currentRoom <= 1 || previousHp <= 0 ? player.maxHp : Math.min(player.maxHp, previousHp + Math.max(10, currentFloor * 3));
   player.r = 10;
   player.baseSpeed = 176;
   player.maxAmmo = playerMaxAmmo();
@@ -8976,31 +9203,32 @@ function startFloor(floor) {
   player.recoil = 0;
   player.reload = 0;
   player.shotCd = 0;
-  player.pulseCd = floor === 1 ? 0 : Math.min(player.pulseCd, 2.5);
+  player.pulseCd = currentFloor === 1 && currentRoom === 1 ? 0 : Math.min(player.pulseCd, 2.5);
   player.pulseActive = 0;
   player.noise = 0;
   player.spotted = 0;
   player.dashTime = 0;
   player.dashInvuln = 0;
   player.dashCd = Math.min(player.dashCd || 0, 0.35);
-  activatePendingBossAbilityForFloor(floor);
+  activatePendingBossAbilityForFloor(currentFloor);
   player.reflexReady = runStats.reflexBuffer;
-  player.smokeCharges = (isBossFloor(floor) ? 2 : activeRouteType === "cache" ? 1 : 1) + (runStats.smokeBonus || 0);
+  player.smokeCharges = (isBossFloor(currentFloor, currentRoom) ? 2 : activeRouteType === "cache" ? 1 : 1) + (runStats.smokeBonus || 0);
 
-  bots = makeFloorBots(floor);
+  bots = makeFloorBots(currentFloor);
   for (const bot of bots) resolveWallOverlap(bot, 18);
-  spawnBreakables(floor);
-  spawnSmokeCanisters(floor);
+  spawnBreakables(currentFloor);
+  spawnSmokeCanisters(currentFloor);
+  placeRoomObjective();
 
   floorStartTime = nowSec();
   running = false;
   gameOver = false;
-  startMusic(isBossFloor(floor) ? "music_boss" : "music_run");
+  startMusic(isBossFloor(currentFloor, currentRoom) ? "music_boss" : "music_run");
 
   roundOpponentLabel = bots.length === 1
     ? botIntroName(bots[0])
     : `${bots.length} contacts`;
-  roundMatchLabel = isBossFloor(floor)
+  roundMatchLabel = isBossFloor(currentFloor, currentRoom)
     ? "BOSS FIGHT"
     : activeRouteType === "cache"
       ? "SUPPLY ROOM"
@@ -9009,21 +9237,23 @@ function startFloor(floor) {
         : "GROUP FIGHT";
   lastCountdownCue = "";
 
-  addLog(`Floor ${floor}: ${activeStage.name}.`);
-  addLog(`${roundMatchLabel}: ${roundOpponentLabel}.`);
-  if (floor >= 2 && !isBossFloor(floor)) addLog("Next door locked.");
-  if (isBossFloor(floor)) addLog("Boss floor.");
+  addLog(`${towerRoomLabel()}: ${activeStage.name}.`);
+  addLog(`Goal: ${objectiveText(activeRoomObjective)}.`);
+  addLog(`${roundMatchLabel}: ${roundOpponentLabel}.`) ;
+  if (currentFloor >= 2 && !isBossFloor(currentFloor, currentRoom)) addLog("Next door locked.");
+  if (isBossFloor(currentFloor, currentRoom)) addLog("Boss room.");
   if (activeRouteType === "cache") addLog("Weapon cache route.");
   updateHud();
 
-  const scene = storySceneForFloor(floor);
-  if (scene) showStoryScene(floor, scene);
-  else if (isBossFloor(floor) && bots[0]) showBossIntro(bots[0]);
+  const scene = currentRoom === 1 ? storySceneForFloor(currentFloor) : null;
+  if (scene) showStoryScene(currentFloor, scene);
+  else if (isBossFloor(currentFloor, currentRoom) && bots[0]) showBossIntro(bots[0]);
   else beginRoundCountdown();
 }
 
-function isBossFloor(floor = currentFloor) {
-  return BOSS_FLOORS.has(floor) || activeRouteType === "boss" || activeRouteType === "rival";
+function isBossFloor(floor = currentFloor, room = currentRoom) {
+  const finalRoom = isFinalTowerRoom(floor, room);
+  return isBossAmbushRoom(floor, room) || (finalRoom && (BOSS_FLOORS.has(floor) || activeRouteType === "boss" || activeRouteType === "rival"));
 }
 
 function beginRoundCountdown() {
@@ -9101,36 +9331,60 @@ function showBossIntro(bot) {
 function makeFloorBots(floor) {
   const created = [];
 
-  if (isBossFloor(floor)) {
-    const profile = bossProfileForFloor(floor);
+  if (isBossFloor(floor, currentRoom)) {
+    const finalRoom = isFinalTowerRoom(floor, currentRoom);
+    const mainProfile = bossProfileForFloor(floor);
     const spawn = activeStage.botSpawns[0] || { x: worldW - 90, y: worldH - 90, role: "boss" };
-    created.push(makeBot(profile.name, spawn.x, spawn.y, "boss", profile.color, floor, profile));
+    created.push(makeBot(mainProfile.name, spawn.x, spawn.y, "boss", mainProfile.color, floor, mainProfile));
+
+    if (isBossAmbushRoom(floor, currentRoom)) {
+      const witchSpawn = activeStage.botSpawns[1] || safePointNear(worldW * 0.72, worldH * 0.32, 140);
+      created.push(makeBot("Witch", witchSpawn.x, witchSpawn.y, "witch", WITCH_PROFILE.color, floor, WITCH_PROFILE));
+    }
+
+    if (floor >= 8 && finalRoom) {
+      const secondProfile = BOSS_PROFILES[1] || BOSS_PROFILES[0];
+      const secondSpawn = activeStage.botSpawns[1] || safePointNear(worldW * 0.76, worldH * 0.72, 180);
+      created.push(makeBot(secondProfile.name, secondSpawn.x, secondSpawn.y, "boss", secondProfile.color, floor, secondProfile));
+      const witchSpawn = activeStage.botSpawns[2] || safePointNear(worldW * 0.28, worldH * 0.26, 180);
+      created.push(makeBot("Witch", witchSpawn.x, witchSpawn.y, "witch", WITCH_PROFILE.color, floor, WITCH_PROFILE));
+    } else if (floor >= 7 && finalRoom) {
+      const supportSpawn = activeStage.botSpawns[1] || safePointNear(worldW * 0.70, worldH * 0.35, 180);
+      const supportProfile = floor % 2 ? BOT_PROFILES[3] : WITCH_PROFILE;
+      created.push(makeBot(supportProfile.name, supportSpawn.x, supportSpawn.y, supportProfile.witch ? "witch" : "support", supportProfile.color, floor, supportProfile));
+    } else if (floor >= 4 && finalRoom) {
+      const supportSpawn = activeStage.botSpawns[1] || safePointNear(worldW * 0.70, worldH * 0.35, 180);
+      const supportProfile = floor >= 6 ? WITCH_PROFILE : BOT_PROFILES[3];
+      created.push(makeBot(supportProfile.name, supportSpawn.x, supportSpawn.y, supportProfile.witch ? "witch" : "support", supportProfile.color, floor, supportProfile));
+    }
     return created;
   }
 
-  const count = activeRouteType === "standard" && floor >= 6 ? 2 : 1;
+  const roomPressure = Math.max(0, currentRoom - 1);
+  const routePressure = activeRouteType === "rival" ? 1 : 0;
+  const count = clamp(1 + Math.floor((floor + roomPressure) / 4) + routePressure, 1, activeRouteType === "cache" ? 2 : 4);
   const rolesByFloor = [
-    ["duelist"],
-    ["baiter"],
-    ["hunter"],
-    ["boss"],
-    ["anchor"],
+    ["duelist", "baiter"],
+    ["baiter", "hunter"],
     ["hunter", "flanker"],
-    ["baiter"],
-    ["boss"]
+    ["anchor", "support"],
+    ["hunter", "flanker", "baiter"],
+    ["baiter", "anchor", "flanker"],
+    ["hunter", "duelist", "support"],
+    ["anchor", "hunter", "flanker"]
   ];
 
-  const roles = activeRouteType === "cache" ? ["duelist"] : rolesByFloor[(floor - 1) % rolesByFloor.length] || ["duelist"];
+  const roles = activeRouteType === "cache" ? ["duelist", "anchor"] : rolesByFloor[(floor - 1) % rolesByFloor.length] || ["duelist"];
   for (let i = 0; i < count; i++) {
     const template = activeStage.botSpawns[i % activeStage.botSpawns.length];
-    const profile = BOT_PROFILES[(floor + i - 1) % BOT_PROFILES.length];
-    const role = roles[i % roles.length] || template.role || "duelist";
+    const useWitch = floor >= 4 && i === count - 1 && currentRoom % 3 === 0;
+    const profile = useWitch ? WITCH_PROFILE : BOT_PROFILES[(floor + currentRoom + i - 2) % BOT_PROFILES.length];
+    const role = useWitch ? "witch" : (roles[i % roles.length] || template.role || "duelist");
     created.push(makeBot(profile.name, template.x, template.y, role, profile.color, floor, profile));
   }
 
   return created;
 }
-
 
 function botName(i) {
   return ["Vanta", "Mire", "Sable", "Rook", "Null", "Ash", "Vex"][i] || "Unit";
@@ -9140,18 +9394,21 @@ function makeBot(name, x, y, role, color, floor, profile = null) {
   const p = nearestFreePoint(x, y, 28);
   const difficulty = floor - 1;
   const isBoss = role === "boss";
+  const isWitch = role === "witch" || profile?.witch;
   const persona = profile || BOT_PROFILES[0];
   const weapon = WEAPON_BY_ID[persona.weaponId || "pistol"] || WEAPON_BY_ID.pistol;
   const aimSkill = clamp(persona.aim ?? 0.62, 0.35, 0.95);
 
-  const roleSpeed = role === "duelist" ? 18 : role === "flanker" ? 12 : role === "coward" ? -8 : role === "anchor" ? -6 : isBoss ? 14 : 0;
-  const roleReaction = role === "duelist" ? -0.22 : role === "hunter" ? -0.08 : role === "coward" ? 0.12 : role === "support" ? 0.05 : isBoss ? -0.26 : 0;
-  const roleAim = role === "duelist" ? -0.08 : role === "hunter" ? -0.03 : role === "coward" ? 0.05 : role === "flanker" ? 0.02 : isBoss ? -0.09 : 0;
+  const roleSpeed = isWitch ? -10 : role === "duelist" ? 18 : role === "flanker" ? 12 : role === "coward" ? -8 : role === "anchor" ? -6 : isBoss ? 14 : 0;
+  const roleReaction = isWitch ? 0.05 : role === "duelist" ? -0.22 : role === "hunter" ? -0.08 : role === "coward" ? 0.12 : role === "support" ? 0.05 : isBoss ? -0.26 : 0;
+  const roleAim = isWitch ? 0.03 : role === "duelist" ? -0.08 : role === "hunter" ? -0.03 : role === "coward" ? 0.05 : role === "flanker" ? 0.02 : isBoss ? -0.09 : 0;
   const maxHp = isBoss
     ? 220 + difficulty * 16
-    : role === "duelist"
-      ? 138 + difficulty * 12
-      : 84 + difficulty * 7 + (role === "anchor" ? 18 : 0);
+    : isWitch
+      ? 92 + difficulty * 8
+      : role === "duelist"
+        ? 138 + difficulty * 12
+        : 84 + difficulty * 7 + (role === "anchor" ? 18 : 0);
 
   return {
     name,
@@ -9203,6 +9460,9 @@ function makeBot(name, x, y, role, color, floor, profile = null) {
     bossAbilityTimer: isBoss ? rand(1.1, 2.2) : 99,
     tauntTimer: isBoss ? rand(1.8, 3.4) : 99,
     audioTauntCd: isBoss ? 0 : 99,
+    curseCd: isWitch ? rand(1.1, 2.4) : 99,
+    curseCharge: 0,
+    curseTarget: null,
     flankSide: Math.random() < 0.5 ? -1 : 1,
     memory: {
       playerLastRoute: [],
@@ -9854,7 +10114,11 @@ function damageBreakable(item, dmg, hitPoint = item, angle = 0, weapon = current
 
   item.alive = false;
 
-  if (item.type === "smoke") {
+  if (item.type === "objective_crystal") {
+    addParticles("spark", item.x, item.y, angle, 24);
+    addParticles("reward", item.x, item.y - 6, -Math.PI / 2, 16);
+    floatText.push({ x: item.x - 20, y: item.y - 26, text: "ward", t: 0.8 });
+  } else if (item.type === "smoke") {
     addSmoke(item.x, item.y, 82, 7.0);
     floatText.push({ x: item.x, y: item.y - 26, text: "smoke", t: 0.8 });
   } else {
@@ -10147,6 +10411,7 @@ function updatePlayer(dt) {
   const sneaking = keys.has("shift");
   player.dashCd = Math.max(0, (player.dashCd || 0) - dt);
   player.dashInvuln = Math.max(0, (player.dashInvuln || 0) - dt);
+  player.curseSlow = Math.max(0, (player.curseSlow || 0) - dt);
 
   if (player.dashTime > 0) {
     resumeAudio();
@@ -10156,7 +10421,8 @@ function updatePlayer(dt) {
     if (movedDistance > 1.2 && Math.random() < 0.85) addMovementTrace(player.x, player.y, player.dashAngle, { t: 0.7, color: "#7cc7ff", owner: "player", kind: "dash", size: 1.15 });
   } else if (moving) {
     resumeAudio();
-    const speed = player.baseSpeed * runStats.moveMult * (sneaking ? 0.55 : 1);
+    const curseMult = (player.curseSlow || 0) > 0 ? 0.42 : 1;
+    const speed = player.baseSpeed * runStats.moveMult * (sneaking ? 0.55 : 1) * curseMult;
     const l = len(x, y);
     const movedDistance = moveEntity(player, (x / l) * speed * dt, (y / l) * speed * dt);
     player.noise = sneaking ? 44 * runStats.sneakNoiseMult : 112;
@@ -10193,6 +10459,7 @@ function updatePlayer(dt) {
 }
 
 function doPlayerDash() {
+  if (mode === "running" && (player.curseSlow || 0) > 0) breakWitchCurse();
   if (mode !== "running" || gameOver || player.dashCd > 0 || player.dashTime > 0) return;
 
   let x = 0;
@@ -10207,6 +10474,7 @@ function doPlayerDash() {
   player.dashInvuln = 0.24;
   player.dashCd = dashCooldownTime();
   player.noise = 170;
+  breakWitchCurse();
   addMovementTrace(player.x, player.y, player.dashAngle, { t: 1.0, color: "#7cc7ff", owner: "player", kind: "dash", size: 1.35 });
   addParticles("dust", player.x, player.y, player.dashAngle, 16);
   addScreenFlash(0.022);
@@ -10439,7 +10707,7 @@ function damageBot(bot, dmg, angle = angleTo(player, bot), weapon = currentWeapo
     addDecal("blood", bot.x, bot.y, angle, weapon.id === "shotgun" || weapon.id === "breacher" ? 30 : 18);
     addDecal("blood", bot.x + rand(-10, 10), bot.y + rand(-10, 10), angle, weapon.id === "dmr" ? 22 : 14);
     addLog(`${bot.name} down.`);
-    if (bots.every(b => !b.alive)) startFinalKillReplay(bot, angle, weapon, hitPoint);
+    maybeCompleteRoomFromEnemyClear(bot, angle, weapon, hitPoint);
   }
 }
 
@@ -10456,7 +10724,7 @@ function applyDamageOverTime(bot, dot) {
         bot.alive = false;
         player.kills += 1;
         addLog(`${bot.name} down.`);
-        if (bots.every(b => !b.alive)) startFinalKillReplay(bot, rand(-Math.PI, Math.PI), currentWeapon(), bot);
+        maybeCompleteRoomFromEnemyClear(bot, rand(-Math.PI, Math.PI), currentWeapon(), bot);
       }
     }, dot.interval * i * 1000);
   }
@@ -10627,41 +10895,56 @@ function clearFloor() {
   killReplay = null;
   running = false;
   mode = "floorClear";
-  const routeBonus = activeRouteType === "cache" ? 1 : isBossFloor(currentFloor) ? 3 : 0;
+
+  const roomTotal = towerRoomsForFloor(currentFloor);
+  const floorComplete = isFinalTowerRoom(currentFloor, currentRoom);
+  const bossRoom = isBossFloor(currentFloor, currentRoom);
+  const cacheRoom = isWeaponCacheFloor(currentFloor, currentRoom);
+  const routeBonus = cacheRoom ? 1 : bossRoom ? 3 : 0;
   const omen = activeVillageOmen();
-  const omenShardBonus = (omen?.rivalShardBonus && activeRouteType === "rival" ? omen.rivalShardBonus : 0) + (omen?.bossShardBonus && isBossFloor(currentFloor) ? omen.bossShardBonus : 0);
-  const reward = currentFloor + routeBonus + omenShardBonus + Math.max(0, Math.floor((player.hp / player.maxHp) * 2)) + powerRank("luck") + powerRank("contractPay");
+  const omenShardBonus = (omen?.rivalShardBonus && activeRouteType === "rival" && floorComplete ? omen.rivalShardBonus : 0) + (omen?.bossShardBonus && bossRoom ? omen.bossShardBonus : 0);
+  const baseReward = floorComplete ? currentFloor : Math.max(1, Math.ceil(currentFloor * 0.55));
+  const reward = baseReward + routeBonus + omenShardBonus + Math.max(0, Math.floor((player.hp / player.maxHp) * (floorComplete ? 2 : 1))) + powerRank("luck") + powerRank("contractPay");
+
   runStats.clearStreak += 1;
-  if (runStats.bossAbility && !runStats.bossAbility.pending) expireBossAbility(`${runStats.bossAbility.name} faded after the floor.`);
-  const suppliesFound = storySupplyRewardForFloor(currentFloor) + (activeStoryMode && omen?.supplyBonus ? omen.supplyBonus : 0);
+  if (runStats.bossAbility && !runStats.bossAbility.pending) expireBossAbility(`${runStats.bossAbility.name} faded after the room.`);
+  const suppliesFound = floorComplete ? storySupplyRewardForFloor(currentFloor) + (activeStoryMode && omen?.supplyBonus ? omen.supplyBonus : 0) : 0;
   save.shards += reward;
-  save.bestFloor = Math.max(save.bestFloor, currentFloor);
   save.totalClears += 1;
-  if (suppliesFound) addVillageSupplies(suppliesFound, "found on this floor");
-  const hub = ensureHubSave();
-  hub.hope = (Number(hub.hope) || 0) + 1;
-  hub.lastHelp = `+1 hope for clearing floor ${currentFloor}.`;
+  if (floorComplete) {
+    save.bestFloor = Math.max(save.bestFloor, currentFloor);
+    setTowerCheckpointAfterFloor(currentFloor);
+    const hub = ensureHubSave();
+    hub.hope = (Number(hub.hope) || 0) + 1;
+    hub.lastHelp = `+1 hope for clearing floor ${currentFloor}.`;
+    if (suppliesFound) addVillageSupplies(suppliesFound, "found on this floor");
+  }
   saveGame();
-  checkVillageAchievements("floor");
+  if (floorComplete) checkVillageAchievements("floor");
 
   pendingFloorReward = {
     floor: currentFloor,
+    room: currentRoom,
+    roomTotal,
+    floorComplete,
+    nextRoom: floorComplete ? 0 : currentRoom + 1,
     reward,
     suppliesFound,
-    hpBonus: Math.max(0, Math.floor((player.hp / player.maxHp) * 2)),
+    hpBonus: Math.max(0, Math.floor((player.hp / player.maxHp) * (floorComplete ? 2 : 1))),
     omenShardBonus,
-    cacheFloor: isWeaponCacheFloor(currentFloor),
-    towerClear: currentFloor >= 8
+    cacheFloor: cacheRoom,
+    towerClear: floorComplete && currentFloor >= 8
   };
 
-  addLog(`Floor ${currentFloor} clear. +${reward} shards.`);
+  addLog(`${towerRoomLabel()} clear. +${reward} shards.`);
+  if (floorComplete) addLog(`Floor ${currentFloor} saved. Floor ${Math.min(8, currentFloor + 1)} unlocked.`);
   playSfx("reward");
   showFloorClearCelebration(pendingFloorReward);
   expireVillagePrepEffects();
 }
 
-function isWeaponCacheFloor(floor = currentFloor) {
-  return activeRouteType === "cache" || floor === 1;
+function isWeaponCacheFloor(floor = currentFloor, room = currentRoom) {
+  return (floor === 1 && room === 1) || (activeRouteType === "cache" && isFinalTowerRoom(floor, room));
 }
 
 function makeConfettiLayer(count = 54) {
@@ -10689,15 +10972,20 @@ function makeTreasureSparkles(count = 72) {
 }
 
 function showFloorClearCelebration(info) {
-  const confetti = makeConfettiLayer(54);
-
-  const jackpotText = info.cacheFloor ? "WEAPON CACHE FOUND" : isBossFloor(info.floor) ? "BOSS DEFEATED" : "FLOOR CLEAR";
-  const subText = info.towerClear ? "Tower route complete." : `Route choice unlocked for floor ${info.floor + 1}.`;
+  const confetti = makeConfettiLayer(info.floorComplete ? 54 : 32);
+  const roomText = `Floor ${info.floor} · Room ${info.room}/${info.roomTotal}`;
+  const jackpotText = info.cacheFloor ? "WEAPON CACHE" : isBossFloor(info.floor, info.room) ? "BOSS ROOM CLEAR" : info.floorComplete ? "FLOOR CLEAR" : "ROOM CLEAR";
+  const subText = info.towerClear
+    ? "Tower route complete."
+    : info.floorComplete
+      ? `Floor ${info.floor} saved. Choose the next route or go back to town.`
+      : `Next room: ${info.room + 1}/${info.roomTotal}. Pick one reward and keep climbing.`;
+  const hopeText = info.floorComplete ? "+1 hope earned." : "Hope waits at the floor clear.";
 
   openOverlay(`
     <div class="vsScreen framedScreen celebrationScreen">
       <div class="confettiLayer">${confetti}</div>
-      ${renderTopStrip(`Floor ${info.floor} Clear`, "backMenu")}
+      ${renderTopStrip(roomText, "backMenu")}
       <div class="vsPanel celebrationPanel">
         <div class="slotHeader">${jackpotText}</div>
         <div class="slotReels">
@@ -10705,14 +10993,14 @@ function showFloorClearCelebration(info) {
           <div class="slotReel"><span>${player.kills}</span><small>KILLS</small></div>
           <div class="slotReel"><span>${Math.round(player.hp)}</span><small>HP LEFT</small></div>
         </div>
-        <h2>${info.towerClear ? "TOWER CLEAR" : "NICE CLEANUP"}</h2>
-        <p class="panelLead">${subText} ${info.cacheFloor ? "Cache floors can change the whole run." : "Pick one reward and keep climbing."}</p>
+        <h2>${info.towerClear ? "TOWER CLEAR" : info.floorComplete ? "FLOOR SAVED" : "ROOM DONE"}</h2>
+        <p class="panelLead">${subText}</p>
         <div class="celebrationPayout">
           <b>+${info.reward} shards banked</b>
-          <span>+1 hope earned. ${info.suppliesFound ? `+${info.suppliesFound} village supplies found` : info.hpBonus > 0 ? `Survival bonus: +${info.hpBonus}` : "No village supplies this floor"}</span>
+          <span>${hopeText} ${info.suppliesFound ? `+${info.suppliesFound} village supplies found` : info.hpBonus > 0 ? `Survival bonus: +${info.hpBonus}` : "No supplies found"}</span>
         </div>
         <div class="menuActions">
-          <button class="vsButton green jackpotButton" data-action="claimFloorReward">${info.towerClear ? "CLAIM TOWER" : activeStoryMode ? "CLAIM REWARD" : "CLAIM AND CHOOSE ROUTE"}</button>
+          <button class="vsButton green jackpotButton" data-action="claimFloorReward">${info.towerClear ? "CLAIM TOWER" : info.floorComplete ? "CLAIM FLOOR" : "CLAIM ROOM"}</button>
         </div>
       </div>
     </div>
@@ -10737,13 +11025,17 @@ function showRewardChoices() {
     return upgradeRewardCard(reward.data, index);
   }).join("");
 
-  const cacheFloor = isWeaponCacheFloor(currentFloor);
-  const title = cacheFloor ? "Weapon Cache" : isBossFloor(currentFloor) ? "Boss Reward" : "Run Reward";
+  const floorInfo = pendingFloorReward || { floor: currentFloor, room: currentRoom, roomTotal: towerRoomsForFloor(currentFloor), floorComplete: true };
+  const cacheFloor = isWeaponCacheFloor(currentFloor, currentRoom);
+  const bossRoom = isBossFloor(currentFloor, currentRoom);
+  const title = cacheFloor ? "Weapon Cache" : bossRoom ? "Boss Reward" : floorInfo.floorComplete ? "Floor Reward" : "Room Reward";
   const lead = cacheFloor
-    ? `Pick one prize before floor ${currentFloor + 1}. Weapons are rare, so this room matters.`
-    : isBossFloor(currentFloor)
+    ? `Pick one prize before ${floorInfo.floorComplete ? `floor ${currentFloor + 1}` : `room ${floorInfo.room + 1}/${floorInfo.roomTotal}`}. Weapons are rare, so this room matters.`
+    : bossRoom
       ? `Pick one reward. Boss abilities last for the next floor or until you take three hits.`
-      : `Choose one temporary tool before climbing to floor ${currentFloor + 1}.`;
+      : floorInfo.floorComplete
+        ? `Choose one temporary tool before climbing to floor ${currentFloor + 1}.`
+        : `Choose one temporary tool before room ${floorInfo.room + 1}/${floorInfo.roomTotal}.`;
   const confetti = cacheFloor ? `<div class="confettiLayer cacheConfetti">${makeConfettiLayer(64)}</div>` : "";
   const slotStrip = cacheFloor ? `
     <div class="cacheTreasureBox">
@@ -10751,14 +11043,14 @@ function showRewardChoices() {
       <div class="cacheTreasureGlow"></div>
       <div class="cacheTreasureSparkles">${makeTreasureSparkles(90)}</div>
       <div class="cacheTreasureChest"><i></i><b></b><em></em></div>
-      <div class="cachePrizeRibbon">Pick one prize before floor ${currentFloor + 1}</div>
+      <div class="cachePrizeRibbon">Pick one prize before ${floorInfo.floorComplete ? `floor ${currentFloor + 1}` : `room ${floorInfo.room + 1}/${floorInfo.roomTotal}`}</div>
     </div>
   ` : "";
 
   openOverlay(`
     <div class="vsScreen framedScreen levelUpScreen rewardChoiceScreen ${cacheFloor ? "cacheChoiceScreen" : ""}">
       ${confetti}
-      ${renderTopStrip(`Floor ${currentFloor} Reward`, "backMenu")}
+      ${renderTopStrip(`${towerRoomLabel()} Reward`, "backMenu")}
       <div class="vsPanel levelPanel">
         <h2>${title}</h2>
         ${slotStrip}
@@ -10778,12 +11070,12 @@ function showRewardChoices() {
 
 
 function pickRewardChoices() {
-  const cacheFloor = isWeaponCacheFloor(currentFloor);
+  const cacheFloor = isWeaponCacheFloor(currentFloor, currentRoom);
   const rewards = [];
   const weaponPool = weightedWeaponPool(cacheFloor);
   const upgradePool = [...RUN_UPGRADES];
 
-  if (isBossFloor(currentFloor)) {
+  if (isBossFloor(currentFloor, currentRoom)) {
     const bossReward = bossAbilityRewardForFloor(currentFloor);
     if (bossReward) rewards.push({ type: "upgrade", data: bossReward });
   }
@@ -10849,12 +11141,19 @@ function chooseReward(index) {
 
   const floorInfo = pendingFloorReward || {};
   pendingFloorReward = null;
+
+  if (!floorInfo.floorComplete && floorInfo.nextRoom) {
+    startFloor(currentFloor, floorInfo.nextRoom);
+    return;
+  }
+
   if (activeStoryMode && currentFloor < 8) {
     villagePendingRouteFloor = currentFloor + 1;
     if (floorInfo.suppliesFound || floorInfo.reward) {
       const hub = ensureHubSave();
       hub.lastReturnCard = {
         floor: currentFloor,
+        room: floorInfo.room || currentRoom,
         suppliesFound: floorInfo.suppliesFound || 0,
         shardsFound: floorInfo.reward || 0,
         request: activeBoardTask()?.title || "Board work",
@@ -10975,7 +11274,7 @@ function chooseRoute(kind) {
   lastRouteChoice = nextRouteType;
   addLog(`Path selected: ${nextRouteType}.`);
   applyVillagePrepToRunStats("gate");
-  startFloor(currentFloor + 1);
+  startFloor(currentFloor + 1, 1);
 }
 
 
@@ -11095,6 +11394,7 @@ function updateBots(dt) {
     pressureTick(bot, dt);
     consumeTeamIntel(bot);
     updateBossBehavior(bot, seesPlayer);
+    updateWitchBehavior(bot, dt, seesPlayer);
 
     if (bot.suspicion > 72) player.spotted = Math.max(player.spotted, 0.2);
 
@@ -11519,6 +11819,79 @@ function smoothAngle(current, target, amount) {
   return current + diff * clamp(amount, 0, 1);
 }
 
+function updateWitchBehavior(bot, dt, seesPlayer) {
+  if (!(bot.role === "witch" || bot.profile?.witch) || mode !== "running" || !bot.alive) return;
+  bot.curseCd = Math.max(0, (bot.curseCd || 0) - dt);
+  if (bot.curseCharge > 0) {
+    bot.curseCharge = Math.max(0, bot.curseCharge - dt);
+    bot.angle = smoothAngle(bot.angle, angleTo(bot, player), dt * 7);
+    if (bot.curseCharge <= 0) fireWitchCurse(bot);
+    return;
+  }
+  if (!seesPlayer || bot.curseCd > 0 || dist(bot, player) < 120 || !hasVisualLineOfSight(bot, player)) return;
+  bot.curseCharge = 1.05;
+  bot.curseTarget = { x: player.x, y: player.y, t: nowSec() };
+  bot.shotCd = Math.max(bot.shotCd, 1.15);
+  bot.state = "attack";
+  floatText.push({ x: bot.x - 22, y: bot.y - 34, text: "curse", t: 0.85 });
+  addScreenFlash(0.012);
+}
+
+function fireWitchCurse(bot) {
+  if (!bot.alive || mode !== "running") return;
+  const target = bot.curseTarget || player;
+  const angle = angleTo(bot, target);
+  const end = rayBlocked(bot, angle, 920);
+  enemyShots.push({
+    x1: bot.x,
+    y1: bot.y,
+    x2: end.x,
+    y2: end.y,
+    t: 0.22,
+    maxT: 0.22,
+    owner: bot.name,
+    color: "#c77dff",
+    width: 3.2,
+    curse: true
+  });
+  bot.curseCd = rand(4.5, 6.8);
+  bot.curseTarget = null;
+  playAssetSfx("smoke", 0.22);
+  const p = closestPointOnLine(player, bot, end);
+  const d = Math.hypot(player.x - p.x, player.y - p.y);
+  if (d < playerDodgeRadius() + 7 && hasVisualLineOfSight(bot, player)) {
+    applyWitchCurse(bot);
+  } else if (d < player.r + 20) {
+    maybeNearMiss(p, bot.name);
+  } else if (dist(bot, end) < 910) {
+    addImpact("wall", end.x, end.y, angle, { ...WEAPON_BY_ID.needler, id: "curse", shake: 0.45, color: "#c77dff" });
+  }
+}
+
+function applyWitchCurse(bot) {
+  if (player.dashInvuln > 0) {
+    maybeNearMiss(player, bot.name);
+    return;
+  }
+  player.curseSlow = Math.max(player.curseSlow || 0, 2.2);
+  player.curseBreak = Math.max(player.curseBreak || 0, 5);
+  player.spotted = Math.max(player.spotted, 0.6);
+  damagePlayer(6 + currentFloor * 0.8, bot.name);
+  addParticles("spark", player.x, player.y, -Math.PI / 2, 18);
+  floatText.push({ x: player.x - 28, y: player.y - 34, text: "cursed", t: 1.0 });
+  addLog("Witch curse. Dash to break it faster.");
+}
+
+function breakWitchCurse() {
+  if ((player.curseSlow || 0) <= 0) return;
+  player.curseBreak = Math.max(0, (player.curseBreak || 0) - 1);
+  if (player.curseBreak <= 0) {
+    player.curseSlow = 0;
+    floatText.push({ x: player.x - 24, y: player.y - 34, text: "curse broken", t: 0.8 });
+    addParticles("reward", player.x, player.y - 4, -Math.PI / 2, 12);
+  }
+}
+
 function botAimAndShoot(bot, seesPlayer) {
   const smokeFirePoint = botSmokeFirePoint(bot);
   const canShootByPressure = bot.pressureHint && nowSec() - bot.pressureHint.t < 1.1 && hasLineOfSight(bot, player);
@@ -11657,7 +12030,7 @@ function updateHud() {
   const reload = player.reload > 0 ? `${player.reload.toFixed(1)}s` : "none";
   const hitRate = player.shots ? Math.round((player.hits / player.shots) * 100) + "%" : "n/a";
   const alive = bots.filter(b => b.alive).length;
-  const floorLabel = mode === "menu" ? "menu" : mode === "village" ? "village" : mode === "villagePaused" ? "village paused" : mode === "countdown" ? `${currentFloor} / 8 matchmaking` : mode === "pauseRequest" ? `${currentFloor} / 8 pause request` : mode === "paused" ? `${currentFloor} / 8 paused` : `${currentFloor} / 8`;
+  const floorLabel = mode === "menu" ? "menu" : mode === "village" ? "village" : mode === "villagePaused" ? "village paused" : mode === "countdown" ? `${currentFloor}/8 room ${currentRoom}/${towerRoomsForFloor(currentFloor)} matchmaking` : mode === "pauseRequest" ? `${currentFloor}/8 room ${currentRoom}/${towerRoomsForFloor(currentFloor)} pause request` : mode === "paused" ? `${currentFloor}/8 room ${currentRoom}/${towerRoomsForFloor(currentFloor)} paused` : `${currentFloor}/8 room ${currentRoom}/${towerRoomsForFloor(currentFloor)}`;
   const stageLabel = activeStage ? activeStage.name : "none";
   const upgrades = runStats?.upgrades?.length ? runStats.upgrades.join(", ") : "none";
 
@@ -11709,6 +12082,7 @@ function draw() {
   drawPoisonPuddles();
   drawSmokes();
   drawBreakables(palette);
+  drawRoomObjectiveWorld();
   drawPickups();
   drawShellCasings();
   drawBotVision();
@@ -11732,6 +12106,7 @@ function draw() {
   drawCrosshair();
   drawAmmoHud();
   drawUtilityHud();
+  drawRoomObjectiveHud();
   drawStoryProgressHud();
   drawCountdownOverlay();
   drawScreenFlash();
@@ -11768,7 +12143,7 @@ function drawCountdownOverlay() {
     sub = roundOpponentLabel;
   } else if (remaining <= 2.5 && remaining > 0.6) {
     main = String(Math.max(1, Math.ceil((remaining - 0.6) / 0.6)));
-    sub = `${roundMatchLabel} · ${roundOpponentLabel}`;
+    sub = `${towerRoomLabel()} · ${roundOpponentLabel}`;
   } else if (remaining <= 0.6) {
     main = "FIGHT";
     sub = "check your corners";
@@ -11881,16 +12256,28 @@ function drawBreakables(palette) {
     ctx.translate(item.x, item.y);
     ctx.rotate(Math.sin(nowSec() * 1.3 + item.wobble) * 0.04);
     const smoke = item.type === "smoke";
-    ctx.fillStyle = smoke ? "rgba(160,172,190,0.16)" : "rgba(255, 211, 90, 0.14)";
+    const crystal = item.type === "objective_crystal";
+    ctx.fillStyle = crystal ? "rgba(199,125,255,0.18)" : smoke ? "rgba(160,172,190,0.16)" : "rgba(255, 211, 90, 0.14)";
     ctx.beginPath();
     ctx.arc(0, 0, item.r + 8, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = smoke ? "#394253" : "#253047";
-    ctx.strokeStyle = smoke ? "#9aa6bb" : palette.wallLine;
+    ctx.fillStyle = crystal ? "#4b2c72" : smoke ? "#394253" : "#253047";
+    ctx.strokeStyle = crystal ? "#c77dff" : smoke ? "#9aa6bb" : palette.wallLine;
     ctx.lineWidth = 2;
-    ctx.fillRect(-item.r, -item.r, item.r * 2, item.r * 2);
-    ctx.strokeRect(-item.r + 0.5, -item.r + 0.5, item.r * 2 - 1, item.r * 2 - 1);
+    if (crystal) {
+      ctx.beginPath();
+      ctx.moveTo(0, -item.r - 4);
+      ctx.lineTo(item.r + 5, 0);
+      ctx.lineTo(0, item.r + 4);
+      ctx.lineTo(-item.r - 5, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      ctx.fillRect(-item.r, -item.r, item.r * 2, item.r * 2);
+      ctx.strokeRect(-item.r + 0.5, -item.r + 0.5, item.r * 2 - 1, item.r * 2 - 1);
+    }
 
     if (smoke) {
       ctx.fillStyle = "rgba(230,235,245,0.7)";
@@ -12616,6 +13003,50 @@ function drawCrosshair() {
 }
 
 
+function drawRoomObjectiveWorld() {
+  if (!activeRoomObjective || !(mode === "running" || mode === "countdown" || mode === "killReplay")) return;
+  const o = activeRoomObjective;
+  if (o.type !== "hold") return;
+  const pct = clamp((o.held || 0) / Math.max(1, o.needed || 1), 0, 1);
+  ctx.save();
+  ctx.globalAlpha = 0.72;
+  ctx.fillStyle = "rgba(199,125,255,0.08)";
+  ctx.strokeStyle = "rgba(199,125,255,0.54)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(o.x, o.y, o.r || 78, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,211,90,0.88)";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(o.x, o.y, (o.r || 78) - 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawRoomObjectiveHud() {
+  if (!activeRoomObjective || !activeStage) return;
+  if (!(mode === "running" || mode === "countdown" || mode === "pauseRequest" || mode === "paused" || mode === "killReplay")) return;
+  const x = W / 2 - 155;
+  const y = 58;
+  ctx.save();
+  ctx.globalAlpha = 0.72;
+  ctx.fillStyle = "rgba(0,0,0,0.56)";
+  ctx.fillRect(x, y, 310, 42);
+  ctx.strokeStyle = "rgba(255,211,90,0.22)";
+  ctx.strokeRect(x + 0.5, y + 0.5, 309, 41);
+  ctx.globalAlpha = 1;
+  ctx.textAlign = "left";
+  ctx.fillStyle = "rgba(255,211,90,0.86)";
+  ctx.font = "900 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillText("GOAL", x + 12, y + 13);
+  ctx.fillStyle = "rgba(246,248,255,0.88)";
+  ctx.font = "800 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillText(objectiveText(activeRoomObjective), x + 12, y + 31);
+  ctx.restore();
+}
+
 function drawStoryProgressHud() {
   if (!activeStoryMode || !activeStage) return;
   if (!(mode === "running" || mode === "countdown" || mode === "pauseRequest" || mode === "paused" || mode === "killReplay")) return;
@@ -12626,10 +13057,10 @@ function drawStoryProgressHud() {
   const x = W - 188;
   const y = 58;
   const w = 156;
-  const h = 34;
+  const h = 44;
   const pipGap = 13;
   const startX = x + 14;
-  const lineY = y + 23;
+  const lineY = y + 34;
 
   ctx.save();
   ctx.textBaseline = "middle";
@@ -12656,6 +13087,12 @@ function drawStoryProgressHud() {
   ctx.fillStyle = "rgba(235,241,255,0.86)";
   ctx.fillText(`${floor}/${totalFloors}`, x + w - 10, y + 10);
 
+  ctx.textAlign = "left";
+  ctx.font = "800 8px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = "rgba(235,241,255,0.50)";
+  ctx.fillText(`ROOM ${currentRoom}/${towerRoomsForFloor(floor)}`, x + 10, y + 24);
+
+  ctx.textAlign = "right";
   ctx.font = "800 8px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
   ctx.fillStyle = "rgba(235,241,255,0.45)";
   ctx.fillText(left === 0 ? "FINAL" : `${left} LEFT`, x + w - 10, y + 24);
@@ -12914,6 +13351,7 @@ function loop(t) {
     if (dt > 0) {
       updatePlayer(dt);
       updateBots(dt);
+      updateRoomObjective(dt);
       updateEffects(dt);
     }
     updateHud();
@@ -13111,6 +13549,7 @@ overlay.addEventListener("click", e => {
     storeChest: () => moveChestResource(button.dataset.resource || "", "store", e.shiftKey),
     takeChest: () => moveChestResource(button.dataset.resource || "", "take", e.shiftKey),
     useVillageSink: () => useVillageSink(button.dataset.sinkId || ""),
+    stabilizeTowerCheckpoint: () => stabilizeTowerCheckpoint(),
     openStory: () => renderStorySelect(),
     helpVillager: () => helpVillager(button.dataset.id),
     startStoryChapter: () => startStoryChapter(button.dataset.id),
