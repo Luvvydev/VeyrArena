@@ -192,6 +192,13 @@ const ASSET_PATHS = {
     town_fish_cast: "./assets/sfx/town_fish_cast.mp3",
     town_fish_reel: "./assets/sfx/town_fish_reel.mp3",
     town_leaves: "./assets/sfx/town_leaves.mp3",
+    town_forge_ring: "./assets/sfx/town_forge_ring.mp3",
+    town_blacksmith_workshop: "./assets/sfx/town_blacksmith_workshop.mp3",
+    town_building_work: "./assets/sfx/town_building_work.mp3",
+    town_village_day: "./assets/sfx/town_village_day.mp3",
+    town_village_night: "./assets/sfx/town_village_night.mp3",
+    ui_confirm_001: "./assets/sfx/ui_confirm_001.ogg",
+    ui_error_001: "./assets/sfx/ui_error_001.ogg",
     footstep_platformer: "./assets/sfx/footstep_platformer.ogg",
     footstep_concrete_1: "./assets/sfx/footstep_concrete_1.mp3",
     footstep_concrete_2: "./assets/sfx/footstep_concrete_2.mp3",
@@ -717,6 +724,11 @@ const HUB_VILLAGERS = [
 const DEFAULT_HUB_SAVE = {
   supplies: 0,
   hope: 0,
+  retries: 0,
+  townLog: [],
+  homeRank: 0,
+  homeRestDay: -1,
+  chest: { supplies: 0, seeds: 0, ore: 0, fish: 0, crops: 0 },
   helped: {
     maren: 0,
     rowan: 0,
@@ -734,12 +746,24 @@ const DEFAULT_HUB_SAVE = {
   ore: 0,
   crops: 0,
   farmHarvests: 0,
-  energy: 5,
+  energy: 7,
   towerDay: 0,
   fishingDay: -1,
   fishingUses: 0,
   visitor: null,
   activeTask: null,
+  boardTasks: [],
+  boardTaskDay: -1,
+  selectedTaskId: null,
+  completedDailyTaskIds: {},
+  towerOmen: null,
+  dailyEvent: null,
+  dailyEventUsed: {},
+  prep: { meal: null, tool: null, scout: null, shrine: null },
+  collection: { fish: 0, ore: 0, crops: 0, relics: 0, visitors: {}, memories: {} },
+  lastReturnCard: null,
+  nightFallDay: -1,
+  nightFallPending: false,
   taskCounter: 0,
   lastGain: "",
   lastHelp: ""
@@ -774,6 +798,7 @@ const DEFAULT_SAVE = {
     bossRead: 0
   },
   storyFlags: {},
+  achievements: {},
   hub: structuredClone(DEFAULT_HUB_SAVE),
   settings: {
     master: 0.75,
@@ -792,10 +817,15 @@ const SHAPES = [
   { id: "diamond", name: "Vanguard", cost: 8, req: 2, sprite: "player_vanguard" },
   { id: "triangle", name: "Outrider", cost: 12, req: 3, sprite: "player_alt" },
   { id: "hex", name: "Phantom", cost: 16, req: 4, sprite: "player_phantom" },
-  { id: "medic", name: "Field Medic", cost: 22, req: 5, sprite: "rpg_soldier" },
-  { id: "orc", name: "Breaker", cost: 30, req: 6, sprite: "rpg_orc" },
-  { id: "vampire", name: "Night Glass", cost: 42, req: 7, sprite: "enemy_vampire" },
-  { id: "nullSuit", name: "Null Frame", cost: 55, req: 8, sprite: "enemy_null" }
+  { id: "medic", name: "Field Medic", cost: 20, req: 3, sprite: "player_alt" },
+  { id: "breaker", name: "Breaker", cost: 24, req: 4, sprite: "player_vanguard" },
+  { id: "rook", name: "Rook Guard", cost: 28, req: 4, sprite: "enemy_rook" },
+  { id: "mire", name: "Mire Scout", cost: 32, req: 5, sprite: "enemy_mire" },
+  { id: "sable", name: "Sable Knife", cost: 36, req: 5, sprite: "enemy_sable" },
+  { id: "vampire", name: "Night Glass", cost: 42, req: 6, sprite: "enemy_vampire" },
+  { id: "nullSuit", name: "Null Frame", cost: 55, req: 7, sprite: "enemy_null" },
+  { id: "bossVanta", name: "Vanta Shell", cost: 70, req: 8, sprite: "boss_vanta" },
+  { id: "bossNull", name: "Null Crown", cost: 90, req: 8, sprite: "boss_null" }
 ];
 
 const COLORS = [
@@ -1837,10 +1867,27 @@ let villageInteractTarget = null;
 let villageMessage = { speaker: "Maren", text: "Walk the village. Press E near people, buildings, rubble, the shrine, or the tower gate.", t: 5 };
 let villagePulse = 0;
 let villageEnergyFlash = 0;
+let villageHistoryOpen = false;
+let villageMesses = [];
+let villageNextMessAt = 0;
+const achievementToasts = [];
+
+const VILLAGE_MESS_SPOTS = [
+  { x: 650, y: 348 }, { x: 750, y: 514 }, { x: 928, y: 506 }, { x: 1055, y: 340 },
+  { x: 574, y: 690 }, { x: 1112, y: 690 }, { x: 822, y: 770 }, { x: 418, y: 590 }, { x: 1256, y: 590 }
+];
+
+const VILLAGER_PATROLS = {
+  maren: [{ x: 410, y: 572 }, { x: 560, y: 510 }, { x: 650, y: 350 }, { x: 520, y: 645 }, { x: 410, y: 572 }],
+  rowan: [{ x: 840, y: 612 }, { x: 960, y: 576 }, { x: 1050, y: 360 }, { x: 860, y: 760 }, { x: 720, y: 612 }, { x: 840, y: 612 }],
+  tavi: [{ x: 1270, y: 572 }, { x: 1130, y: 500 }, { x: 1038, y: 310 }, { x: 1376, y: 690 }, { x: 1270, y: 572 }]
+};
 
 const VILLAGE_TOWER_GATE = { x: 840, y: 118 };
 const VILLAGE_SHRINE = { x: 840, y: 312 };
 const VILLAGE_WELL = { x: 656, y: 322 };
+const VILLAGE_HOME = { x: 1218, y: 982, w: 180, h: 120 };
+const VILLAGE_CHEST = { x: 1328, y: 918 };
 
 const VILLAGE_VILLAGER_SPOTS = [
   { id: "maren", x: 410, y: 572, hut: { x: 280, y: 388, w: 220, h: 150 }, color: "#7dffb2" },
@@ -1905,12 +1952,39 @@ const VILLAGE_FARM_PLOTS = [
   { id: "farm_8", x: 330, y: 870 }
 ];
 
-const VILLAGE_VISITOR_SPOT = { x: 1004, y: 1030 };
+const VILLAGE_VISITOR_SPOT = { x: 1028, y: 246 };
+const VILLAGE_DAILY_BOARD = { x: 640, y: 228, r: 58 };
+
+const VILLAGE_PREP_DEFS = {
+  maren_meal: { slot: "meal", name: "Maren's Meal", text: "+15 max HP next floor", apply: () => { runStats.maxHpBonus += 15; }, revert: () => { runStats.maxHpBonus -= 15; } },
+  garden_tonic: { slot: "meal", name: "Garden Tonic", text: "healing pickups restore 25% more", apply: () => { runStats.healMult = (runStats.healMult || 1) * 1.25; }, revert: () => { runStats.healMult = (runStats.healMult || 1) / 1.25; } },
+  rowan_oil: { slot: "tool", name: "Rowan's Oil", text: "+20% damage next floor", apply: () => { runStats.damageMult *= 1.2; }, revert: () => { runStats.damageMult /= 1.2; } },
+  kitchen_stew: { slot: "tool", name: "Kitchen Stew", text: "+1 smoke charge next floor", apply: () => { runStats.smokeBonus += 1; }, revert: () => { runStats.smokeBonus -= 1; } },
+  tavi_map: { slot: "scout", name: "Tavi's Map", text: "+90 Pulse range next floor", apply: () => { runStats.pulseRange += 90; }, revert: () => { runStats.pulseRange -= 90; } },
+  shrine_candle: { slot: "shrine", name: "Mira's Ward", text: "+1 death retry on the next run", apply: () => { runStats.retries = (runStats.retries || 0) + 1; }, revert: () => { runStats.retries = Math.max(0, (runStats.retries || 0) - 1); } }
+};
+
+const VILLAGE_TOWER_OMENS = [
+  { id: "supply_hum", name: "Supply hum", text: "Supply rooms are louder tonight. Extra cache, more enemies watching.", rewardText: "+1 supply from the next story floor.", supplyBonus: 1 },
+  { id: "cold_east", name: "Cold east stair", text: "The east stairs are cold. Boss floors pay better, but the tower feels meaner.", rewardText: "+2 shards from boss floors.", bossShardBonus: 2 },
+  { id: "quiet_tower", name: "Quiet tower", text: "The tower is quiet. Fewer chances, safer climb.", rewardText: "+6 max HP if you enter now.", hpPrepBonus: 6 },
+  { id: "red_lights", name: "Red lights", text: "Red lights burn above the gate. Rival floors are worth the risk.", rewardText: "+2 shards from rival floors.", rivalShardBonus: 2 },
+  { id: "mira_whisper", name: "Mira whisper", text: "Mira's voice is close. Story floors bring back more for the village.", rewardText: "+1 supply from story floors.", supplyBonus: 1 }
+];
+
+const VILLAGE_DAILY_EVENTS = [
+  { id: "fish_biting", name: "Fish are biting", text: "First catches bring an extra fish today." },
+  { id: "loose_stone", name: "Loose stone", text: "The first mine swing today pulls extra ore." },
+  { id: "forge_heat", name: "Forge heat", text: "Village projects cost one less supply today." },
+  { id: "rain", name: "Soft rain", text: "New seeds are planted and watered together." },
+  { id: "sick_tent", name: "Sick tent", text: "Helping Maren pays extra trust today." }
+];
+
 const VILLAGE_VISITORS = {
-  seed: { name: "Seed Seller", title: "traveling shop", action: "buy seed pouch", text: "A stranger brought seeds from another village.", cost: { supplies: 2 }, reward: { seeds: 3, shards: 1 } },
-  miner: { name: "Ore Buyer", title: "road trader", action: "trade ore", text: "A trader wants clean ore for repair work.", cost: { ore: 2 }, reward: { shards: 5, supplies: 1 } },
-  fisher: { name: "Fish Cook", title: "camp cook", action: "trade fish", text: "A cook is buying fish for the road crew.", cost: { fish: 2 }, reward: { supplies: 4, shards: 1 } },
-  gift: { name: "Lost Pilgrim", title: "visitor", action: "accept gift", text: "A pilgrim came to thank the village for keeping the road lit.", cost: {}, reward: { supplies: 2, seeds: 1, shards: 1 } }
+  seed: { name: "Seed Seller", title: "traveling shop", sprite: "player_alt", action: "buy seed pouch", text: "A stranger brought seeds from another village.", cost: { supplies: 2 }, reward: { seeds: 3, shards: 1 } },
+  miner: { name: "Ore Buyer", title: "road trader", sprite: "player_vanguard", action: "trade ore", text: "A trader wants clean ore for repair work.", cost: { ore: 2 }, reward: { shards: 5, supplies: 1 } },
+  fisher: { name: "Fish Cook", title: "camp cook", sprite: "player_marine", action: "trade fish", text: "A cook is buying fish for the road crew.", cost: { fish: 2 }, reward: { supplies: 4, shards: 1 } },
+  gift: { name: "Lost Pilgrim", title: "visitor", sprite: "player_phantom", action: "accept gift", text: "A pilgrim came to thank the village for keeping the road lit.", cost: {}, reward: { supplies: 2, seeds: 1, shards: 1 } }
 };
 
 const VILLAGE_PROJECTS = [
@@ -1920,7 +1994,7 @@ const VILLAGE_PROJECTS = [
     x: 260,
     y: 835,
     color: "#7dffb2",
-    max: 4,
+    max: 99,
     action: "repair garden",
     text: "Spend supplies to repair the garden. Each row helps every tower climb.",
     reward: "The garden has another working row.",
@@ -1932,7 +2006,7 @@ const VILLAGE_PROJECTS = [
     x: 840,
     y: 885,
     color: "#ffd35a",
-    max: 4,
+    max: 99,
     action: "repair kitchen",
     text: "Spend supplies to repair the kitchen. Meals turn into more utility before each fight.",
     reward: "The kitchen can feed more people before each climb.",
@@ -1944,7 +2018,7 @@ const VILLAGE_PROJECTS = [
     x: 1420,
     y: 790,
     color: "#7cc7ff",
-    max: 4,
+    max: 99,
     action: "raise watch post",
     text: "Spend supplies to raise the watch post. Scouts make Pulse more useful in the tower.",
     reward: "The watch post can see farther into the tower.",
@@ -1985,7 +2059,7 @@ const VILLAGE_DECOR = Array.from({ length: 170 }, (_, i) => ({
 }));
 
 const VILLAGE_TREE_LINES = [
-  [74, 120, "town_tree_green"], [130, 160, "town_tree_green"], [190, 120, "town_tree_blue"],
+  [74, 120, "town_tree_green"], [112, 84, "town_tree_green"], [308, 108, "town_tree_blue"],
   [348, 102, "town_tree_gold"], [1180, 102, "town_tree_gold"], [1490, 128, "town_tree_green"], [1560, 174, "town_tree_blue"],
   [78, 820, "town_tree_green"], [132, 920, "town_tree_gold"], [220, 990, "town_tree_green"],
   [1438, 984, "town_tree_blue"], [1530, 916, "town_tree_green"], [1598, 820, "town_tree_gold"],
@@ -2008,6 +2082,9 @@ function loadSave() {
       completedChapters: Array.isArray(parsed.completedChapters) ? parsed.completedChapters : [],
       storyFlags: {
         ...(parsed.storyFlags || {})
+      },
+      achievements: {
+        ...(parsed.achievements || {})
       },
       hub: {
         ...structuredClone(DEFAULT_HUB_SAVE),
@@ -2036,6 +2113,15 @@ function loadSave() {
         },
         farmPlots: {
           ...(parsed.hub?.farmPlots || {})
+        },
+        hope: Number(parsed.hub?.hope ?? DEFAULT_HUB_SAVE.hope) || 0,
+        retries: Number(parsed.hub?.retries ?? DEFAULT_HUB_SAVE.retries) || 0,
+        townLog: Array.isArray(parsed.hub?.townLog) ? parsed.hub.townLog.slice(0, 32) : [],
+        homeRank: Number(parsed.hub?.homeRank) || 0,
+        homeRestDay: Number(parsed.hub?.homeRestDay ?? -1),
+        chest: {
+          ...structuredClone(DEFAULT_HUB_SAVE).chest,
+          ...(parsed.hub?.chest || {})
         },
         seeds: Number(parsed.hub?.seeds ?? DEFAULT_HUB_SAVE.seeds) || 0,
         fish: Number(parsed.hub?.fish) || 0,
@@ -2066,6 +2152,70 @@ function loadSave() {
 
 function saveGame() {
   localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+}
+
+function unlockAchievement(id, title, text) {
+  save.achievements = save.achievements || {};
+  if (save.achievements[id]) return false;
+  save.achievements[id] = true;
+  saveGame();
+  achievementToasts.unshift({ id, title, text, t: 4.2, maxT: 4.2 });
+  achievementToasts.splice(4);
+  playAssetSfx("bonus_chime", 0.34);
+  return true;
+}
+
+function checkVillageAchievements(source = "") {
+  const hub = ensureHubSave();
+  if (save.totalClears >= 1) unlockAchievement("first_floor", "First Floor Down", "The tower blinked first.");
+  if (save.totalClears >= 5) unlockAchievement("five_floors", "One More Run", "Five floors cleared across attempts.");
+  if (save.bestFloor >= 4) unlockAchievement("floor_four", "Halfway Hungry", "Reached floor 4.");
+  if (hubHope() >= 5) unlockAchievement("hope_5", "People Are Watching", "Held 5 hope at once.");
+  if ((hub.retries || 0) > 0) unlockAchievement("bought_retry", "Pocket Miracle", "Stored a boss retry token.");
+  if (hubProjectTotal() >= 3) unlockAchievement("builder_3", "Actual Contractor", "Upgraded town projects 3 times.");
+  if (hubRubbleClearedCount() >= 5) unlockAchievement("cleanup_5", "Less Embarrassing", "Cleared 5 rubble piles.");
+  if (hubStumpClearedCount() >= 3) unlockAchievement("wood_3", "Stump Goblin", "Chopped 3 stumps.");
+  if ((hub.collection?.visitors && Object.keys(hub.collection.visitors).length >= 3)) unlockAchievement("visitors_3", "Road Gets Busy", "Met 3 visitor types.");
+  if ((hub.boardTasks || []).some(task => task.done)) unlockAchievement("first_board", "Pinned And Done", "Finished a daily board job.");
+  if (Object.keys(hub.completedDailyTaskIds || {}).length >= 5) unlockAchievement("board_5", "Clipboard Goblin", "Finished 5 board jobs.");
+  if ((hub.homeRank || 0) >= 1) unlockAchievement("home_rank_1", "Mine, Not The Tower's", "Built your first house.");
+  if ((hub.homeRank || 0) >= 3) unlockAchievement("home_rank_3", "Indoor Person", "Reached house rank 3.");
+  if (source === "hairball") unlockAchievement("first_hairball", "Not My Job", "Cleaned your first hairball.");
+  if (source === "chest") unlockAchievement("used_chest", "It Stacks", "Moved an item through the chest.");
+}
+
+function updateAchievementToasts(dt) {
+  for (const toast of achievementToasts) toast.t -= dt;
+  for (let i = achievementToasts.length - 1; i >= 0; i--) {
+    if (achievementToasts[i].t <= 0) achievementToasts.splice(i, 1);
+  }
+}
+
+function drawAchievementToasts() {
+  if (!achievementToasts.length) return;
+  ctx.save();
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  achievementToasts.forEach((toast, i) => {
+    const alpha = clamp(Math.min(toast.t, toast.maxT - toast.t) * 2.2, 0, 1);
+    const x = W - 344;
+    const y = 118 + i * 72;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "rgba(3,5,12,0.82)";
+    ctx.fillRect(x, y, 318, 58);
+    ctx.strokeStyle = "rgba(255,211,90,0.82)";
+    ctx.strokeRect(x + 0.5, y + 0.5, 317, 57);
+    ctx.fillStyle = "#ffd35a";
+    ctx.font = "900 10px ui-monospace, monospace";
+    ctx.fillText("ACHIEVEMENT", x + 14, y + 10);
+    ctx.fillStyle = "#f5f1ff";
+    ctx.font = "900 15px ui-monospace, monospace";
+    ctx.fillText(toast.title, x + 14, y + 26);
+    ctx.fillStyle = "rgba(217,222,234,0.78)";
+    ctx.font = "800 10px ui-monospace, monospace";
+    ctx.fillText(toast.text, x + 14, y + 44);
+  });
+  ctx.restore();
 }
 
 function setVolumeSetting(name, value) {
@@ -2101,6 +2251,7 @@ function resetSave() {
 
 
 function ensureHubSave() {
+  const previousHubRef = save.hub || null;
   save.hub = {
     ...structuredClone(DEFAULT_HUB_SAVE),
     ...(save.hub || {}),
@@ -2129,6 +2280,15 @@ function ensureHubSave() {
     farmPlots: {
       ...(save.hub?.farmPlots || {})
     },
+    hope: Number(save.hub?.hope ?? DEFAULT_HUB_SAVE.hope) || 0,
+    retries: Number(save.hub?.retries ?? DEFAULT_HUB_SAVE.retries) || 0,
+    townLog: Array.isArray(save.hub?.townLog) ? save.hub.townLog.slice(0, 32) : [],
+    homeRank: Number(save.hub?.homeRank) || 0,
+    homeRestDay: Number(save.hub?.homeRestDay ?? -1),
+    chest: {
+      ...structuredClone(DEFAULT_HUB_SAVE).chest,
+      ...(save.hub?.chest || {})
+    },
     seeds: Number(save.hub?.seeds ?? DEFAULT_HUB_SAVE.seeds) || 0,
     fish: Number(save.hub?.fish) || 0,
     ore: Number(save.hub?.ore) || 0,
@@ -2140,9 +2300,99 @@ function ensureHubSave() {
     fishingUses: Number(save.hub?.fishingUses) || 0,
     visitor: save.hub?.visitor || null,
     activeTask: save.hub?.activeTask || null,
+    boardTasks: Array.isArray(save.hub?.boardTasks) ? save.hub.boardTasks : [],
+    boardTaskDay: Number(save.hub?.boardTaskDay ?? -1),
+    selectedTaskId: save.hub?.selectedTaskId || null,
+    completedDailyTaskIds: {
+      ...(save.hub?.completedDailyTaskIds || {})
+    },
+    towerOmen: save.hub?.towerOmen || null,
+    dailyEvent: save.hub?.dailyEvent || null,
+    dailyEventUsed: {
+      ...(save.hub?.dailyEventUsed || {})
+    },
+    prep: {
+      ...structuredClone(DEFAULT_HUB_SAVE).prep,
+      ...(save.hub?.prep || {})
+    },
+    collection: {
+      ...structuredClone(DEFAULT_HUB_SAVE).collection,
+      ...(save.hub?.collection || {}),
+      visitors: {
+        ...(save.hub?.collection?.visitors || {})
+      },
+      memories: {
+        ...(save.hub?.collection?.memories || {})
+      }
+    },
+    lastReturnCard: save.hub?.lastReturnCard || null,
+    nightFallDay: Number(save.hub?.nightFallDay ?? -1),
+    nightFallPending: Boolean(save.hub?.nightFallPending),
     taskCounter: Number(save.hub?.taskCounter) || 0
   };
+  if (previousHubRef) {
+    const normalizedHub = save.hub;
+    save.hub = previousHubRef;
+    for (const key of Object.keys(save.hub)) delete save.hub[key];
+    Object.assign(save.hub, normalizedHub);
+  }
   return save.hub;
+}
+
+function hubHope() {
+  return Number(ensureHubSave().hope) || 0;
+}
+
+function pushVillageLogEntry(speaker, text) {
+  const hub = ensureHubSave();
+  const line = `${speaker}: ${text}`;
+  const list = Array.isArray(hub.townLog) ? hub.townLog : [];
+  if (list[0] === line) return;
+  list.unshift(line);
+  hub.townLog = list.slice(0, 32);
+  saveGame();
+}
+
+function addVillageHope(amount = 1, source = "") {
+  const hub = ensureHubSave();
+  hub.hope = Math.max(0, (Number(hub.hope) || 0) + amount);
+  if (source) hub.lastHelp = `${source}. Hope +${amount}.`;
+  saveGame();
+  return hub.hope;
+}
+
+function spendVillageHope(amount, reason = "") {
+  const hub = ensureHubSave();
+  if ((Number(hub.hope) || 0) < amount) return false;
+  hub.hope = Math.max(0, (Number(hub.hope) || 0) - amount);
+  if (reason) hub.lastHelp = `${reason}. Hope -${amount}.`;
+  saveGame();
+  return true;
+}
+
+function villageRestoredCount() {
+  return Math.min(hubTotalHelp(), hubHopeMax());
+}
+
+function villageHasVisibleOverlay() {
+  return overlay && overlay.classList.contains("show");
+}
+
+function villageVillagerPoint(spot) {
+  const path = VILLAGER_PATROLS[spot.id] || [{ x: spot.x, y: spot.y }];
+  if (path.length < 2) return { x: spot.x, y: spot.y };
+  const rank = hubVillagerRank(spot.id);
+  const speed = 0.045 + Math.min(5, rank) * 0.006;
+  const progress = (nowSec() * speed + spot.x * 0.001) % 1;
+  const scaled = progress * (path.length - 1);
+  const index = Math.floor(scaled);
+  const local = scaled - index;
+  const a = path[index];
+  const b = path[Math.min(path.length - 1, index + 1)];
+  return {
+    x: a.x + (b.x - a.x) * local,
+    y: a.y + (b.y - a.y) * local
+  };
 }
 
 function hubVillagerById(id) {
@@ -2189,7 +2439,7 @@ function hubHopePercent() {
 }
 
 function villageMaxEnergy() {
-  return 5;
+  return 7;
 }
 
 function villageEnergy() {
@@ -2202,17 +2452,54 @@ function villageEnergy() {
   return hub.energy;
 }
 
+function activeVillageOmen() {
+  const omen = ensureHubSave().towerOmen;
+  if (!omen) return null;
+  const def = VILLAGE_TOWER_OMENS.find(item => item.id === omen.id);
+  return def ? { ...def, day: omen.day } : null;
+}
+
+function activeVillageDailyEvent() {
+  const event = ensureHubSave().dailyEvent;
+  if (!event) return null;
+  const def = VILLAGE_DAILY_EVENTS.find(item => item.id === event.id);
+  return def ? { ...def, day: event.day } : null;
+}
+
+function pickVillageOmen(source = "tower") {
+  const hub = ensureHubSave();
+  const index = Math.abs(Math.floor(villageHash(hub.towerDay, String(source).length) * VILLAGE_TOWER_OMENS.length)) % VILLAGE_TOWER_OMENS.length;
+  const omen = VILLAGE_TOWER_OMENS[index];
+  hub.towerOmen = { id: omen.id, day: hub.towerDay };
+  return omen;
+}
+
+function pickVillageDailyEvent(source = "tower") {
+  const hub = ensureHubSave();
+  const index = Math.abs(Math.floor(villageHash(hub.towerDay + 7, String(source).length + 3) * VILLAGE_DAILY_EVENTS.length)) % VILLAGE_DAILY_EVENTS.length;
+  const event = VILLAGE_DAILY_EVENTS[index];
+  hub.dailyEvent = { id: event.id, day: hub.towerDay };
+  hub.dailyEventUsed = {};
+  return event;
+}
+
 function refillVillageEnergy(source = "after tower") {
   const hub = ensureHubSave();
   hub.towerDay = (Number(hub.towerDay) || 0) + 1;
   hub.energy = villageMaxEnergy();
   hub.fishingDay = hub.towerDay;
   hub.fishingUses = 0;
+  hub.nightFallPending = false;
   assignVillageVisitor(source);
   updateFarmGrowthAfterTower();
-  hub.lastGain = `Town energy restored after the tower. Day ${hub.towerDay}.`;
+  const omen = pickVillageOmen(source);
+  const event = pickVillageDailyEvent(source);
+  assignVillageBoardAfterFloor(Math.max(1, currentFloor || hub.towerDay));
+  hub.lastGain = `Day ${hub.towerDay}: energy restored. ${omen.name}: ${omen.rewardText}`;
   villageEnergyFlash = 1;
+  playAssetSfx("town_village_day", 0.12);
   saveGame();
+  return { omen, event };
 }
 
 function spendVillageEnergy(cost, label = "work") {
@@ -2224,12 +2511,16 @@ function spendVillageEnergy(cost, label = "work") {
     hub.energy = energy;
     saveGame();
     updateHud();
-    playAssetSfx("ui_button_click", 0.16);
+    playAssetSfx("ui_error_001", 0.28) || playAssetSfx("ui_button_click", 0.16);
     floatText.push({ x: villagePlayer.x - 48, y: villagePlayer.y - 46, text: "NO ENERGY", t: 1.1 });
-    setVillageMessage("Too tired", `You need ${spend} energy for ${label}. Go into the tower and finish a fight to recover energy.`, 3.0);
+    setVillageMessage("Too tired", `You need ${spend} energy for ${label}. The tower refills the day after a fight.`, 3.0);
     return false;
   }
   hub.energy = clamp(energy - spend, 0, max);
+  if (hub.energy <= 0 && hub.nightFallDay !== hub.towerDay) {
+    hub.nightFallPending = true;
+    hub.nightFallDay = hub.towerDay;
+  }
   villageEnergyFlash = 1;
   villagePulse = Math.max(villagePulse, 0.35);
   floatText.push({ x: villagePlayer.x - 30, y: villagePlayer.y - 58, text: `-${spend} energy`, t: 0.9 });
@@ -2245,6 +2536,9 @@ function hubResource(name) {
 function addHubResource(name, amount) {
   const hub = ensureHubSave();
   hub[name] = Math.max(0, (Number(hub[name]) || 0) + amount);
+  if (amount > 0 && hub.collection && ["fish", "ore", "crops"].includes(name)) {
+    hub.collection[name] = Math.max(Number(hub.collection[name]) || 0, Number(hub[name]) || 0);
+  }
   return hub[name];
 }
 
@@ -2283,67 +2577,198 @@ function activeVillageVisitor() {
   return def ? { ...def, type: visitor.type } : null;
 }
 
-function villageTaskText(task = ensureHubSave().activeTask) {
-  if (!task) return "No village task. Clear a tower floor to bring new work home.";
-  const progress = `${Math.min(task.progress || 0, task.need || 1)}/${task.need || 1}`;
-  return `${task.title} ${progress} · reward +${task.rewardSupplies || 1} supply, +${task.rewardShards || 1} shard`;
+function villagePrepSummary() {
+  const prep = ensureHubSave().prep || {};
+  return ["meal", "tool", "scout", "shrine"].map(slot => {
+    const def = VILLAGE_PREP_DEFS[prep[slot]];
+    return { slot, def };
+  });
 }
 
-function assignVillageTaskAfterFloor(floor) {
+function grantVillagePrep(prepId, reason = "Village prep") {
+  const def = VILLAGE_PREP_DEFS[prepId];
+  if (!def) return false;
   const hub = ensureHubSave();
-  const options = [];
-  if (VILLAGE_STUMPS.some(stump => !villageStumpCleared(stump.id))) {
-    options.push({ type: "chop", title: "Chop wood for repairs", need: floor % 3 === 0 ? 2 : 1, rewardSupplies: 1, rewardShards: 1 });
+  hub.prep[def.slot] = prepId;
+  hub.lastGain = `${def.name} readied. ${def.text}.`;
+  saveGame();
+  playAssetSfx("ui_confirm_001", 0.32) || playAssetSfx("bonus_chime", 0.28);
+  villagePulse = 1;
+  floatText.push({ x: villagePlayer.x - 44, y: villagePlayer.y - 64, text: "PREP READY", t: 1.2 });
+  setVillageMessage(reason, `${def.name} is in tonight's prep tray. ${def.text}.`, 3.4);
+  return true;
+}
+
+function applyVillagePrepToRunStats(context = "tower") {
+  if (!runStats) return [];
+  const hub = ensureHubSave();
+  const applied = [];
+  const prep = hub.prep || {};
+  for (const slot of ["meal", "tool", "scout", "shrine"]) {
+    const def = VILLAGE_PREP_DEFS[prep[slot]];
+    if (!def) continue;
+    def.apply();
+    if (def.revert) {
+      runStats.villagePrepReverts = runStats.villagePrepReverts || [];
+      runStats.villagePrepReverts.push(def.revert);
+    }
+    applied.push(def.name);
+    prep[slot] = null;
   }
-  if (VILLAGE_RUBBLE.some(rubble => !villageRubbleCleared(rubble.id))) {
-    options.push({ type: "rubble", title: "Clear a broken spot", need: 1, rewardSupplies: 1, rewardShards: 1 });
+  const omen = activeVillageOmen();
+  if (omen?.hpPrepBonus) {
+    runStats.maxHpBonus += omen.hpPrepBonus;
+    runStats.villagePrepReverts = runStats.villagePrepReverts || [];
+    runStats.villagePrepReverts.push(() => { runStats.maxHpBonus -= omen.hpPrepBonus; });
+    applied.push(`${omen.name} +${omen.hpPrepBonus} HP`);
   }
-  if (VILLAGE_PROJECTS.some(project => hubProjectRank(project.id) < project.max)) {
-    options.push({ type: "project", title: "Improve a village building", need: 1, rewardSupplies: 1, rewardShards: 1 });
+  hub.prep = prep;
+  if (applied.length) {
+    saveGame();
+    addLog(`Village prep applied: ${applied.join(", ")}.`);
   }
-  options.push({ type: "farm", title: "Work the garden plots", need: 1, rewardSupplies: 1, rewardShards: 1 });
-  options.push({ type: "mine", title: "Mine stone by the east ridge", need: 1, rewardSupplies: 1, rewardShards: 1 });
-  options.push({ type: "fish", title: "Fish at the pond", need: 1, rewardSupplies: 1, rewardShards: 1 });
-  if (HUB_VILLAGERS.some(villager => hubVillagerRank(villager.id) < villager.max)) {
-    options.push({ type: "villager", title: "Help one villager", need: 1, rewardSupplies: 1, rewardShards: 1 });
+  return applied;
+}
+
+function expireVillagePrepEffects() {
+  if (!runStats?.villagePrepReverts?.length) return;
+  const reverts = runStats.villagePrepReverts.splice(0).reverse();
+  for (const revert of reverts) {
+    try { revert(); } catch {}
   }
-  if (!options.length) {
-    hub.activeTask = null;
-    return null;
-  }
+  runStats.healMult = Math.max(1, runStats.healMult || 1);
+}
+
+function villageTaskPool(floor = 1) {
+  const hub = ensureHubSave();
+  const pool = [];
+  pool.push({ id: `maren_fish_${hub.towerDay}`, type: "turnin", title: "Bring Maren fish", giver: "Maren", text: "Bring Maren 2 fish.", need: 2, resource: "fish", prep: "maren_meal", rewardSupplies: 1, rewardShards: 1, villager: "maren" });
+  pool.push({ id: `rowan_ore_${hub.towerDay}`, type: "turnin", title: "Bring Rowan ore", giver: "Rowan", text: "Bring Rowan 2 ore.", need: 2, resource: "ore", prep: "rowan_oil", rewardSupplies: 1, rewardShards: 1, villager: "rowan" });
+  pool.push({ id: `tavi_scout_${hub.towerDay}`, type: "rubble", title: "Clear Tavi's view", giver: "Tavi", text: "Clear 1 rubble pile near the gate or watch.", need: 1, prep: "tavi_map", rewardSupplies: 1, rewardShards: 1, villager: "tavi" });
+  pool.push({ id: `garden_crop_${hub.towerDay}`, type: "farm", title: "Pull fresh food", giver: "Garden", text: "Harvest 1 crop.", need: 1, prep: "garden_tonic", rewardSupplies: 1, rewardShards: 1 });
+  pool.push({ id: `smith_project_${hub.towerDay}`, type: "project", title: "Fix one station", giver: "Board", text: "Upgrade any town project once.", need: 1, prep: "kitchen_stew", rewardSupplies: 1, rewardShards: 1 });
+  pool.push({ id: `stranger_crop_${hub.towerDay}`, type: "turnin", title: "Cook wants crops", giver: "Cook", text: "Bring the cook 2 crops.", need: 2, resource: "crops", prep: "kitchen_stew", rewardSupplies: 2, rewardShards: 1 });
+  pool.push({ id: `shrine_candle_${hub.towerDay}`, type: "turnin", title: "Light the shrine", giver: "Shrine", text: "Spend 2 supplies at the shrine.", need: 2, resource: "supplies", prep: "shrine_candle", rewardSupplies: 0, rewardShards: 1 });
+  pool.push({ id: `mine_loose_${hub.towerDay}`, type: "mine", title: "Mine fresh ore", giver: "Rowan", text: "Mine 1 ore node.", need: 1, prep: "rowan_oil", rewardSupplies: 1, rewardShards: 1, villager: "rowan" });
+  pool.push({ id: `pond_food_${hub.towerDay}`, type: "fish", title: "Catch pond fish", giver: "Maren", text: "Fish once at the pond.", need: 1, prep: "maren_meal", rewardSupplies: 1, rewardShards: 1, villager: "maren" });
+  pool.push({ id: `wood_repairs_${hub.towerDay}`, type: "chop", title: "Chop repair wood", giver: "Board", text: "Finish 1 stump and pick up the wood.", need: 1, prep: "tavi_map", rewardSupplies: 1, rewardShards: 1 });
+  return pool.filter(task => {
+    if (task.type === "chop" && !VILLAGE_STUMPS.some(stump => !villageStumpCleared(stump.id))) return false;
+    if (task.type === "rubble" && !VILLAGE_RUBBLE.some(rubble => !villageRubbleCleared(rubble.id))) return false;
+    if (task.type === "project" && !VILLAGE_PROJECTS.some(project => hubProjectRank(project.id) < project.max)) return false;
+    return true;
+  });
+}
+
+function assignVillageBoardAfterFloor(floor) {
+  const hub = ensureHubSave();
+  const pool = villageTaskPool(floor);
   hub.taskCounter = (Number(hub.taskCounter) || 0) + 1;
-  const task = { ...options[(hub.taskCounter + floor) % options.length], progress: 0, floor, id: `task_${Date.now()}_${floor}` };
+  const tasks = [];
+  for (let i = 0; i < pool.length && tasks.length < 3; i++) {
+    const index = (hub.taskCounter + floor + i * 3) % pool.length;
+    const task = { ...pool[index], progress: 0, floor, done: false };
+    if (!tasks.some(item => item.id === task.id || item.type === task.type && item.giver === task.giver)) tasks.push(task);
+  }
+  while (pool.length && tasks.length < 3) {
+    const task = { ...pool[tasks.length % pool.length], progress: 0, floor, done: false };
+    if (!tasks.some(item => item.id === task.id)) tasks.push(task);
+    else break;
+  }
+  hub.boardTasks = tasks;
+  hub.boardTaskDay = hub.towerDay;
+  hub.selectedTaskId = tasks[0]?.id || null;
+  hub.activeTask = tasks[0] || null;
+  saveGame();
+  return tasks;
+}
+
+function activeBoardTask() {
+  const hub = ensureHubSave();
+  return (hub.boardTasks || []).find(task => task.id === hub.selectedTaskId) || hub.activeTask || null;
+}
+
+function villageTaskText(task = activeBoardTask()) {
+  if (!task) return "No board card selected. Open the daily board and pick a job.";
+  const progress = task.type === "turnin" ? `${Math.min(hubResource(task.resource), task.need || 1)}/${task.need || 1}` : `${Math.min(task.progress || 0, task.need || 1)}/${task.need || 1}`;
+  const prep = VILLAGE_PREP_DEFS[task.prep];
+  return `${task.title} ${progress} · ${prep ? prep.name : "reward"}`;
+}
+
+function completeVillageTask(task, source = "work") {
+  if (!task || task.done) return false;
+  const hub = ensureHubSave();
+  const supplies = task.rewardSupplies || 0;
+  const shards = task.rewardShards || 0;
+  hub.supplies += supplies;
+  save.shards += shards;
+  if (task.villager && hub.helped?.[task.villager] !== undefined) {
+    hub.collection.memories[`${task.villager}_${Math.min(5, hub.helped[task.villager] + 1)}`] = true;
+  }
+  const boardTask = (hub.boardTasks || []).find(item => item.id === task.id);
+  if (boardTask) {
+    boardTask.done = true;
+    boardTask.progress = boardTask.need || 1;
+  }
+  hub.completedDailyTaskIds[task.id] = true;
+  hub.activeTask = null;
+  if (hub.selectedTaskId === task.id) hub.selectedTaskId = (hub.boardTasks || []).find(item => !item.done)?.id || null;
+  hub.activeTask = (hub.boardTasks || []).find(item => item.id === hub.selectedTaskId) || null;
+  hub.hope = (Number(hub.hope) || 0) + 1;
+  hub.lastGain = `Daily board complete. +${supplies} supply, +${shards} shard, +1 hope.`;
+  saveGame();
+  villagePulse = 1;
+  playAssetSfx("cache_upgrade", 0.42);
+  playAssetSfx("ui_confirm_001", 0.34) || playAssetSfx("bonus_chime", 0.34);
+  addParticles("reward", VILLAGE_DAILY_BOARD.x, VILLAGE_DAILY_BOARD.y - 22, -Math.PI / 2, 34);
+  floatText.push({ x: VILLAGE_DAILY_BOARD.x - 58, y: VILLAGE_DAILY_BOARD.y - 76, text: `BOARD +${supplies} +${shards} +hope`, t: 1.25 });
+  if (task.prep) grantVillagePrep(task.prep, task.giver || "Daily board");
+  else setVillageMessage("Task complete", `${task.title} is done. You earned ${supplies} supply and ${shards} shard.`, 3.2);
+  checkVillageAchievements("board");
+  updateHud();
+  return true;
+}
+
+function selectVillageTask(id) {
+  const hub = ensureHubSave();
+  const task = (hub.boardTasks || []).find(item => item.id === id);
+  if (!task) return;
+  if (task.done) {
+    setVillageMessage("Daily board", `${task.title} is already finished. Pick another task or climb.`, 2.6);
+    return;
+  }
+  hub.selectedTaskId = task.id;
   hub.activeTask = task;
   saveGame();
-  return task;
+  playAssetSfx("select", 0.22);
+
+  if (task.type === "turnin") {
+    if (hubResource(task.resource) < (task.need || 1)) {
+      setVillageMessage(task.giver || "Daily board", `${task.text} Need ${task.need} ${task.resource}. You have ${hubResource(task.resource)}.`, 3.4);
+      return;
+    }
+    addHubResource(task.resource, -(task.need || 1));
+    task.progress = task.need || 1;
+    completeVillageTask(task, "turn in");
+    return;
+  }
+
+  setVillageMessage(task.giver || "Daily board", `${task.text} ${villageTaskText(task)}.`, 3.4);
 }
 
 function advanceVillageTask(type, amount = 1) {
   const hub = ensureHubSave();
-  const task = hub.activeTask;
-  if (!task || task.type !== type) return false;
+  const task = activeBoardTask();
+  if (!task || task.done || task.type !== type) return false;
   task.progress = Math.min(task.need || 1, (Number(task.progress) || 0) + amount);
+  const boardTask = (hub.boardTasks || []).find(item => item.id === task.id);
+  if (boardTask) boardTask.progress = task.progress;
+  hub.activeTask = task;
   if (task.progress < (task.need || 1)) {
-    hub.activeTask = task;
     saveGame();
     return false;
   }
-
-  const supplies = task.rewardSupplies || 1;
-  const shards = task.rewardShards || 1;
-  hub.supplies += supplies;
-  save.shards += shards;
-  hub.lastGain = `Village task complete. +${supplies} supply, +${shards} shard.`;
-  hub.activeTask = null;
-  saveGame();
-  villagePulse = 1;
-  playAssetSfx("cache_upgrade", 0.42);
-  playAssetSfx("bonus_chime", 0.34);
-  addParticles("reward", villagePlayer.x, villagePlayer.y - 12, -Math.PI / 2, 28);
-  floatText.push({ x: villagePlayer.x - 42, y: villagePlayer.y - 54, text: `TASK +${supplies} +${shards}`, t: 1.2 });
-  setVillageMessage("Task complete", `${task.title} is done. You earned ${supplies} supply and ${shards} shard.`, 3.2);
-  updateHud();
-  return true;
+  return completeVillageTask(task, type);
 }
 
 function hubHelpCost(villager) {
@@ -2362,25 +2787,31 @@ function hubBonusPulseRange() {
   return hubVillagerRank("tavi") * 12;
 }
 
+function hubProjectEffectiveRank(id) {
+  const rank = hubProjectRank(id);
+  return Math.max(0, Math.floor(Math.sqrt(rank) * 2));
+}
+
 function hubProjectMaxHpBonus() {
-  return hubProjectRank("garden") * 3;
+  return hubProjectEffectiveRank("garden") * 3;
 }
 
 function hubProjectSmokeBonus() {
-  return hubProjectRank("kitchen");
+  return Math.floor(hubProjectEffectiveRank("kitchen") / 2);
 }
 
 function hubProjectPulseRangeBonus() {
-  return hubProjectRank("watchpost") * 22;
+  return hubProjectEffectiveRank("watchpost") * 18;
 }
 
 function hubProjectTowerText(id, rank = hubProjectRank(id)) {
+  const effective = Math.max(0, Math.floor(Math.sqrt(rank) * 2));
   if (id === "garden") {
-    const extra = Math.floor(rank / 2);
-    return `Tower bonus: +${rank * 3} max HP${extra ? ` and +${extra} supply from each campaign floor` : ""}.`;
+    const extra = Math.floor(effective / 2);
+    return `Tower bonus: +${effective * 3} max HP${extra ? ` and +${extra} supply from each campaign floor` : ""}.`;
   }
-  if (id === "kitchen") return `Tower bonus: +${rank} starting smoke per floor.`;
-  if (id === "watchpost") return `Tower bonus: +${rank * 22} Pulse range.`;
+  if (id === "kitchen") return `Tower bonus: +${Math.floor(effective / 2)} starting smoke per floor.`;
+  if (id === "watchpost") return `Tower bonus: +${effective * 18} Pulse range.`;
   return "Tower bonus active.";
 }
 
@@ -2401,13 +2832,77 @@ function addVillageSupplies(amount, source = "from the tower") {
   return amount;
 }
 
+function villagerTrustLine(id, rank) {
+  const lines = {
+    maren: [
+      "Maren starts packing tonic for your next climb.",
+      "The hospital tent is standing. Fewer people wake up shaking.",
+      "A sick child asks if Mira can still hear the village.",
+      "Maren strengthens every healing pickup she can prepare.",
+      "Maren remembers Mira leaving a ribbon at the shrine before the tower took her."
+    ],
+    rowan: [
+      "Rowan oils your weapon before the next floor.",
+      "Forge sparks return to the road house.",
+      "Rowan can reroll broken parts into usable tower gear.",
+      "The forge now marks rare caches by sound alone.",
+      "Rowan admits the old tower key was made here."
+    ],
+    tavi: [
+      "Tavi sketches a safer route map for the gate.",
+      "The watch post lanterns are lit again.",
+      "Tavi can count movement behind the next door.",
+      "The watch can spot hidden cache rooms before you choose.",
+      "Tavi found a map room mark that matches Mira's path."
+    ]
+  };
+  return lines[id]?.[Math.max(0, rank - 1)] || "Trust increased.";
+}
+
+function villagerPrepForRank(id, rank) {
+  if (id === "maren") return rank >= 4 ? "garden_tonic" : "maren_meal";
+  if (id === "rowan") return "rowan_oil";
+  if (id === "tavi") return "tavi_map";
+  return null;
+}
+
+function repeatVillagerFavor(id) {
+  const villager = hubVillagerById(id);
+  if (!villager) return;
+  const hub = ensureHubSave();
+  const needs = {
+    maren: { resource: "fish", amount: 1, prep: "maren_meal", ask: "Bring me 1 fish and I can pack a meal for your next climb.", done: "Maren packs a meal for tonight's climb." },
+    rowan: { resource: "ore", amount: 1, prep: "rowan_oil", ask: "Bring me 1 ore and I can oil your weapon before the gate.", done: "Rowan oils your weapon for tonight's climb." },
+    tavi: { resource: "supplies", amount: 1, prep: "tavi_map", ask: "Bring me 1 supply and I can mark the safer route before you climb.", done: "Tavi marks a cleaner route for tonight's climb." }
+  };
+  const job = needs[id] || needs.tavi;
+  const have = hubResource(job.resource);
+  if (have < job.amount) {
+    setVillageMessage(villager.name, `${job.ask} You have ${have}/${job.amount}.`, 3.2);
+    return;
+  }
+  if (!spendVillageEnergy(1, `helping ${villager.name}`)) return;
+  addHubResource(job.resource, -job.amount);
+  hub.hope = (Number(hub.hope) || 0) + 1;
+  hub.lastHelp = `${villager.name} repeat favor. +1 hope.`;
+  saveGame();
+  grantVillagePrep(job.prep, villager.name);
+  const spot = VILLAGE_VILLAGER_SPOTS.find(item => item.id === id);
+  if (spot) {
+    const point = villageVillagerPoint(spot);
+    addParticles("reward", point.x, point.y - 20, -Math.PI / 2, 18);
+    floatText.push({ x: point.x - 28, y: point.y - 42, text: "+1 hope", t: 0.95 });
+  }
+  setVillageMessage(villager.name, `${job.done} Come back with more ${job.resource} after the next floor.`, 3.4);
+}
+
 function helpVillager(id) {
   const villager = hubVillagerById(id);
   if (!villager) return;
   const hub = ensureHubSave();
   const rank = hub.helped[id] || 0;
   if (rank >= villager.max) {
-    setVillageMessage(villager.name, `${villager.name} has everything for now.`);
+    repeatVillagerFavor(id);
     return;
   }
   const cost = Math.min(5, rank + 1);
@@ -2421,19 +2916,28 @@ function helpVillager(id) {
   if (!spendVillageEnergy(1, `helping ${villager.name}`)) return;
 
   hub.supplies -= cost;
-  hub.helped[id] = rank + 1;
-  hub.lastHelp = `${villager.name} helped. ${villager.bonus}.`;
+  const event = activeVillageDailyEvent();
+  const extraTrust = event?.id === "sick_tent" && id === "maren" && rank < villager.max - 1 ? 1 : 0;
+  const nextRank = clamp(rank + 1 + extraTrust, 0, villager.max);
+  hub.helped[id] = nextRank;
+  hub.collection.memories[`${id}_${nextRank}`] = true;
+  hub.hope = (Number(hub.hope) || 0) + 1;
+  hub.lastHelp = `${villager.name} trust ${nextRank}/${villager.max}. ${villagerTrustLine(id, nextRank)} +1 hope.`;
   hub.lastGain = "";
   saveGame();
   playAssetSfx("bonus_chime", 0.38);
   playAssetSfx("cache_upgrade", 0.28);
+  if (id === "rowan") playAssetSfx("town_forge_ring", 0.24);
   villagePulse = 1;
   const spot = VILLAGE_VILLAGER_SPOTS.find(item => item.id === id);
   if (spot) {
     addParticles("reward", spot.x, spot.y - 20, -Math.PI / 2, 22);
-    floatText.push({ x: spot.x - 24, y: spot.y - 42, text: `+hope`, t: 0.95 });
+    floatText.push({ x: spot.x - 24, y: spot.y - 42, text: `+1 hope`, t: 0.95 });
   }
-  setVillageMessage(villager.name, `${villager.name} can help more now. ${villager.bonus}.`);
+  const trustLine = villagerTrustLine(id, nextRank);
+  const prepId = villagerPrepForRank(id, nextRank);
+  if (prepId) grantVillagePrep(prepId, villager.name);
+  setVillageMessage(villager.name, `${trustLine} ${villager.bonus}.`);
   advanceVillageTask("villager");
   if (mode !== "village") renderVillageHub();
 }
@@ -2461,6 +2965,110 @@ function hubVillagerCard(villager) {
   `;
 }
 
+function ensureVillageBoardTasks(force = false) {
+  const hub = ensureHubSave();
+  const hasUsableTask = Array.isArray(hub.boardTasks) && hub.boardTasks.some(task => task && task.id && !task.done);
+  if (force || !hasUsableTask) assignVillageBoardAfterFloor(Math.max(1, currentFloor || hub.towerDay || 1));
+  const nextHub = ensureHubSave();
+  if (!Array.isArray(nextHub.boardTasks) || !nextHub.boardTasks.length) {
+    nextHub.boardTasks = [
+      { id: `emergency_fish_${nextHub.towerDay}`, type: "fish", title: "Catch pond fish", giver: "Maren", text: "Fish once at the pond.", need: 1, prep: "maren_meal", rewardSupplies: 1, rewardShards: 1, done: false, progress: 0 },
+      { id: `emergency_ore_${nextHub.towerDay}`, type: "mine", title: "Mine fresh ore", giver: "Rowan", text: "Mine 1 ore node.", need: 1, prep: "rowan_oil", rewardSupplies: 1, rewardShards: 1, done: false, progress: 0 },
+      { id: `emergency_shrine_${nextHub.towerDay}`, type: "turnin", title: "Light the shrine", giver: "Shrine", text: "Spend 2 supplies at the shrine.", need: 2, resource: "supplies", prep: "shrine_candle", rewardSupplies: 0, rewardShards: 1, done: false, progress: 0 }
+    ];
+    nextHub.selectedTaskId = nextHub.boardTasks[0].id;
+    nextHub.activeTask = nextHub.boardTasks[0];
+    saveGame();
+  }
+  if (!nextHub.selectedTaskId || !nextHub.boardTasks.some(task => task.id === nextHub.selectedTaskId && !task.done)) {
+    nextHub.selectedTaskId = nextHub.boardTasks.find(task => !task.done)?.id || nextHub.boardTasks[0]?.id || null;
+    nextHub.activeTask = nextHub.boardTasks.find(task => task.id === nextHub.selectedTaskId) || null;
+    saveGame();
+  }
+  return nextHub.boardTasks || [];
+}
+
+function renderVillageDailyBoard() {
+  const hub = ensureHubSave();
+  const tasks = ensureVillageBoardTasks();
+  const omen = activeVillageOmen();
+  const event = activeVillageDailyEvent();
+  const cards = tasks.map(task => {
+    const selected = hub.selectedTaskId === task.id;
+    const prep = VILLAGE_PREP_DEFS[task.prep];
+    const progress = task.type === "turnin" ? `${Math.min(hubResource(task.resource), task.need || 1)}/${task.need || 1} ${task.resource}` : `${Math.min(task.progress || 0, task.need || 1)}/${task.need || 1}`;
+    return `
+      <button class="dailyTaskCard ${selected ? "selected" : ""} ${task.done ? "completed" : ""}" data-action="selectVillageTask" data-task-id="${task.id}" ${task.done ? "disabled" : ""}>
+        <span class="routeTag">${selected ? "SELECTED" : (task.giver || "BOARD")}</span>
+        <b>${task.title}</b>
+        <p>${task.text}</p>
+        <small>${progress} · fills ${prep ? prep.slot : "reward"}: ${prep ? prep.name : "+reward"}</small>
+      </button>
+    `;
+  }).join("");
+
+  openOverlay(`
+    <div class="vsScreen framedScreen routeChoiceScreen dailyBoardScreen">
+      ${renderTopStrip("Daily Board", "backVillage")}
+      <div class="vsPanel levelPanel routePanel">
+        <h2>Pick one town job</h2>
+        <p class="panelLead">You have ${villageEnergy()}/${villageMaxEnergy()} town energy. Finish jobs to load meal, tool, scout, or shrine prep for the next climb.</p>
+        <div class="dailyBoardMeta">
+          <div><b>${event?.name || "Quiet day"}</b><span>${event?.text || "Nothing unusual is happening in town today."}</span></div>
+          <div><b>${omen?.name || "No omen"}</b><span>${omen?.text || "No clear tower omen right now."}</span></div>
+        </div>
+        <div class="routeGrid dailyTaskGrid">${cards}</div>
+        <div class="vsDetailBar">
+          <div class="powerIcon big">!</div>
+          <div>
+            <b>Daily board</b>
+            <p>${villageTaskText(activeBoardTask()) || "Pick a board card, finish it, then check the gate."}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `, "dailyBoardMenu");
+}
+
+function renderVillagePrepTray() {
+  const prep = villagePrepSummary();
+  const omen = activeVillageOmen();
+  const slots = prep.map(item => `
+    <div class="prepSlot ${item.def ? "filled" : ""}">
+      <b>${item.slot.toUpperCase()}</b>
+      <span>${item.def ? `${item.def.name}<br>${item.def.text}` : item.slot === "meal" ? "Empty. Finish Maren or crop jobs." : item.slot === "tool" ? "Empty. Finish Rowan or kitchen jobs." : item.slot === "scout" ? "Empty. Finish Tavi or wood jobs." : "Empty. Finish shrine work or spend hope."}</span>
+    </div>
+  `).join("");
+  const nextLabel = activeStoryMode && villagePendingRouteFloor > 0 && runStats ? `Enter Floor ${villagePendingRouteFloor}` : "Choose Campaign Climb";
+  openOverlay(`
+    <div class="vsScreen framedScreen routeChoiceScreen prepTrayScreen">
+      ${renderTopStrip("Tower Gate", "backVillage")}
+      <div class="vsPanel levelPanel routePanel">
+        <h2>Tonight's Prep</h2>
+        <p class="panelLead">Each finished board job fills one slot. Empty slots mean you skipped free help before the climb.</p>
+        <div class="prepTrayGrid">${slots}</div>
+        <div class="dailyBoardMeta">
+          <div><b>${omen?.name || "No omen"}</b><span>${omen?.text || "The tower is quiet."}</span></div>
+          <div><b>How to fill slots</b><span>Meal comes from Maren or crops. Tool comes from Rowan or kitchen jobs. Scout comes from Tavi jobs. Shrine comes from shrine jobs or spent hope.</span></div>
+        </div>
+        <div class="menuActions">
+          <button class="vsButton green jackpotButton" data-action="continueTowerGate">${nextLabel}</button>
+          <button class="vsButton blue" data-action="openVillageBoard">Daily Board</button>
+        </div>
+      </div>
+    </div>
+  `, "prepTrayMenu");
+}
+
+function continueTowerGate() {
+  if (activeStoryMode && villagePendingRouteFloor > 0 && runStats) {
+    setVillageMessage("Tower gate", `Choose the route for floor ${villagePendingRouteFloor}.`, 1.2);
+    showRouteChoices(villagePendingRouteFloor);
+    return;
+  }
+  renderStorySelect();
+}
+
 function renderVillageHub() {
   startVillageHub();
 }
@@ -2474,12 +3082,14 @@ function startVillageHub() {
   villagePendingRouteFloor = 0;
   worldW = VILLAGE_WORLD.w;
   worldH = VILLAGE_WORLD.h;
+  closeVillageHistory();
   closeOverlay();
   startMusic("music_menu");
   ensureHubSave();
   player.hp = player.maxHp;
   mouse.down = false;
   villageInteractTarget = null;
+  villageNextMessAt = nowSec() + 8;
   villageMessage.t = Math.max(villageMessage.t, 2.4);
   lastTime = performance.now();
   updateHud();
@@ -2496,15 +3106,33 @@ function enterVillageBetweenStoryFloors(nextFloor, info = {}) {
   villageReturnChapterId = activeStoryChapterId;
   worldW = VILLAGE_WORLD.w;
   worldH = VILLAGE_WORLD.h;
+  closeVillageHistory();
   closeOverlay();
   startMusic("music_menu");
   ensureHubSave();
   mouse.down = false;
   villageInteractTarget = null;
-  const task = assignVillageTaskAfterFloor(currentFloor);
+  const hub = ensureHubSave();
+  ensureVillageBoardTasks();
+  const task = activeBoardTask();
+  const omen = activeVillageOmen();
+  const event = activeVillageDailyEvent();
+  const visitor = activeVillageVisitor();
+  hub.lastReturnCard = {
+    floor: currentFloor,
+    suppliesFound: info.suppliesFound || 0,
+    shardsFound: info.reward || pendingFloorReward?.reward || 0,
+    visitor: visitor?.name || "none",
+    request: task?.title || "Open the daily board",
+    status: event?.name || "quiet day",
+    omen: omen?.name || "none",
+    t: nowSec()
+  };
+  saveGame();
   const supplies = info.suppliesFound ? ` You brought back ${info.suppliesFound} supplies.` : "";
-  const taskText = task ? ` New village task: ${villageTaskText(task)}.` : "";
-  setVillageMessage("Back from the tower", `Floor ${currentFloor} is clear.${supplies}${taskText} Go to the tower gate when you are ready for floor ${nextFloor}.`, 6.2);
+  const boardText = task ? ` Board: ${villageTaskText(task)}.` : "";
+  const omenText = omen ? ` ${omen.name}: ${omen.rewardText}` : "";
+  setVillageMessage("Back from the tower", `Floor ${currentFloor} is clear.${supplies}${boardText}${omenText} Go to the tower gate when you are ready for floor ${nextFloor}.`, 6.2);
   villagePulse = 1;
   lastTime = performance.now();
   updateHud();
@@ -2518,6 +3146,7 @@ function returnToVillageFromOverlay() {
     towerCleared = false;
     worldW = VILLAGE_WORLD.w;
     worldH = VILLAGE_WORLD.h;
+    closeVillageHistory();
     closeOverlay();
     startMusic("music_menu");
     ensureHubSave();
@@ -2531,8 +3160,309 @@ function returnToVillageFromOverlay() {
   renderVillageHub();
 }
 
-function setVillageMessage(speaker, text, t = 4.2) {
-  villageMessage = { speaker, text, t };
+function setVillageMessage(speaker, text, t = 3.4) {
+  const ttl = clamp(Number(t) || 3.4, 1.4, 5.0);
+  villageMessage = { speaker, text, t: ttl, maxT: ttl };
+  pushVillageLogEntry(speaker, text);
+}
+
+function toggleVillageHistory() {
+  if (mode !== "village") return;
+  if (villageHistoryOpen) {
+    villageHistoryOpen = false;
+    closeOverlay();
+    return;
+  }
+  if (villageHasVisibleOverlay()) return;
+  const entries = ensureHubSave().townLog || [];
+  villageHistoryOpen = true;
+  openOverlay(`
+    <div class="vsScreen framedScreen routeChoiceScreen villageHistoryScreen">
+      ${renderTopStrip("Town Log", "backVillageHistory")}
+      <div class="vsPanel levelPanel routePanel villageHistoryPanel">
+        <h2>Town Log</h2>
+        <p class="panelLead">Press Enter again to close this and go back to walking the village.</p>
+        <div class="villageLogList">
+          ${entries.length ? entries.map(line => `<div class="villageLogEntry">${line}</div>`).join("") : `<div class="villageLogEntry empty">Nothing has happened yet.</div>`}
+        </div>
+      </div>
+    </div>
+  `, "villageHistoryMenu");
+}
+
+function closeVillageHistory() {
+  if (!villageHistoryOpen) return;
+  villageHistoryOpen = false;
+  closeOverlay();
+}
+
+function maybeSpawnVillageMess() {
+  if (mode !== "village") return;
+  const hub = ensureHubSave();
+  if ((hub.towerDay || 0) < 1 || villageMesses.length >= 4) return;
+  const now = nowSec();
+  if (now < villageNextMessAt) return;
+  const used = new Set(villageMesses.map(item => item.spotIndex));
+  let spotIndex = Math.abs(Math.floor(villageHash(hub.towerDay + villageMesses.length, now) * VILLAGE_MESS_SPOTS.length)) % VILLAGE_MESS_SPOTS.length;
+  for (let i = 0; i < VILLAGE_MESS_SPOTS.length; i++) {
+    const next = (spotIndex + i) % VILLAGE_MESS_SPOTS.length;
+    if (!used.has(next)) { spotIndex = next; break; }
+  }
+  const spot = VILLAGE_MESS_SPOTS[spotIndex];
+  villageMesses.push({
+    id: `mess_${Math.round(now * 1000)}`,
+    spotIndex,
+    x: spot.x + rand(-8, 8),
+    y: spot.y + rand(-8, 8)
+  });
+  villageNextMessAt = now + rand(12, 20);
+  if (villageMesses.length === 1) setVillageMessage("Village", "Hairball on the road. Clean it with E for hope.", 3.2);
+}
+
+function cleanVillageMess(id) {
+  const index = villageMesses.findIndex(item => item.id === id);
+  if (index < 0) return;
+  if (!spendVillageEnergy(1, "cleaning hairball")) return;
+  const mess = villageMesses[index];
+  villageMesses.splice(index, 1);
+  addVillageHope(1, "You kept the camp clean");
+  playAssetSfx("reward", 0.26);
+  addParticles("reward", mess.x, mess.y - 8, -Math.PI / 2, 10);
+  floatText.push({ x: mess.x - 24, y: mess.y - 26, text: "+1 hope", t: 0.9 });
+  setVillageMessage("Village", "You spent 1 energy cleaning a hairball. Gross, but the village noticed.", 2.6);
+  checkVillageAchievements("hairball");
+}
+
+function renderVillageShrine() {
+  const hub = ensureHubSave();
+  const offers = [
+    { id: "retry", title: "Buy Mira's Ward", cost: 3, desc: "Bank +1 retry token for boss deaths. Max 2 stored.", blocked: hub.retries >= 2 },
+    { id: "energy", title: "Catch your breath", cost: 2, desc: "Restore 2 town energy right now.", blocked: villageEnergy() >= villageMaxEnergy() },
+    { id: "ward", title: "Light the shrine", cost: 2, desc: "Fill the shrine prep slot for the next run if it is empty.", blocked: Boolean(hub.prep?.shrine) }
+  ];
+  openOverlay(`
+    <div class="vsScreen framedScreen routeChoiceScreen shrineScreen">
+      ${renderTopStrip("Mira Shrine", "backVillage")}
+      <div class="vsPanel levelPanel routePanel">
+        <h2>Spend Hope</h2>
+        <p class="panelLead">Hope is your personal resource. Use it here for things that help you, not just the town.</p>
+        <div class="dailyBoardMeta">
+          <div><b>Hope</b><span>${hubHope()} in hand</span></div>
+          <div><b>Restored</b><span>${villageRestoredCount()}/${hubHopeMax()} village progress</span></div>
+        </div>
+        <div class="routeGrid dailyTaskGrid">
+          ${offers.map(offer => `
+            <button class="dailyTaskCard ${offer.blocked ? "completed" : ""}" data-action="buyShrineOffer" data-offer-id="${offer.id}" ${offer.blocked ? "disabled" : ""}>
+              <span class="routeTag">COST ${offer.cost}</span>
+              <b>${offer.title}</b>
+              <p>${offer.desc}</p>
+              <small>${offer.blocked ? "Unavailable right now" : "Spend hope"}</small>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    </div>
+  `, "shrineMenu");
+}
+
+function buyShrineOffer(id) {
+  const hub = ensureHubSave();
+  if (id === "retry") {
+    if (hub.retries >= 2) {
+      setVillageMessage("Mira shrine", "You already have the maximum stored retry tokens.", 2.6);
+      return;
+    }
+    if (!spendVillageHope(3, "Bought Mira's Ward")) {
+      setVillageMessage("Mira shrine", "You need 3 hope for that.", 2.6);
+      return;
+    }
+    hub.retries = Math.min(2, (Number(hub.retries) || 0) + 1);
+    saveGame();
+    setVillageMessage("Mira shrine", "You banked one retry token for a boss death.", 2.8);
+    playAssetSfx("bonus_chime", 0.32);
+    checkVillageAchievements("retry");
+    renderVillageShrine();
+    return;
+  }
+  if (id === "energy") {
+    if (villageEnergy() >= villageMaxEnergy()) {
+      setVillageMessage("Mira shrine", "Your town energy is already full.", 2.4);
+      return;
+    }
+    if (!spendVillageHope(2, "Caught your breath at the shrine")) {
+      setVillageMessage("Mira shrine", "You need 2 hope for that.", 2.6);
+      return;
+    }
+    hub.energy = clamp((Number(hub.energy) || 0) + 2, 0, villageMaxEnergy());
+    saveGame();
+    villageEnergyFlash = 1;
+    setVillageMessage("Mira shrine", "You got 2 town energy back.", 2.6);
+    renderVillageShrine();
+    return;
+  }
+  if (id === "ward") {
+    if (hub.prep?.shrine) {
+      setVillageMessage("Mira shrine", "The shrine slot is already filled for your next run.", 2.6);
+      return;
+    }
+    if (!spendVillageHope(2, "Lit the shrine")) {
+      setVillageMessage("Mira shrine", "You need 2 hope for that.", 2.6);
+      return;
+    }
+    grantVillagePrep("shrine_candle", "Mira Shrine");
+    setVillageMessage("Mira shrine", "The shrine slot is now filled with Mira's Ward.", 2.8);
+    renderVillageShrine();
+  }
+}
+
+function homeUpgradeCost() {
+  const rank = Number(ensureHubSave().homeRank) || 0;
+  return { hope: 4 + rank * 2, supplies: 6 + rank * 3 };
+}
+
+function renderVillageHouse() {
+  const hub = ensureHubSave();
+  const rank = Number(hub.homeRank) || 0;
+  const cost = homeUpgradeCost();
+  const rested = hub.homeRestDay === hub.towerDay;
+  openOverlay(`
+    <div class="vsScreen framedScreen routeChoiceScreen houseScreen">
+      ${renderTopStrip("Your House", "backVillage")}
+      <div class="vsPanel levelPanel routePanel">
+        <h2>${rank > 0 ? `House Rank ${rank}` : "Build your house"}</h2>
+        <p class="panelLead">A house lets you recover town energy without being forced straight back into the tower.</p>
+        <div class="dailyBoardMeta">
+          <div><b>Rest</b><span>${rank > 0 ? `Restore ${Math.min(villageMaxEnergy(), 2 + rank)} energy once per town day.` : "Build first, then you can sleep here."}</span></div>
+          <div><b>Cost</b><span>${cost.hope} hope and ${cost.supplies} supplies. You have ${hubHope()} hope and ${hub.supplies} supplies.</span></div>
+        </div>
+        <div class="menuActions">
+          <button class="vsButton green" data-action="sleepHouse" ${rank > 0 && !rested && villageEnergy() < villageMaxEnergy() ? "" : "disabled"}>Sleep</button>
+          <button class="vsButton blue" data-action="upgradeHouse" ${hubHope() >= cost.hope && hub.supplies >= cost.supplies ? "" : "disabled"}>${rank > 0 ? "Upgrade House" : "Build House"}</button>
+        </div>
+      </div>
+    </div>
+  `, "houseMenu");
+}
+
+function upgradeVillageHouse() {
+  const hub = ensureHubSave();
+  const rank = Number(hub.homeRank) || 0;
+  const cost = { hope: 4 + rank * 2, supplies: 6 + rank * 3 };
+  const currentHope = Number(hub.hope) || 0;
+  const currentSupplies = Number(hub.supplies) || 0;
+  if (currentHope < cost.hope || currentSupplies < cost.supplies) {
+    setVillageMessage("House", `Need ${cost.hope} hope and ${cost.supplies} supplies. You have ${currentHope} hope and ${currentSupplies} supplies.`, 3.2);
+    renderVillageHouse();
+    return;
+  }
+  hub.hope = currentHope - cost.hope;
+  hub.supplies = currentSupplies - cost.supplies;
+  hub.homeRank = rank + 1;
+  saveGame();
+  playAssetSfx("town_building_work", 0.28);
+  playAssetSfx("bonus_chime", 0.32);
+  unlockAchievement("home_built", "Front Door Energy", "Built or upgraded your house.");
+  checkVillageAchievements("house");
+  villageInteractTarget = null;
+  villagePulse = 1;
+  setVillageMessage("House", `House rank ${hub.homeRank}. It now restores town energy when you sleep.`, 3.2);
+  renderVillageHouse();
+}
+
+function sleepVillageHouse() {
+  const hub = ensureHubSave();
+  const rank = Number(hub.homeRank) || 0;
+  if (rank <= 0 || hub.homeRestDay === hub.towerDay || villageEnergy() >= villageMaxEnergy()) {
+    renderVillageHouse();
+    return;
+  }
+  hub.energy = clamp((Number(hub.energy) || 0) + Math.min(villageMaxEnergy(), 2 + rank), 0, villageMaxEnergy());
+  hub.homeRestDay = hub.towerDay;
+  saveGame();
+  villageEnergyFlash = 1;
+  unlockAchievement("first_sleep", "Not A Dungeon Nap", "Recovered energy at home.");
+  setVillageMessage("House", "You slept at home and got town energy back.", 2.8);
+  renderVillageHouse();
+}
+
+const CHEST_RESOURCES = ["supplies", "seeds", "ore", "fish", "crops"];
+const CHEST_RESOURCE_META = {
+  supplies: { name: "Supplies", glyph: "S", hint: "wood, crates, repair parts" },
+  seeds: { name: "Seeds", glyph: "✦", hint: "plant these in the garden" },
+  ore: { name: "Ore", glyph: "O", hint: "Rowan turns this into tool prep" },
+  fish: { name: "Fish", glyph: "F", hint: "Maren turns this into meal prep" },
+  crops: { name: "Crops", glyph: "C", hint: "food for kitchen and board jobs" }
+};
+
+function chestSlotHtml(resource, amount, location) {
+  const meta = CHEST_RESOURCE_META[resource];
+  if (!meta || amount <= 0) return `<button class="inventorySlot empty" disabled></button>`;
+  const action = location === "bag" ? "storeChest" : "takeChest";
+  const title = location === "bag" ? "Click to store 1" : "Click to take 1";
+  return `
+    <button class="inventorySlot filled ${resource}" data-action="${action}" data-resource="${resource}" title="${title}">
+      <span class="slotIcon ${resource}">${meta.glyph}</span>
+      <b>${amount}</b>
+      <small>${location === "bag" ? "Bag" : "Chest"}</small>
+    </button>
+  `;
+}
+
+function emptyChestSlots(count) {
+  return Array.from({ length: count }, () => `<button class="inventorySlot empty" disabled></button>`).join("");
+}
+
+function renderVillageChest() {
+  const hub = ensureHubSave();
+  hub.chest = { ...structuredClone(DEFAULT_HUB_SAVE).chest, ...(hub.chest || {}) };
+  const bagItems = CHEST_RESOURCES.map(resource => chestSlotHtml(resource, hubResource(resource), "bag")).join("");
+  const chestItems = CHEST_RESOURCES.map(resource => chestSlotHtml(resource, hub.chest?.[resource] || 0, "chest")).join("");
+  openOverlay(`
+    <div class="vsScreen framedScreen routeChoiceScreen chestScreen">
+      ${renderTopStrip("Storage Chest", "backVillage")}
+      <div class="vsPanel levelPanel routePanel inventoryPanel">
+        <h2>Inventory and Chest</h2>
+        <p class="panelLead">Click a filled bag slot to store 1. Click a filled chest slot to take 1.</p>
+        <div class="minecraftInventoryFrame">
+          <section>
+            <h3>Bag</h3>
+            <div class="inventorySlotGrid">${bagItems}${emptyChestSlots(13)}</div>
+          </section>
+          <div class="inventoryArrow">⇄</div>
+          <section>
+            <h3>Chest</h3>
+            <div class="inventorySlotGrid chestSlots">${chestItems}${emptyChestSlots(13)}</div>
+          </section>
+        </div>
+        <div class="inventoryHintBar">Your real counts update instantly. This is still stack based, not a huge RPG inventory.</div>
+      </div>
+    </div>
+  `, "chestMenu");
+}
+
+function moveChestResource(resource, direction) {
+  if (!CHEST_RESOURCES.includes(resource)) return;
+  const hub = ensureHubSave();
+  hub.chest = { ...structuredClone(DEFAULT_HUB_SAVE).chest, ...(hub.chest || {}) };
+  const bagAmount = resource === "supplies" ? Number(hub.supplies) || 0 : Number(hub[resource]) || 0;
+  const chestAmount = Number(hub.chest[resource]) || 0;
+
+  if (direction === "store") {
+    if (bagAmount <= 0) return;
+    if (resource === "supplies") hub.supplies = bagAmount - 1;
+    else hub[resource] = bagAmount - 1;
+    hub.chest[resource] = chestAmount + 1;
+  } else {
+    if (chestAmount <= 0) return;
+    hub.chest[resource] = chestAmount - 1;
+    if (resource === "supplies") hub.supplies = bagAmount + 1;
+    else hub[resource] = bagAmount + 1;
+  }
+
+  saveGame();
+  playAssetSfx("ui_confirm_001", 0.18) || playAssetSfx("select", 0.16);
+  checkVillageAchievements("chest");
+  renderVillageChest();
 }
 
 function villageRubbleCleared(id) {
@@ -2589,10 +3519,16 @@ function findVillageInteractTarget() {
     if (!best || target.distance < best.distance) best = target;
   };
 
+  for (const mess of villageMesses) {
+    const distance = Math.hypot(villagePlayer.x - mess.x, villagePlayer.y - mess.y);
+    if (distance <= 84) return { type: "mess", id: mess.id, label: "hairball", action: "clean hairball (1 energy)", distance };
+  }
+
   for (const spot of VILLAGE_VILLAGER_SPOTS) {
     const villager = hubVillagerById(spot.id);
     if (!villager) continue;
-    const distance = Math.hypot(villagePlayer.x - spot.x, villagePlayer.y - spot.y);
+    const point = villageVillagerPoint(spot);
+    const distance = Math.hypot(villagePlayer.x - point.x, villagePlayer.y - point.y);
     if (distance <= 82) consider({ type: "villager", id: spot.id, label: villager.name, action: `talk to ${villager.name}`, distance });
   }
 
@@ -2629,6 +3565,9 @@ function findVillageInteractTarget() {
     if (distance <= 82) consider({ type: "visitor", label: visitor.name, action: visitor.action, distance });
   }
 
+  const boardDistance = Math.hypot(villagePlayer.x - VILLAGE_DAILY_BOARD.x, villagePlayer.y - VILLAGE_DAILY_BOARD.y);
+  if (boardDistance <= 92) consider({ type: "board", label: "Daily board", action: "open daily board", distance: boardDistance });
+
   for (const project of VILLAGE_PROJECTS) {
     const distance = Math.hypot(villagePlayer.x - project.x, villagePlayer.y - project.y);
     if (distance <= 104) consider({ type: "project", id: project.id, label: `${project.name} · ${hubProjectTowerText(project.id)}`, action: hubProjectActionText(project), distance });
@@ -2649,8 +3588,14 @@ function findVillageInteractTarget() {
   const menuDistance = Math.hypot(villagePlayer.x - (road.x + road.w / 2), villagePlayer.y - (road.y + road.h - 4));
   if (menuDistance <= 82) consider({ type: "menu", label: road.label, action: road.action, distance: menuDistance });
 
+  const homeDistance = Math.hypot(villagePlayer.x - VILLAGE_HOME.x, villagePlayer.y - VILLAGE_HOME.y);
+  if (homeDistance <= 96) consider({ type: "home", label: "your house", action: (ensureHubSave().homeRank || 0) > 0 ? "rest or upgrade house" : "build house", distance: homeDistance });
+
+  const chestDistance = Math.hypot(villagePlayer.x - VILLAGE_CHEST.x, villagePlayer.y - VILLAGE_CHEST.y);
+  if (chestDistance <= 72) consider({ type: "chest", label: "storage chest", action: "open chest", distance: chestDistance });
+
   const shrineDistance = Math.hypot(villagePlayer.x - VILLAGE_SHRINE.x, villagePlayer.y - VILLAGE_SHRINE.y);
-  if (shrineDistance <= 86) consider({ type: "shrine", label: "Mira shrine", action: "check village hope", distance: shrineDistance });
+  if (shrineDistance <= 86) consider({ type: "shrine", label: "Mira shrine", action: "spend hope", distance: shrineDistance });
 
   return best;
 }
@@ -2662,7 +3607,8 @@ function clearVillageRubble(id) {
   if (!spendVillageEnergy(1, "clearing rubble")) return;
   hub.rubbleCleared[id] = true;
   hub.supplies += 1;
-  hub.lastGain = "+1 supply found while clearing the village.";
+  hub.hope = (Number(hub.hope) || 0) + 1;
+  hub.lastGain = "+1 supply found while clearing the village. +1 hope.";
   hub.lastHelp = "";
   saveGame();
   villagePulse = 1;
@@ -2670,8 +3616,8 @@ function clearVillageRubble(id) {
   playAssetSfx("bonus_chime", 0.24);
   addParticles("dust", rubble.x, rubble.y, -Math.PI / 2, 18);
   addParticles("reward", rubble.x, rubble.y - 8, -Math.PI / 2, 12);
-  floatText.push({ x: rubble.x - 28, y: rubble.y - 36, text: "+1 supply", t: 1.0 });
-  setVillageMessage("Village", "You cleared rubble and found one supply. The place looks a little less dead.");
+  floatText.push({ x: rubble.x - 38, y: rubble.y - 36, text: "+1 supply  +1 hope", t: 1.0 });
+  setVillageMessage("Village", "You cleared rubble, found one supply, and raised the town's spirits a little.");
   advanceVillageTask("rubble");
 }
 
@@ -2696,17 +3642,23 @@ function mineVillageNode(id) {
   }
   if (!spendVillageEnergy(2, "mining")) return;
   hub.mineCleared[id] = hub.towerDay;
-  addHubResource("ore", mine.ore || 1);
+  let oreFound = mine.ore || 1;
+  const event = activeVillageDailyEvent();
+  if (event?.id === "loose_stone" && !hub.dailyEventUsed.loose_stone) {
+    oreFound += 1;
+    hub.dailyEventUsed.loose_stone = true;
+  }
+  addHubResource("ore", oreFound);
   if (mine.shards) save.shards += mine.shards;
-  hub.lastGain = mine.shards ? "+1 ore and +1 shard from mining." : "+1 ore from mining.";
+  hub.lastGain = mine.shards ? `+${oreFound} ore and +1 shard from mining.` : `+${oreFound} ore from mining.`;
   saveGame();
   villagePulse = 1;
   playAssetSfx("town_mine", 0.42);
   playAssetSfx("bonus_chime", 0.16);
   addParticles("dust", mine.x, mine.y, -Math.PI / 2, 18);
   addParticles("reward", mine.x, mine.y - 8, -Math.PI / 2, 12);
-  floatText.push({ x: mine.x - 36, y: mine.y - 42, text: mine.shards ? "+ore  +shard" : "+ore", t: 1.0 });
-  setVillageMessage("Mining", mine.shards ? "You broke loose ore and found a shard inside the rock." : "You broke loose ore for repairs and trades.", 2.8);
+  floatText.push({ x: mine.x - 36, y: mine.y - 42, text: mine.shards ? `+${oreFound} ore  +shard` : `+${oreFound} ore`, t: 1.0 });
+  setVillageMessage("Mining", mine.shards ? `You broke loose ${oreFound} ore and found a shard inside the rock.` : `You broke loose ${oreFound} ore for repairs and prep.`, 2.8);
   advanceVillageTask("mine");
 }
 
@@ -2729,16 +3681,22 @@ function fishVillagePond() {
   if (!spendVillageEnergy(2, "fishing")) return;
   hub.fishingUses = (Number(hub.fishingUses) || 0) + 1;
   const lucky = villageHash(hub.towerDay, hub.fishingUses) > 0.58;
-  addHubResource("fish", 1);
+  let fishFound = 1;
+  const event = activeVillageDailyEvent();
+  if (event?.id === "fish_biting" && !hub.dailyEventUsed.fish_biting) {
+    fishFound += 1;
+    hub.dailyEventUsed.fish_biting = true;
+  }
+  addHubResource("fish", fishFound);
   if (lucky) save.shards += 1;
-  hub.lastGain = lucky ? "+1 fish and +1 shard from fishing." : "+1 fish from fishing.";
+  hub.lastGain = lucky ? `+${fishFound} fish and +1 shard from fishing.` : `+${fishFound} fish from fishing.`;
   saveGame();
   villagePulse = 1;
   playAssetSfx("town_fish_cast", 0.42);
   setTimeout(() => playAssetSfx("town_fish_reel", 0.28), 120);
   addParticles("reward", VILLAGE_FISHING_SPOTS[0].x, VILLAGE_FISHING_SPOTS[0].y, -Math.PI / 2, 18);
-  floatText.push({ x: VILLAGE_FISHING_SPOTS[0].x - 34, y: VILLAGE_FISHING_SPOTS[0].y - 44, text: lucky ? "+fish  +shard" : "+fish", t: 1.0 });
-  setVillageMessage("Fishing", lucky ? "You caught a fish and pulled a shard from the mud." : "You caught a fish. A visitor may trade for it.", 2.8);
+  floatText.push({ x: VILLAGE_FISHING_SPOTS[0].x - 34, y: VILLAGE_FISHING_SPOTS[0].y - 44, text: lucky ? `+${fishFound} fish  +shard` : `+${fishFound} fish`, t: 1.0 });
+  setVillageMessage("Fishing", lucky ? `You caught ${fishFound} fish and pulled a shard from the mud.` : `You caught ${fishFound} fish. Maren can turn fish into tower prep.`, 2.8);
   advanceVillageTask("fish");
 }
 
@@ -2747,8 +3705,8 @@ function villageFarmActionText(id) {
   const day = ensureHubSave().towerDay;
   if (plot.state === "ready") return "harvest crop (1 energy)";
   if (plot.state === "planted" && plot.watered && day < (plot.readyDay || 999)) return "crop growing";
-  if (plot.state === "planted" && !plot.watered) return "water crop (1 energy)";
-  return hubResource("seeds") > 0 ? "plant seed (1 energy)" : "need seeds";
+  if (plot.state === "planted" && !plot.watered) return "water crop (free)";
+  return hubResource("seeds") > 0 ? "plant and water (1 energy)" : "need seeds";
 }
 
 function workVillageFarmPlot(id) {
@@ -2783,13 +3741,12 @@ function workVillageFarmPlot(id) {
   }
 
   if (plot.state === "planted" && !plot.watered) {
-    if (!spendVillageEnergy(1, "watering")) return;
     saveVillageFarmPlot(id, { state: "planted", watered: true, plantedDay: plot.plantedDay ?? day, readyDay: day + 1 });
     saveGame();
     playAssetSfx("town_leaves", 0.22);
     addParticles("reward", plotDef.x, plotDef.y, -Math.PI / 2, 10);
     floatText.push({ x: plotDef.x - 28, y: plotDef.y - 36, text: "watered", t: 0.9 });
-    setVillageMessage("Garden", "Watered. It will grow after one tower fight.", 2.4);
+    setVillageMessage("Garden", "Watered for free. The energy was already spent planting this plot.", 2.4);
     advanceVillageTask("farm");
     return;
   }
@@ -2801,12 +3758,12 @@ function workVillageFarmPlot(id) {
   }
   if (!spendVillageEnergy(1, "planting")) return;
   addHubResource("seeds", -1);
-  saveVillageFarmPlot(id, { state: "planted", watered: false, plantedDay: day, readyDay: day + 1 });
+  saveVillageFarmPlot(id, { state: "planted", watered: true, plantedDay: day, readyDay: day + 1 });
   saveGame();
   playAssetSfx("town_leaves", 0.24);
   addParticles("dust", plotDef.x, plotDef.y, -Math.PI / 2, 8);
-  floatText.push({ x: plotDef.x - 24, y: plotDef.y - 36, text: "seed", t: 0.9 });
-  setVillageMessage("Garden", "Seed planted. Water it before your next climb if you want it to grow.", 2.8);
+  floatText.push({ x: plotDef.x - 32, y: plotDef.y - 36, text: "seed + water", t: 0.9 });
+  setVillageMessage("Garden", "Seed planted and watered with one energy. It will grow after one tower fight.", 2.8);
   advanceVillageTask("farm");
 }
 
@@ -2834,6 +3791,7 @@ function interactVillageVisitor() {
     setVillageMessage("Road", "No visitor is here. Visitors usually arrive after tower fights.", 2.4);
     return;
   }
+  hub.collection.visitors[visitor.type] = true;
   const costText = Object.entries(visitor.cost || {}).map(([k, v]) => `${v} ${k}`).join(", ") || "free";
   for (const [key, value] of Object.entries(visitor.cost || {})) {
     if ((Number(hub[key]) || 0) < value) {
@@ -2843,7 +3801,6 @@ function interactVillageVisitor() {
       return;
     }
   }
-  if (!spendVillageEnergy(1, "trading with the visitor")) return;
   payVisitorCost(visitor.cost);
   applyVisitorReward(visitor.reward);
   hub.visitor.bought = true;
@@ -2874,6 +3831,7 @@ function collectVillageStumpDrops() {
     if (d > 34) continue;
     delete hub.stumpDrops[stump.id];
     hub.supplies += stump.supplies || 1;
+    hub.hope = (Number(hub.hope) || 0) + 1;
     if (stump.shards) save.shards += stump.shards;
     hub.lastGain = stump.shards ? "Picked up wood, one supply, and one shard." : "Picked up wood and one supply.";
     collected = true;
@@ -2881,7 +3839,7 @@ function collectVillageStumpDrops() {
     playAssetSfx("reward", 0.42);
     playAssetSfx("bonus_chime", 0.26);
     addParticles("reward", stump.x, stump.y - 10, -Math.PI / 2, 22);
-    floatText.push({ x: stump.x - 38, y: stump.y - 44, text: stump.shards ? "+1 supply  +1 shard" : "+1 supply", t: 1.0 });
+    floatText.push({ x: stump.x - 46, y: stump.y - 44, text: stump.shards ? "+1 supply  +1 shard  +1 hope" : "+1 supply  +1 hope", t: 1.0 });
     setVillageMessage("Supplies picked up", stump.shards ? "You picked up the chopped wood and found a shard under it." : "You picked up the chopped wood for the village.", 2.6);
     advanceVillageTask("chop");
   }
@@ -2898,16 +3856,15 @@ function villageStumpHitCount(id) {
 function villageStumpActionText(stump) {
   const hits = villageStumpHitCount(stump.id);
   const left = Math.max(1, stump.hp - hits);
-  return `chop stump (${left} hit${left === 1 ? "" : "s"})`;
+  return `chop stump (${left} hit${left === 1 ? "" : "s"}, 1 energy on break)`;
 }
 
 function chopVillageStump(id) {
   const stump = VILLAGE_STUMPS.find(item => item.id === id);
   if (!stump || villageStumpCleared(id)) return false;
 
-  if (!spendVillageEnergy(1, "chopping")) return false;
-
   const hits = villageStumpHitCount(id) + 1;
+  if (hits >= stump.hp && !spendVillageEnergy(1, "finishing stump")) return false;
   const hub = ensureHubSave();
   hub.stumpHits[id] = hits;
   villageToolSwing = {
@@ -2971,7 +3928,7 @@ function villageTargetWorldPoint(target) {
   if (!target) return null;
   if (target.type === "villager") {
     const spot = VILLAGE_VILLAGER_SPOTS.find(item => item.id === target.id);
-    return spot ? { x: spot.x, y: spot.y } : null;
+    return spot ? villageVillagerPoint(spot) : null;
   }
   if (target.type === "rubble") {
     const item = VILLAGE_RUBBLE.find(rubble => rubble.id === target.id);
@@ -2989,13 +3946,20 @@ function villageTargetWorldPoint(target) {
     const item = VILLAGE_MINE_NODES.find(mine => mine.id === target.id);
     return item ? { x: item.x, y: item.y } : null;
   }
+  if (target.type === "mess") {
+    const item = villageMesses.find(mess => mess.id === target.id);
+    return item ? { x: item.x, y: item.y } : null;
+  }
   if (target.type === "fish") return { ...VILLAGE_FISHING_SPOTS[0] };
   if (target.type === "visitor") return { ...VILLAGE_VISITOR_SPOT };
+  if (target.type === "board") return { ...VILLAGE_DAILY_BOARD };
   if (target.type === "project") {
     const item = hubProjectById(target.id);
     return item ? { x: item.x, y: item.y } : null;
   }
   if (target.type === "tower") return { ...VILLAGE_TOWER_GATE };
+  if (target.type === "home") return { x: VILLAGE_HOME.x, y: VILLAGE_HOME.y };
+  if (target.type === "chest") return { ...VILLAGE_CHEST };
   if (target.type === "shrine") return { ...VILLAGE_SHRINE };
   if (target.type === "power") {
     const b = VILLAGE_SERVICE_BUILDINGS.power;
@@ -3047,7 +4011,9 @@ function hubProjectById(id) {
 }
 
 function hubProjectCost(project) {
-  return Math.min(4, hubProjectRank(project.id) + 1);
+  const rank = hubProjectRank(project.id);
+  const base = Math.max(1, Math.floor(rank / 3) + 1);
+  return activeVillageDailyEvent()?.id === "forge_heat" ? Math.max(1, base - 1) : base;
 }
 
 function hubProjectActionText(project) {
@@ -3072,7 +4038,7 @@ function improveVillageProject(id) {
     return;
   }
 
-  const cost = Math.min(4, rank + 1);
+  const cost = hubProjectCost(project);
   if (hub.supplies < cost) {
     playAssetSfx("ui_button_click", 0.16);
     addParticles("dust", project.x, project.y + 8, -Math.PI / 2, 8);
@@ -3085,18 +4051,20 @@ function improveVillageProject(id) {
   hub.supplies -= cost;
   const nextRank = rank + 1;
   hub.projects[id] = nextRank;
+  hub.hope = (Number(hub.hope) || 0) + 1;
   save.shards += 1;
-  hub.lastHelp = `${project.name} rank ${nextRank}/${project.max}. ${hubProjectTowerText(id, nextRank)}`;
+  hub.lastHelp = `${project.name} rank ${nextRank}. ${hubProjectTowerText(id, nextRank)} +1 hope.`;
   hub.lastGain = "";
   saveGame();
   villagePulse = 1;
   playAssetSfx("bonus_chime", 0.36);
   playAssetSfx("cache_upgrade", 0.28);
+  playAssetSfx("town_building_work", 0.22);
   addParticles("reward", project.x, project.y - 24, -Math.PI / 2, 30);
   addParticles("dust", project.x, project.y + 6, -Math.PI / 2, 12);
-  floatText.push({ x: project.x - 52, y: project.y - 66, text: `rank ${nextRank}/${project.max}`, t: 1.1 });
+  floatText.push({ x: project.x - 52, y: project.y - 66, text: `rank ${nextRank}`, t: 1.1 });
   floatText.push({ x: project.x - 42, y: project.y - 46, text: "+1 hope  +1 shard", t: 1.2 });
-  setVillageMessage(project.name, `Spent ${cost} supplies. ${project.reward} Rank ${nextRank}/${project.max}. ${hubProjectTowerText(id, nextRank)}`);
+  setVillageMessage(project.name, `Spent ${cost} supplies. ${project.reward} Rank ${nextRank}. ${hubProjectTowerText(id, nextRank)}`);
   advanceVillageTask("project");
   updateHud();
 }
@@ -3129,6 +4097,10 @@ function interactVillage() {
     improveVillageProject(target.id);
     return;
   }
+  if (target.type === "mess") {
+    cleanVillageMess(target.id);
+    return;
+  }
   if (target.type === "farm") {
     workVillageFarmPlot(target.id);
     return;
@@ -3145,13 +4117,12 @@ function interactVillage() {
     interactVillageVisitor();
     return;
   }
+  if (target.type === "board") {
+    renderVillageDailyBoard();
+    return;
+  }
   if (target.type === "tower") {
-    if (activeStoryMode && villagePendingRouteFloor > 0 && runStats) {
-      setVillageMessage("Tower gate", `Choose the route for floor ${villagePendingRouteFloor}.`, 1.2);
-      showRouteChoices(villagePendingRouteFloor);
-      return;
-    }
-    renderStorySelect();
+    renderVillagePrepTray();
     return;
   }
   if (target.type === "power") {
@@ -3166,8 +4137,16 @@ function interactVillage() {
     renderMenu();
     return;
    }
+  if (target.type === "home") {
+    renderVillageHouse();
+    return;
+  }
+  if (target.type === "chest") {
+    renderVillageChest();
+    return;
+  }
   if (target.type === "shrine") {
-    setVillageMessage("Mira shrine", `Hope is ${hubTotalHelp()} of ${hubHopeMax()}. Bring supplies home and help people before the next climb.`);
+    renderVillageShrine();
   }
 }
 
@@ -3184,7 +4163,7 @@ function updateVillage(dt) {
     dx /= l;
     dy /= l;
     p.angle = Math.atan2(dy, dx);
-    const runMult = (keys.has("shift") && villageEnergy() > 0) ? 1.55 : 1;
+    const runMult = keys.has("shift") ? 1.55 : 1;
     moveVillagePlayer(dx * p.speed * runMult * dt, dy * p.speed * runMult * dt);
     p.bob += dt * 9 * runMult;
     if (nowSec() - lastPlayerFootstepAt > (runMult > 1 ? 0.23 : 0.34)) {
@@ -3198,8 +4177,16 @@ function updateVillage(dt) {
   villagePlayer.interactCooldown = Math.max(0, villagePlayer.interactCooldown - dt);
   villageToolSwing.t = Math.max(0, villageToolSwing.t - dt);
   villageMessage.t = Math.max(0, villageMessage.t - dt);
+  const hub = ensureHubSave();
+  if (hub.nightFallPending) {
+    hub.nightFallPending = false;
+    saveGame();
+    setVillageMessage("Night falls", "The tower lights wake. Check tonight's prep at the gate and climb before the day goes cold.", 5.0);
+    playAssetSfx("town_village_night", 0.16);
+  }
   villagePulse = Math.max(0, villagePulse - dt * 1.8);
   villageEnergyFlash = Math.max(0, villageEnergyFlash - dt * 2.8);
+  maybeSpawnVillageMess();
   collectVillageStumpDrops();
   villageInteractTarget = findVillageInteractTarget();
   camera.x = clamp(p.x - W / 2, 0, Math.max(0, VILLAGE_WORLD.w - W));
@@ -3216,6 +4203,7 @@ function drawVillage() {
   drawVillagePond();
   drawVillagePaths();
   drawVillageWell();
+  drawVillageHomeAndChest();
   drawVillageFences();
   drawVillageWallsAndTrees();
   drawVillageShrine();
@@ -3227,6 +4215,8 @@ function drawVillage() {
   drawVillageStumpDrops();
   drawVillageActivitySites();
   drawVillageStations();
+  drawVillageTaskMarkers();
+  drawVillageMesses();
   drawVillageVisitor();
   drawVillageVillagers();
   drawVillagePlayer();
@@ -3236,6 +4226,7 @@ function drawVillage() {
 
   ctx.restore();
   drawVillageScreenUi();
+  drawAchievementToasts();
   drawScreenFlash();
 }
 
@@ -3443,6 +4434,41 @@ function drawVillageWell() {
   ctx.restore();
 }
 
+function drawVillageHomeAndChest() {
+  const hub = ensureHubSave();
+  const rank = Number(hub.homeRank) || 0;
+  const h = VILLAGE_HOME;
+  ctx.save();
+  if (rank <= 0) {
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath();
+    ctx.ellipse(h.x, h.y + 30, 78, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    drawTownAsset("town_crate_big", h.x - 34, h.y + 18, 32, 0, 0.86);
+    drawTownAsset("town_stump", h.x + 34, h.y + 20, 28, 0, 0.75);
+    ctx.fillStyle = "rgba(3,5,12,0.62)";
+    ctx.fillRect(h.x - 58, h.y - 22, 116, 34);
+    ctx.strokeStyle = "rgba(255,211,90,0.58)";
+    ctx.strokeRect(h.x - 58, h.y - 22, 116, 34);
+    ctx.fillStyle = "#ffd35a";
+    ctx.font = "900 9px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("BUILD YOUR HOUSE", h.x, h.y - 2);
+  } else {
+    drawVillageCottage({ x: h.x - h.w / 2, y: h.y - h.h / 2, w: h.w, h: h.h }, "#c77dff", "Home", Math.min(5, rank), 5);
+    ctx.fillStyle = "#f5f1ff";
+    ctx.font = "900 11px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(`YOUR HOUSE R${rank}`, h.x, h.y + 78);
+  }
+  drawTownAsset("tiny_chest", VILLAGE_CHEST.x, VILLAGE_CHEST.y, 44, 0, 1) || drawTownAsset("town_crate_big", VILLAGE_CHEST.x, VILLAGE_CHEST.y, 44, 0, 1);
+  ctx.fillStyle = "#ffd35a";
+  ctx.font = "900 9px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("CHEST", VILLAGE_CHEST.x, VILLAGE_CHEST.y + 38);
+  ctx.restore();
+}
+
 function drawVillageFences() {
   ctx.save();
   const fenceRuns = [
@@ -3497,9 +4523,9 @@ function drawVillageTree(x, y, key = "town_tree_green") {
 }
 
 function drawVillageShrine() {
-  const hope = hubTotalHelp();
+  const restored = villageRestoredCount();
   const max = hubHopeMax();
-  const pct = clamp(hope / Math.max(1, max), 0, 1);
+  const pct = clamp(restored / Math.max(1, max), 0, 1);
   const pulse = 1 + villagePulse * 0.4;
 
   ctx.save();
@@ -3548,7 +4574,10 @@ function drawVillageShrine() {
   ctx.fillText("MIRA", 0, 72);
   ctx.fillStyle = "rgba(217,222,234,0.64)";
   ctx.font = "700 10px ui-monospace, monospace";
-  ctx.fillText(`${hope}/${max} HOPE`, 0, 88);
+  ctx.fillText(`${restored}/${max} RESTORED`, 0, 88);
+  ctx.fillStyle = "#ffd35a";
+  ctx.font = "700 9px ui-monospace, monospace";
+  ctx.fillText(`HOPE ${hubHope()}  RETRY ${ensureHubSave().retries || 0}`, 0, 101);
   ctx.restore();
 }
 
@@ -3582,8 +4611,10 @@ function drawVillageTowerGate() {
 
   for (let i = -4; i <= 4; i++) drawTownAsset("town_stone_dark", i * 32, -2, 34, 0, 0.8);
   for (let i = -4; i <= 4; i++) drawTownAsset("town_stone_b", i * 32, 34, 34, 0, 0.7);
+  const omen = activeVillageOmen();
+  const pulse = 0.7 + Math.sin(nowSec() * 2.4) * 0.25;
   const g = ctx.createRadialGradient(0, 20, 18, 0, 20, 132);
-  g.addColorStop(0, "rgba(124,199,255,0.38)");
+  g.addColorStop(0, omen?.id === "red_lights" ? `rgba(255,92,122,${0.30 + pulse * 0.16})` : `rgba(124,199,255,${0.30 + pulse * 0.12})`);
   g.addColorStop(0.68, "rgba(48,69,98,0.22)");
   g.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g;
@@ -3599,7 +4630,12 @@ function drawVillageTowerGate() {
   ctx.fillText("TOWER GATE", 0, 8);
   ctx.fillStyle = "rgba(217,222,234,0.66)";
   ctx.font = "900 12px ui-monospace, monospace";
-  ctx.fillText("E: choose campaign climb", 0, 42);
+  ctx.fillText("E: prep tray", 0, 42);
+  if (omen) {
+    ctx.fillStyle = omen.id === "red_lights" ? "#ff6b7d" : "#7cc7ff";
+    ctx.font = "900 10px ui-monospace, monospace";
+    ctx.fillText(omen.name.toUpperCase(), 0, 62);
+  }
   ctx.restore();
 }
 
@@ -3613,32 +4649,53 @@ function drawVillageHuts() {
 
 function drawVillageCottage(h, color, role, rank, max) {
   const cx = h.x + h.w / 2;
+  const buildStage = clamp(rank, 0, 5);
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.beginPath();
   ctx.ellipse(cx + 8, h.y + h.h + 10, h.w * 0.54, 18, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = "#c9b27f";
-  ctx.fillRect(h.x + 18, h.y + 42, h.w - 36, h.h - 44);
-  ctx.strokeStyle = hexToRgba(color, 0.58);
-  ctx.lineWidth = 3;
-  ctx.strokeRect(h.x + 18, h.y + 42, h.w - 36, h.h - 44);
-
-  ctx.fillStyle = "#9d6735";
-  ctx.beginPath();
-  ctx.moveTo(h.x + 4, h.y + 52);
-  ctx.lineTo(cx, h.y - 12);
-  ctx.lineTo(h.x + h.w - 4, h.y + 52);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,211,90,0.48)";
-  ctx.stroke();
-  for (let i = -2; i <= 2; i++) drawTownAsset("town_roof_a", cx + i * 28, h.y + 40 - Math.abs(i) * 8, 34, 0, 0.85);
-
-  drawTownAsset("town_door_a", cx, h.y + h.h - 22, 42, 0, 0.98);
-  drawTownAsset("town_window_a", h.x + 46, h.y + 74, 30, 0, 0.95);
-  drawTownAsset("town_window_b", h.x + h.w - 46, h.y + 74, 30, 0, 0.95);
+  if (buildStage <= 0) {
+    ctx.fillStyle = "rgba(101,71,44,0.7)";
+    ctx.fillRect(h.x + 26, h.y + 98, h.w - 52, 12);
+    ctx.fillStyle = "#caa96c";
+    ctx.fillRect(cx - 28, h.y + 86, 56, 18);
+    ctx.strokeStyle = hexToRgba(color, 0.55);
+    ctx.strokeRect(cx - 28, h.y + 86, 56, 18);
+    drawTownAsset(role === "Smith" ? "tiny_tool_pickaxe" : role === "Lookout" ? "tiny_target" : "tiny_chest", cx + 42, h.y + 82, 26, 0, 0.95);
+    drawTownAsset("town_crate_small", cx - 46, h.y + 102, 24, 0, 0.85);
+    drawTownAsset("town_stump", cx - 74, h.y + 104, 26, 0, 0.7);
+    ctx.fillStyle = "#f5f1ff";
+    ctx.font = "900 11px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("CAMP MAT", cx, h.y + 82);
+  } else {
+    const wallTop = buildStage <= 2 ? h.y + 70 : h.y + 42;
+    const wallInset = buildStage <= 2 ? 32 : 18;
+    ctx.fillStyle = "#c9b27f";
+    ctx.fillRect(h.x + wallInset, wallTop, h.w - wallInset * 2, h.h - (wallTop - h.y) - 2);
+    ctx.strokeStyle = hexToRgba(color, 0.58);
+    ctx.lineWidth = 3;
+    ctx.strokeRect(h.x + wallInset, wallTop, h.w - wallInset * 2, h.h - (wallTop - h.y) - 2);
+    ctx.fillStyle = "#9d6735";
+    ctx.beginPath();
+    ctx.moveTo(h.x + 4, h.y + 52);
+    ctx.lineTo(cx, buildStage <= 2 ? h.y + 8 : h.y - 12);
+    ctx.lineTo(h.x + h.w - 4, h.y + 52);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,211,90,0.48)";
+    ctx.stroke();
+    const roofPieces = buildStage <= 2 ? 3 : 5;
+    for (let i = 0; i < roofPieces; i++) {
+      const offset = i - Math.floor(roofPieces / 2);
+      drawTownAsset("town_roof_a", cx + offset * 28, h.y + 40 - Math.abs(offset) * 8, 34, 0, 0.85);
+    }
+    if (buildStage >= 2) drawTownAsset("town_door_a", cx, h.y + h.h - 22, 42, 0, 0.98);
+    if (buildStage >= 3) drawTownAsset("town_window_a", h.x + 46, h.y + 74, 30, 0, 0.95);
+    if (buildStage >= 4) drawTownAsset("town_window_b", h.x + h.w - 46, h.y + 74, 30, 0, 0.95);
+  }
 
   ctx.fillStyle = "rgba(3,5,12,0.46)";
   ctx.beginPath();
@@ -3755,7 +4812,42 @@ function drawVillageStumpDrops() {
 
 function drawVillageStations() {
   drawVillageServiceBuildings();
+  drawVillageDailyBoard();
   drawVillageProjects();
+}
+
+function drawVillageDailyBoard() {
+  const hub = ensureHubSave();
+  const x = VILLAGE_DAILY_BOARD.x;
+  const y = VILLAGE_DAILY_BOARD.y;
+  const task = activeBoardTask();
+  const done = (hub.boardTasks || []).filter(item => item.done).length;
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.32)";
+  ctx.beginPath();
+  ctx.ellipse(x + 2, y + 24, 54, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  drawTownAsset("tiny_sign", x, y, 70, 0, 1);
+  ctx.fillStyle = "rgba(3,5,12,0.68)";
+  ctx.beginPath();
+  ctx.roundRect(x - 58, y + 28, 116, 34, 5);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,211,90,0.72)";
+  ctx.stroke();
+  ctx.fillStyle = "#ffd35a";
+  ctx.font = "900 10px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("DAILY BOARD", x, y + 43);
+  ctx.fillStyle = "rgba(245,241,255,0.86)";
+  ctx.font = "900 9px ui-monospace, monospace";
+  ctx.fillText(`${done}/${Math.max(1, hub.boardTasks?.length || 3)} DONE`, x, y + 57);
+  if (task) {
+    ctx.strokeStyle = "rgba(125,255,178,0.72)";
+    ctx.beginPath();
+    ctx.arc(x, y + 4, 44 + Math.sin(nowSec() * 3) * 3, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawVillageServiceBuildings() {
@@ -3827,20 +4919,21 @@ function drawVillageProjects() {
 }
 
 function drawVillageProjectLabel(project, rank) {
-  const max = Math.max(1, project.max);
+  const pipCount = 5;
+  const milestone = Math.floor(rank / pipCount) * pipCount;
   ctx.save();
   ctx.fillStyle = "rgba(3,5,12,0.48)";
   ctx.beginPath();
-  ctx.roundRect(project.x - 54, project.y + 62, 108, 18, 5);
+  ctx.roundRect(project.x - 62, project.y + 62, 124, 20, 5);
   ctx.fill();
-  for (let i = 0; i < max; i++) {
-    ctx.fillStyle = i < rank ? project.color : "rgba(255,255,255,0.22)";
-    ctx.fillRect(project.x - 36 + i * 22, project.y + 68, 14, 5);
+  for (let i = 0; i < pipCount; i++) {
+    ctx.fillStyle = i < (rank - milestone) ? project.color : "rgba(255,255,255,0.22)";
+    ctx.fillRect(project.x - 46 + i * 19, project.y + 69, 12, 5);
   }
-  ctx.fillStyle = rank >= project.max ? project.color : "rgba(245,241,255,0.86)";
+  ctx.fillStyle = "rgba(245,241,255,0.9)";
   ctx.font = "900 9px ui-monospace, monospace";
   ctx.textAlign = "center";
-  ctx.fillText(rank >= project.max ? "MAX" : `${rank}/${max}`, project.x, project.y + 58);
+  ctx.fillText(`RANK ${rank}`, project.x, project.y + 58);
   ctx.restore();
 }
 
@@ -3860,7 +4953,7 @@ function drawVillageGarden(project, rank) {
     drawTownAsset("town_fence_v", project.x + 142, project.y - 30 + i * 34, 34, 0, 0.86);
   }
 
-  for (let row = 0; row < project.max; row++) {
+  for (let row = 0; row < 4; row++) {
     const x = project.x - 78 + row * 52;
     const restored = row < rank;
     for (let j = -1; j <= 1; j++) drawTownAsset("town_dirt_b", x, project.y + j * 24, 34, 0, restored ? 0.96 : 0.55);
@@ -4040,6 +5133,28 @@ function drawVillageFishingSpot() {
   ctx.restore();
 }
 
+function drawVillageMesses() {
+  if (!villageMesses.length) return;
+  ctx.save();
+  for (const mess of villageMesses) {
+    ctx.fillStyle = "rgba(0,0,0,0.2)";
+    ctx.beginPath();
+    ctx.ellipse(mess.x + 2, mess.y + 10, 14, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#58754f";
+    ctx.beginPath();
+    ctx.arc(mess.x - 4, mess.y, 5, 0, Math.PI * 2);
+    ctx.arc(mess.x + 3, mess.y + 2, 6, 0, Math.PI * 2);
+    ctx.arc(mess.x + 9, mess.y - 1, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,211,90,0.55)";
+    ctx.beginPath();
+    ctx.arc(mess.x, mess.y, 18 + Math.sin(nowSec() * 3 + mess.x) * 2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawVillageVisitor() {
   const visitor = activeVillageVisitor();
   if (!visitor) return;
@@ -4050,9 +5165,10 @@ function drawVillageVisitor() {
   ctx.beginPath();
   ctx.ellipse(x + 2, y + 18, 26, 8, 0, 0, Math.PI * 2);
   ctx.fill();
-  drawTownAsset("town_crate_big", x - 40, y + 12, 34, 0, 0.9);
-  drawTownAsset(visitor.type === "seed" ? "tiny_flower" : visitor.type === "miner" ? "tiny_tool_pickaxe" : visitor.type === "fisher" ? "tiny_key" : "tiny_coin", x - 40, y - 12, 24, 0, 0.95);
-  if (!drawImageAsset("rpg_soldier", x, y, 42, 42)) {
+  drawTownAsset("town_crate_big", x - 54, y + 14, 34, 0, 0.9);
+  drawTownAsset("town_barrel_a", x - 22, y + 12, 28, 0, 0.88);
+  drawTownAsset(visitor.type === "seed" ? "tiny_flower" : visitor.type === "miner" ? "tiny_tool_pickaxe" : visitor.type === "fisher" ? "tiny_key" : "tiny_coin", x - 54, y - 12, 24, 0, 0.95);
+  if (!drawImageAsset(visitor.sprite || "rpg_soldier", x, y, 42, 42)) {
     ctx.fillStyle = "#ffd35a";
     ctx.beginPath();
     ctx.arc(x, y, 14, 0, Math.PI * 2);
@@ -4066,6 +5182,9 @@ function drawVillageVisitor() {
   ctx.font = "900 10px ui-monospace, monospace";
   ctx.textAlign = "center";
   ctx.fillText(visitor.name.toUpperCase(), x, y + 48);
+  ctx.font = "900 8px ui-monospace, monospace";
+  ctx.fillStyle = "rgba(245,241,255,0.8)";
+  ctx.fillText(visitor.title.toUpperCase(), x, y + 60);
   ctx.restore();
 }
 
@@ -4074,26 +5193,27 @@ function drawVillageVillagers() {
     const villager = hubVillagerById(spot.id);
     const rank = hubVillagerRank(spot.id);
     const size = 48 + Math.min(rank, 5) * 2;
+    const point = villageVillagerPoint(spot);
     ctx.save();
     ctx.fillStyle = "rgba(0,0,0,0.34)";
     ctx.beginPath();
-    ctx.ellipse(spot.x + 2, spot.y + 18, 26, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(point.x + 2, point.y + 18, 26, 8, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = hexToRgba(spot.color, 0.48 + Math.min(0.3, rank * 0.05));
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(spot.x, spot.y, 31 + Math.sin(nowSec() * 1.8 + spot.x) * 2, 0, Math.PI * 2);
+    ctx.arc(point.x, point.y, 31 + Math.sin(nowSec() * 1.8 + spot.x) * 2, 0, Math.PI * 2);
     ctx.stroke();
-    if (!drawImageAsset(villager.sprite, spot.x, spot.y, size, size)) {
+    if (!drawImageAsset(villager.sprite, point.x, point.y, size, size)) {
       ctx.fillStyle = spot.color;
       ctx.beginPath();
-      ctx.arc(spot.x, spot.y, 18, 0, Math.PI * 2);
+      ctx.arc(point.x, point.y, 18, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.fillStyle = "#f5f1ff";
     ctx.font = "900 13px ui-monospace, monospace";
     ctx.textAlign = "center";
-    ctx.fillText(villager.name, spot.x, spot.y + 44);
+    ctx.fillText(villager.name, point.x, point.y + 44);
     ctx.restore();
   }
 }
@@ -4135,29 +5255,80 @@ function drawVillageToolSwing() {
   ctx.restore();
 }
 
+function villageTaskMarkerTargets(task = activeBoardTask()) {
+  if (!task || task.done) return [];
+  if (task.type === "rubble") return VILLAGE_RUBBLE.filter(rubble => !villageRubbleCleared(rubble.id)).map(rubble => ({ x: rubble.x, y: rubble.y, label: "BOARD" })).slice(0, 4);
+  if (task.type === "chop") return VILLAGE_STUMPS.filter(stump => !villageStumpCleared(stump.id)).map(stump => ({ x: stump.x, y: stump.y, label: "BOARD" })).slice(0, 4);
+  if (task.type === "mine") return VILLAGE_MINE_NODES.filter(mine => !villageMineClearedToday(mine.id)).map(mine => ({ x: mine.x, y: mine.y, label: "BOARD" })).slice(0, 3);
+  if (task.type === "fish") return VILLAGE_FISHING_SPOTS.map(spot => ({ x: spot.x, y: spot.y, label: "BOARD" }));
+  if (task.type === "farm") return VILLAGE_FARM_PLOTS.map(plot => ({ x: plot.x, y: plot.y, label: "BOARD" })).slice(0, 5);
+  if (task.type === "project") return VILLAGE_PROJECTS.filter(project => hubProjectRank(project.id) < project.max).map(project => ({ x: project.x, y: project.y, label: "BOARD" }));
+  if (task.type === "villager" && task.villager) {
+    const spot = VILLAGE_VILLAGER_SPOTS.find(item => item.id === task.villager);
+    return spot ? [{ x: spot.x, y: spot.y, label: "BOARD" }] : [];
+  }
+  return [];
+}
+
+function drawVillageTaskMarkers() {
+  const targets = villageTaskMarkerTargets();
+  if (!targets.length) return;
+  ctx.save();
+  ctx.textAlign = "center";
+  for (const target of targets) {
+    const bob = Math.sin(nowSec() * 5 + target.x) * 4;
+    ctx.strokeStyle = "rgba(255,211,90,0.86)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(target.x, target.y - 34 + bob, 14, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "#ffd35a";
+    ctx.font = "900 8px ui-monospace, monospace";
+    ctx.fillText(target.label, target.x, target.y - 50 + bob);
+  }
+  ctx.restore();
+}
+
 function drawVillageScreenUi() {
   const hub = ensureHubSave();
-  const hope = hubTotalHelp();
+  const restored = villageRestoredCount();
   const maxHope = hubHopeMax();
-  const pct = clamp(hope / Math.max(1, maxHope), 0, 1);
+  const pct = clamp(restored / Math.max(1, maxHope), 0, 1);
+  const linesFor = (text, maxWidth) => {
+    const words = String(text || "").split(/\s+/);
+    const lines = [];
+    let line = "";
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  };
+
   ctx.save();
   ctx.fillStyle = "rgba(3,5,12,0.56)";
-  ctx.fillRect(16, 16, 318, 96);
+  ctx.fillRect(16, 16, 382, 104);
   ctx.strokeStyle = "rgba(255,211,90,0.55)";
-  ctx.strokeRect(16, 16, 318, 96);
+  ctx.strokeRect(16, 16, 382, 104);
   ctx.fillStyle = "#f5f1ff";
   ctx.font = "900 18px ui-monospace, monospace";
   ctx.fillText("Mira's Village", 32, 42);
   ctx.fillStyle = "rgba(217,222,234,0.72)";
   ctx.font = "800 11px ui-monospace, monospace";
-  ctx.fillText("WASD move  ·  Shift run  ·  E interact  ·  Esc pause", 32, 62);
+  ctx.fillText("WASD move  ·  Shift run  ·  E interact  ·  Enter log", 32, 62);
   ctx.fillStyle = "rgba(255,255,255,0.12)";
   ctx.fillRect(32, 74, 220, 7);
   ctx.fillStyle = "#7dffb2";
   ctx.fillRect(32, 74, 220 * pct, 7);
   ctx.fillStyle = "#ffd35a";
   ctx.font = "900 13px ui-monospace, monospace";
-  ctx.fillText(`${hope}/${maxHope}`, 258, 82);
+  ctx.fillText(`RESTORED ${restored}/${maxHope}`, 260, 82);
   const energy = villageEnergy();
   const maxEnergy = villageMaxEnergy();
   ctx.fillStyle = "rgba(255,255,255,0.12)";
@@ -4167,21 +5338,17 @@ function drawVillageScreenUi() {
   ctx.fillStyle = "#52e4ff";
   ctx.font = "900 10px ui-monospace, monospace";
   ctx.fillText(`ENERGY ${energy}/${maxEnergy}`, 192, 101);
-  if (villageEnergyFlash > 0) {
-    ctx.fillStyle = "rgba(82,228,255,0.28)";
-    ctx.fillRect(30, 92, 156, 11);
-  }
   ctx.fillStyle = energy <= 1 ? "#ff6b6b" : "rgba(217,222,234,0.65)";
   ctx.font = "900 8px ui-monospace, monospace";
-  ctx.fillText("tower refills", 276, 101);
+  ctx.fillText("tower refills town day", 280, 101);
 
   ctx.fillStyle = "rgba(3,5,12,0.58)";
-  ctx.fillRect(W - 174, 16, 158, 64);
+  ctx.fillRect(W - 220, 16, 204, 84);
   ctx.strokeStyle = "rgba(255,211,90,0.55)";
-  ctx.strokeRect(W - 174, 16, 158, 64);
+  ctx.strokeRect(W - 220, 16, 204, 84);
   ctx.fillStyle = "#ffd35a";
   ctx.font = "900 11px ui-monospace, monospace";
-  ctx.fillText("SUPPLIES", W - 154, 36);
+  ctx.fillText("SUPPLIES", W - 200, 36);
   ctx.fillStyle = "#f5f1ff";
   ctx.font = "900 30px ui-monospace, monospace";
   ctx.textAlign = "right";
@@ -4189,52 +5356,84 @@ function drawVillageScreenUi() {
   ctx.textAlign = "left";
   ctx.fillStyle = "rgba(217,222,234,0.78)";
   ctx.font = "900 9px ui-monospace, monospace";
-  ctx.fillText(`Seeds ${hub.seeds}  Ore ${hub.ore}  Fish ${hub.fish}`, W - 164, 72);
+  ctx.fillText(`Hope ${hubHope()}  Retry ${hub.retries || 0}`, W - 210, 72);
+  ctx.fillText(`Seeds ${hub.seeds}  Ore ${hub.ore}  Fish ${hub.fish}  Crops ${hub.crops}`, W - 210, 86);
 
-  const task = hub.activeTask;
-  if (task) {
-    ctx.fillStyle = "rgba(3,5,12,0.62)";
-    ctx.fillRect(318, 16, 394, 64);
-    ctx.strokeStyle = "rgba(125,255,178,0.5)";
-    ctx.strokeRect(318, 16, 394, 64);
-    ctx.fillStyle = "#7dffb2";
-    ctx.font = "900 11px ui-monospace, monospace";
-    ctx.fillText("VILLAGE TASK", 336, 36);
-    ctx.fillStyle = "#f5f1ff";
-    ctx.font = "900 13px ui-monospace, monospace";
-    ctx.fillText(task.title.toUpperCase(), 336, 55);
-    ctx.fillStyle = "#ffd35a";
-    ctx.font = "900 12px ui-monospace, monospace";
-    ctx.fillText(`${Math.min(task.progress || 0, task.need || 1)}/${task.need || 1}  +${task.rewardSupplies || 1} supply  +${task.rewardShards || 1} shard`, 336, 72);
+  const task = activeBoardTask();
+  const omen = activeVillageOmen();
+  const dailyEvent = activeVillageDailyEvent();
+  const todayX = 416;
+  const todayY = 20;
+  const todayW = 292;
+  ctx.globalAlpha = 0.72;
+  ctx.fillStyle = "rgba(3,5,12,0.24)";
+  ctx.fillRect(todayX, todayY, todayW, 34);
+  ctx.strokeStyle = "rgba(125,255,178,0.18)";
+  ctx.strokeRect(todayX, todayY, todayW, 34);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "rgba(125,255,178,0.78)";
+  ctx.font = "900 8px ui-monospace, monospace";
+  ctx.fillText("JOB", todayX + 10, todayY + 13);
+  ctx.fillStyle = "rgba(245,241,255,0.78)";
+  ctx.font = "900 9px ui-monospace, monospace";
+  const taskText = task ? villageTaskText(task) : "Board has jobs";
+  ctx.fillText((linesFor(taskText, todayW - 20)[0] || "").slice(0, 42), todayX + 10, todayY + 27);
+
+  const returnCard = hub.lastReturnCard;
+  const returnAge = returnCard?.t ? nowSec() - returnCard.t : 99;
+  if (returnCard && returnCard.floor && returnAge < 5) {
+    const alpha = clamp(1 - returnAge / 5, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = 0.85 * alpha;
+    ctx.fillStyle = "rgba(3,5,12,0.45)";
+    ctx.fillRect(28, 132, 274, 54);
+    ctx.strokeStyle = "rgba(124,199,255,0.26)";
+    ctx.strokeRect(28, 132, 274, 54);
+    ctx.fillStyle = "rgba(124,199,255,0.9)";
+    ctx.font = "900 9px ui-monospace, monospace";
+    ctx.fillText(`FLOOR ${returnCard.floor} CLEAR`, 42, 151);
+    ctx.fillStyle = "rgba(245,241,255,0.86)";
+    ctx.font = "900 10px ui-monospace, monospace";
+    ctx.fillText(`+${returnCard.shardsFound} shards  +${returnCard.suppliesFound} supplies`, 42, 169);
+    ctx.restore();
   }
 
   const target = villageInteractTarget;
   if (target) {
-    ctx.fillStyle = "rgba(3,5,12,0.76)";
-    ctx.fillRect(W / 2 - 190, H - 74, 380, 50);
-    ctx.strokeStyle = "rgba(255,211,90,0.8)";
-    ctx.strokeRect(W / 2 - 190, H - 74, 380, 50);
-    ctx.fillStyle = "#ffd35a";
-    ctx.font = "900 13px ui-monospace, monospace";
+    ctx.fillStyle = "rgba(3,5,12,0.55)";
+    ctx.fillRect(W / 2 - 178, H - 62, 356, 38);
+    ctx.strokeStyle = "rgba(255,211,90,0.52)";
+    ctx.strokeRect(W / 2 - 178, H - 62, 356, 38);
+    ctx.fillStyle = "rgba(255,211,90,0.92)";
+    ctx.font = "900 11px ui-monospace, monospace";
     ctx.textAlign = "center";
-    ctx.fillText(`E / CLICK  ${target.action.toUpperCase()}`, W / 2, H - 50);
-    ctx.fillStyle = "rgba(217,222,234,0.75)";
-    ctx.font = "800 10px ui-monospace, monospace";
-    ctx.fillText(target.label, W / 2, H - 32);
+    ctx.fillText(`E / CLICK  ${target.action.toUpperCase()}`.slice(0, 44), W / 2, H - 42);
+    ctx.fillStyle = "rgba(217,222,234,0.62)";
+    ctx.font = "800 8px ui-monospace, monospace";
+    ctx.fillText(String(target.label).slice(0, 42), W / 2, H - 28);
     ctx.textAlign = "left";
   }
 
   if (villageMessage.t > 0) {
-    ctx.fillStyle = "rgba(3,5,12,0.78)";
-    ctx.fillRect(24, H - 130, 540, 82);
-    ctx.strokeStyle = "rgba(124,199,255,0.58)";
-    ctx.strokeRect(24, H - 130, 540, 82);
-    ctx.fillStyle = "#7cc7ff";
-    ctx.font = "900 12px ui-monospace, monospace";
-    ctx.fillText(villageMessage.speaker.toUpperCase(), 42, H - 104);
-    ctx.fillStyle = "#f5f1ff";
-    ctx.font = "800 14px ui-monospace, monospace";
-    wrapCanvasText(villageMessage.text, 42, H - 80, 494, 18);
+    const msgAlpha = clamp(villageMessage.t / Math.max(1, villageMessage.maxT || 3.4), 0, 1);
+    const msgLines = linesFor(villageMessage.text, 336).slice(0, 2);
+    const boxH = 34 + msgLines.length * 14;
+    const boxW = 374;
+    const bottomGap = target ? 74 : 24;
+    const boxY = H - (boxH + bottomGap);
+    ctx.save();
+    ctx.globalAlpha = 0.82 * msgAlpha;
+    ctx.fillStyle = "rgba(3,5,12,0.52)";
+    ctx.fillRect(24, boxY, boxW, boxH);
+    ctx.strokeStyle = "rgba(124,199,255,0.28)";
+    ctx.strokeRect(24, boxY, boxW, boxH);
+    ctx.fillStyle = "rgba(124,199,255,0.9)";
+    ctx.font = "900 9px ui-monospace, monospace";
+    ctx.fillText(villageMessage.speaker.toUpperCase().slice(0, 26), 38, boxY + 18);
+    ctx.fillStyle = "rgba(245,241,255,0.86)";
+    ctx.font = "800 10px ui-monospace, monospace";
+    msgLines.forEach((line, i) => ctx.fillText(line, 38, boxY + 34 + i * 14));
+    ctx.restore();
   }
   ctx.restore();
 }
@@ -4643,10 +5842,12 @@ function renderCollection(backAction) {
   collectionBackAction = resolvedBackAction;
   mode = "collection";
   const operativeCards = SHAPES.map(item => renderShopCard(item, "shape")).join("");
-  const tintCards = COLORS.map(item => renderShopCard(item, "color")).join("");
   const operative = shapeById(save.selectedShape);
   const tint = colorById(save.selectedColor);
   const sprite = ASSET_PATHS.images[operative.sprite] || "";
+  const hub = ensureHubSave();
+  const memories = Object.keys(hub.collection?.memories || {}).length;
+  const visitors = Object.keys(hub.collection?.visitors || {}).length;
 
   openOverlay(`
     <div class="vsScreen framedScreen collectionScreen">
@@ -4654,11 +5855,25 @@ function renderCollection(backAction) {
       <div class="vsPanel collectionPanel">
         <h2>Operatives</h2>
         <div class="shopGrid operativeGrid">${operativeCards}</div>
-        <h2>Trace Tints</h2>
-        <div class="shopGrid tintGrid">${tintCards}</div>
+        <h2>Village Record</h2>
+        <div class="villageRecordGrid">
+          <div><b>${hub.collection?.fish || 0}</b><span>best fish held</span></div>
+          <div><b>${hub.collection?.ore || 0}</b><span>best ore held</span></div>
+          <div><b>${hub.collection?.crops || 0}</b><span>best crops held</span></div>
+          <div><b>${memories}</b><span>trust memories</span></div>
+          <div><b>${visitors}</b><span>visitors met</span></div>
+        </div>
+        <h2>Achievements</h2>
+        <div class="villageRecordGrid achievementRecordGrid">
+          <div><b>${Object.keys(save.achievements || {}).length}</b><span>earned</span></div>
+          <div><b>${save.totalClears || 0}</b><span>floors cleared</span></div>
+          <div><b>${save.bestFloor || 0}</b><span>best floor</span></div>
+          <div><b>${hubHope()}</b><span>hope held</span></div>
+          <div><b>${hub.retries || 0}</b><span>retry tokens</span></div>
+        </div>
         <div class="vsDetailBar collectionDetailBar">
           <div class="selectedSpriteBox">${sprite ? `<img src="${sprite}" alt="">` : ""}</div>
-          <div><b>${operative.name} · ${tint.name}</b></div>
+          <div><b>${operative.name}</b><small>Trace tint removed from this page until it has a real gameplay purpose.</small></div>
           <button class="vsButton green" data-action="${resolvedBackAction}">CONFIRM</button>
         </div>
       </div>
@@ -4689,14 +5904,17 @@ function renderPowerUps(backAction) {
 
 function renderUnlockList() {
   mode = "unlockList";
-  const rows = unlockRows();
+  const baseRows = unlockRows();
+  const achievementRows = achievementUnlockRows();
+  const rows = [...baseRows, ...achievementRows];
   const completed = rows.filter(row => row.done).length;
   const percent = Math.round((completed / Math.max(1, rows.length)) * 100);
   const groups = [
-    { title: "Tower Access", rows: rows.slice(0, 12) },
-    { title: "Story Notes", rows: rows.slice(12, 19) },
-    { title: "Floor Progress", rows: rows.slice(19, 25) },
-    { title: "Power Ranks", rows: rows.slice(25) }
+    { title: "Tower Access", rows: baseRows.slice(0, 12) },
+    { title: "Story Notes", rows: baseRows.slice(12, 19) },
+    { title: "Floor Progress", rows: baseRows.slice(19, 25) },
+    { title: "Power Ranks", rows: baseRows.slice(25) },
+    { title: "Achievements", rows: achievementRows }
   ];
   const html = groups.map(group => `
     <section class="unlockGroup">
@@ -4768,6 +5986,30 @@ function renderOptions() {
       </div>
     </div>
   `, "optionsMenu");
+}
+
+function achievementUnlockRows() {
+  checkVillageAchievements("board");
+  const earned = save.achievements || {};
+  const hub = ensureHubSave();
+  const data = [
+    ["first_floor", "First Floor Down", "Clear any arena floor."],
+    ["five_floors", "One More Run", "Clear 5 total floors."],
+    ["floor_four", "Halfway Hungry", "Reach floor 4."],
+    ["hope_5", "People Are Watching", "Hold 5 hope at once."],
+    ["first_board", "Pinned And Done", "Finish any daily board job."],
+    ["board_5", "Clipboard Goblin", "Finish 5 board jobs."],
+    ["first_hairball", "Not My Job", "Clean up a hairball."],
+    ["bought_retry", "Pocket Miracle", "Store a boss retry token."],
+    ["home_rank_1", "Mine, Not The Tower's", "Build your first house."],
+    ["home_rank_3", "Indoor Person", "Reach house rank 3."],
+    ["used_chest", "It Stacks", "Move an item through the chest."],
+    ["builder_3", "Actual Contractor", "Upgrade town projects 3 times."],
+    ["cleanup_5", "Less Embarrassing", "Clear 5 rubble piles."],
+    ["wood_3", "Stump Goblin", "Chop 3 stumps."],
+    ["visitors_3", "Road Gets Busy", "Meet 3 visitor types."]
+  ];
+  return data.map(([id, reward, text]) => ({ done: Boolean(earned[id]), text, reward }));
 }
 
 function unlockRows() {
@@ -5628,11 +6870,14 @@ function startTower(options = {}) {
     smokeBonus: powerRank("smokeKit") + hubProjectSmokeBonus(),
     heatMult: 1,
     dashCdMult: 1,
+    healMult: 1,
+    villagePrepReverts: [],
     bossAbility: null,
     upgrades: [],
     weapons: ["pistol"],
     weaponFinds: 0,
-    clearStreak: 0
+    clearStreak: 0,
+    retries: Number(ensureHubSave().retries) || 0
   };
 
   player.weaponId = "pistol";
@@ -5643,11 +6888,12 @@ function startTower(options = {}) {
   player.hits = 0;
   killReplay = null;
   logs.length = 0;
+  applyVillagePrepToRunStats("run start");
   if (activeStoryMode) addLog(`${storyChapterById(activeStoryChapterId).name} ascent started.`);
   else addLog("Tower run started.");
-  if (hubProjectRank("garden")) addLog(`Garden ready: +${hubProjectRank("garden") * 3} max HP.`);
-  if (hubProjectRank("kitchen")) addLog(`Kitchen meal: +${hubProjectRank("kitchen")} smoke per floor.`);
-  if (hubProjectRank("watchpost")) addLog(`Watch Post: +${hubProjectRank("watchpost") * 22} Pulse range.`);
+  if (hubProjectRank("garden")) addLog(`Garden ready: +${hubProjectMaxHpBonus()} max HP.`);
+  if (hubProjectRank("kitchen")) addLog(`Kitchen meal: +${hubProjectSmokeBonus()} smoke per floor.`);
+  if (hubProjectRank("watchpost")) addLog(`Watch Post: +${hubProjectPulseRangeBonus()} Pulse range.`);
   startFloor(1);
 }
 
@@ -6684,7 +7930,7 @@ function updatePickups() {
 
     if (dist(player, pickup) <= player.r + pickup.r + 7) {
       const before = player.hp;
-      player.hp = clamp(player.hp + pickup.heal * (1 + powerRank("medSense") * 0.12), 0, player.maxHp);
+      player.hp = clamp(player.hp + pickup.heal * (1 + powerRank("medSense") * 0.12) * (runStats.healMult || 1), 0, player.maxHp);
       floatText.push({ x: player.x, y: player.y - 24, text: `+${Math.round(player.hp - before)}`, t: 0.8 });
       pickups.splice(i, 1);
       continue;
@@ -7346,6 +8592,21 @@ function damagePlayer(dmg, botName) {
   floatText.push({ x: player.x, y: player.y - 22, text: `-${Math.round(dmg)}`, t: 0.7 });
 
   if (player.hp <= 0) {
+    const attacker = bots.find(bot => bot.name === botName);
+    if (attacker?.role === "boss" && runStats?.retries > 0) {
+      runStats.retries -= 1;
+      const hub = ensureHubSave();
+      hub.retries = Math.max(0, (Number(hub.retries) || 0) - 1);
+      saveGame();
+      player.hp = Math.max(28, Math.round(player.maxHp * 0.6));
+      player.dashCd = 0;
+      player.pulseCd = Math.min(player.pulseCd, 1.2);
+      addSmoke(player.x, player.y, 80, "player");
+      addParticles("reward", player.x, player.y - 6, -Math.PI / 2, 16);
+      floatText.push({ x: player.x - 24, y: player.y - 36, text: "RETRY", t: 1.2 });
+      addLog("Mira's Ward pulled you back into the fight.");
+      return;
+    }
     endTower(false, botName);
   }
 }
@@ -7470,21 +8731,28 @@ function clearFloor() {
   running = false;
   mode = "floorClear";
   const routeBonus = activeRouteType === "cache" ? 1 : isBossFloor(currentFloor) ? 3 : 0;
-  const reward = currentFloor + routeBonus + Math.max(0, Math.floor((player.hp / player.maxHp) * 2)) + powerRank("luck") + powerRank("contractPay");
+  const omen = activeVillageOmen();
+  const omenShardBonus = (omen?.rivalShardBonus && activeRouteType === "rival" ? omen.rivalShardBonus : 0) + (omen?.bossShardBonus && isBossFloor(currentFloor) ? omen.bossShardBonus : 0);
+  const reward = currentFloor + routeBonus + omenShardBonus + Math.max(0, Math.floor((player.hp / player.maxHp) * 2)) + powerRank("luck") + powerRank("contractPay");
   runStats.clearStreak += 1;
   if (runStats.bossAbility && !runStats.bossAbility.pending) expireBossAbility(`${runStats.bossAbility.name} faded after the floor.`);
-  const suppliesFound = storySupplyRewardForFloor(currentFloor);
+  const suppliesFound = storySupplyRewardForFloor(currentFloor) + (activeStoryMode && omen?.supplyBonus ? omen.supplyBonus : 0);
   save.shards += reward;
   save.bestFloor = Math.max(save.bestFloor, currentFloor);
   save.totalClears += 1;
   if (suppliesFound) addVillageSupplies(suppliesFound, "found on this floor");
+  const hub = ensureHubSave();
+  hub.hope = (Number(hub.hope) || 0) + 1;
+  hub.lastHelp = `+1 hope for clearing floor ${currentFloor}.`;
   saveGame();
+  checkVillageAchievements("floor");
 
   pendingFloorReward = {
     floor: currentFloor,
     reward,
     suppliesFound,
     hpBonus: Math.max(0, Math.floor((player.hp / player.maxHp) * 2)),
+    omenShardBonus,
     cacheFloor: isWeaponCacheFloor(currentFloor),
     towerClear: currentFloor >= 8
   };
@@ -7492,6 +8760,7 @@ function clearFloor() {
   addLog(`Floor ${currentFloor} clear. +${reward} shards.`);
   playSfx("reward");
   showFloorClearCelebration(pendingFloorReward);
+  expireVillagePrepEffects();
 }
 
 function isWeaponCacheFloor(floor = currentFloor) {
@@ -7543,7 +8812,7 @@ function showFloorClearCelebration(info) {
         <p class="panelLead">${subText} ${info.cacheFloor ? "Cache floors can change the whole run." : "Pick one reward and keep climbing."}</p>
         <div class="celebrationPayout">
           <b>+${info.reward} shards banked</b>
-          <span>${info.suppliesFound ? `+${info.suppliesFound} village supplies found` : info.hpBonus > 0 ? `Survival bonus: +${info.hpBonus}` : "No survival bonus"}</span>
+          <span>+1 hope earned. ${info.suppliesFound ? `+${info.suppliesFound} village supplies found` : info.hpBonus > 0 ? `Survival bonus: +${info.hpBonus}` : "No village supplies this floor"}</span>
         </div>
         <div class="menuActions">
           <button class="vsButton green jackpotButton" data-action="claimFloorReward">${info.towerClear ? "CLAIM TOWER" : activeStoryMode ? "CLAIM REWARD" : "CLAIM AND CHOOSE ROUTE"}</button>
@@ -7735,7 +9004,7 @@ function showRouteChoices(nextFloor) {
       ${renderTopStrip(`Floor ${nextFloor} Route`, activeStoryMode && villagePendingRouteFloor === nextFloor ? "backVillage" : "backMenu")}
       <div class="vsPanel levelPanel routePanel">
         <h2>Choose Next Floor</h2>
-        <p class="panelLead">${activeStoryMode ? "Choose the next floor. Some paths are safer, some have supplies, and some lead to a boss." : "Choose the next floor. Safe fight, supply room, or hard fight."}</p>
+        <p class="panelLead">${activeStoryMode ? "Choose the next floor. Some paths are safer, some have supplies, and some lead to a boss." : "Choose the next floor. Safe fight, supply room, or hard fight."} ${activeVillageOmen()?.text || ""}</p>
         <div class="routeGrid">${cards}</div>
         <div class="vsDetailBar">
           <div class="powerIcon big">?</div>
@@ -7793,6 +9062,7 @@ function chooseRoute(kind) {
   villagePendingRouteFloor = 0;
   lastRouteChoice = nextRouteType;
   addLog(`Path selected: ${nextRouteType}.`);
+  applyVillagePrepToRunStats("gate");
   startFloor(currentFloor + 1);
 }
 
@@ -8418,6 +9688,7 @@ function updateEffects(dt) {
   for (const shot of enemyShots) shot.t -= dt;
   for (const text of floatText) text.t -= dt;
   for (const flash of muzzleFlashes) flash.t -= dt;
+  updateAchievementToasts(dt);
 
   for (const shell of shellCasings) {
     shell.t -= dt;
@@ -8549,6 +9820,7 @@ function draw() {
   drawStoryProgressHud();
   drawCountdownOverlay();
   drawScreenFlash();
+  drawAchievementToasts();
 }
 
 function updateCountdown() {
@@ -9553,7 +10825,26 @@ function drawUtilityHud() {
   drawUtilityBox(baseX, baseY - 44, "E", "SMOKE", String(player.smokeCharges || 0), "#d8dbe8");
   drawUtilityBox(baseX, baseY, "Q", "PULSE", String(pulseCount), pulseReady ? "#7cc7ff" : "#ffd166", pulseLabel);
   drawBossAbilityHud(baseX, baseY - 132);
+  drawRunRetryHud(W - 120, H - 72);
 
+  ctx.restore();
+}
+
+function drawRunRetryHud(x, y) {
+  const retries = runStats?.retries || 0;
+  ctx.save();
+  ctx.globalAlpha = 0.88;
+  ctx.fillStyle = "rgba(20,6,28,0.72)";
+  ctx.fillRect(x, y, 92, 28);
+  ctx.strokeStyle = "rgba(255, 211, 90, 0.72)";
+  ctx.strokeRect(x + 0.5, y + 0.5, 91, 27);
+  ctx.fillStyle = "#ffd35a";
+  ctx.font = "900 10px ui-monospace, monospace";
+  ctx.textAlign = "left";
+  ctx.fillText("RETRY", x + 10, y + 17);
+  ctx.textAlign = "right";
+  ctx.fillStyle = retries > 0 ? "#f5f1ff" : "rgba(217,222,234,0.5)";
+  ctx.fillText(String(retries), x + 80, y + 17);
   ctx.restore();
 }
 
@@ -9707,6 +10998,11 @@ window.addEventListener("keydown", e => {
   }
   if (mode === "village") {
     if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"].includes(key)) keys.add(key);
+    if (key === "enter") {
+      e.preventDefault();
+      if (!e.repeat) toggleVillageHistory();
+      return;
+    }
     if (key === "e") {
       e.preventDefault();
       if (!e.repeat) interactVillage();
@@ -9791,7 +11087,19 @@ overlay.addEventListener("click", e => {
   const actions = {
     startTower: () => startTower(),
     openHub: () => renderVillageHub(),
-    backVillage: () => returnToVillageFromOverlay(),
+    backVillage: () => {
+      villageHistoryOpen = false;
+      returnToVillageFromOverlay();
+    },
+    backVillageHistory: () => closeVillageHistory(),
+    openVillageBoard: () => renderVillageDailyBoard(),
+    selectVillageTask: () => selectVillageTask(button.dataset.taskId),
+    continueTowerGate: () => continueTowerGate(),
+    buyShrineOffer: () => buyShrineOffer(button.dataset.offerId || ""),
+    upgradeHouse: () => upgradeVillageHouse(),
+    sleepHouse: () => sleepVillageHouse(),
+    storeChest: () => moveChestResource(button.dataset.resource || "", "store"),
+    takeChest: () => moveChestResource(button.dataset.resource || "", "take"),
     openStory: () => renderStorySelect(),
     helpVillager: () => helpVillager(button.dataset.id),
     startStoryChapter: () => startStoryChapter(button.dataset.id),

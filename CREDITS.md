@@ -172,3 +172,30 @@ The following user supplied audio files were cut into short local prototype clip
 - freesound_community-leaves-64875.mp3 -> assets/sfx/town_leaves.mp3
 
 Licenses should be checked before public release.
+
+## v5.1 town loop and prep board pass
+
+The following user supplied assets were added or referenced for the town loop update. Kenney license files were copied into `/assets/licenses` where available.
+
+Kenney packs added for local prototype use:
+
+- kenney_interface-sounds.zip: selected UI confirm and error sounds.
+- kenney_game-icons.zip: license included for town UI icon use in future passes.
+- kenney_game-icons-expansion.zip: license included for expanded town UI icon use in future passes.
+- kenney_generic-items.zip: license included for resource and request item use in future passes.
+- kenney_fantasy-ui-borders.zip: license included for fantasy town panel use in future passes.
+- kenney_light-masks-1.0.zip: license included for glow and mood VFX use in future passes.
+- kenney_roguelike-characters(1).zip: license included for visitor and townsfolk variation use in future passes.
+- kenney_tiny-dungeon(1).zip: license included for tower edge and ruin use in future passes.
+- kenney_tiny-town(2).zip: already aligned with the existing town art direction.
+
+User supplied audio copied into `/assets/sfx`:
+
+- flutie8211-bell-ringingstriking-metal-419579.mp3 -> assets/sfx/town_forge_ring.mp3
+- freesound_community-blacksmith-workshop-24409.mp3 -> assets/sfx/town_blacksmith_workshop.mp3
+- freesound_community-house-building-89157.mp3 -> assets/sfx/town_building_work.mp3
+- freesound_community-morning-village-ambience-16903.mp3 -> assets/sfx/town_village_day.mp3
+- freesound_community-summer-village-atmosphere-at-nightdog-barking-cicadas-24164.mp3 -> assets/sfx/town_village_night.mp3
+- kenney_interface-sounds.zip -> assets/sfx/ui_confirm_001.ogg and assets/sfx/ui_error_001.ogg
+
+Licenses and public release rights should be checked again before shipping outside the prototype.
