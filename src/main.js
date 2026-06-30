@@ -2705,6 +2705,7 @@ function villageTaskPool(floor = 1) {
   pool.push({ id: `mine_loose_${hub.towerDay}`, type: "mine", title: "Mine fresh ore", giver: "Rowan", text: "Mine 1 ore node.", need: 1, prep: "rowan_oil", rewardSupplies: 1, rewardShards: 1, villager: "rowan" });
   pool.push({ id: `pond_food_${hub.towerDay}`, type: "fish", title: "Catch pond fish", giver: "Maren", text: "Fish once at the pond.", need: 1, prep: "maren_meal", rewardSupplies: 1, rewardShards: 1, villager: "maren" });
   pool.push({ id: `wood_repairs_${hub.towerDay}`, type: "chop", title: "Chop repair wood", giver: "Board", text: "Finish 1 stump and pick up the wood.", need: 1, prep: "tavi_map", rewardSupplies: 1, rewardShards: 1 });
+  pool.push({ id: `hairball_cleanup_${hub.towerDay}`, type: "hairball", title: "Clean hairballs", giver: "Village", text: "Clean 2 hairballs around town.", need: 2, prep: "garden_tonic", rewardSupplies: 1, rewardShards: 1 });
   return pool.filter(task => {
     if (task.type === "chop" && !VILLAGE_STUMPS.some(stump => !villageStumpCleared(stump.id))) return false;
     if (task.type === "rubble" && !VILLAGE_RUBBLE.some(rubble => !villageRubbleCleared(rubble.id))) return false;
@@ -2794,6 +2795,7 @@ function selectVillageTask(id) {
   hub.activeTask = task;
   saveGame();
   playAssetSfx("select", 0.22);
+  ensureHairballsForBoardTask(task);
 
   if (task.type === "turnin") {
     if (hubResource(task.resource) < (task.need || 1)) {
@@ -3249,12 +3251,15 @@ function closeVillageHistory() {
   closeOverlay();
 }
 
-function maybeSpawnVillageMess() {
-  if (mode !== "village") return;
+function maybeSpawnVillageMess(force = false) {
+  if (mode !== "village" && !force) return;
   const hub = ensureHubSave();
-  if ((hub.towerDay || 0) < 1 || villageMesses.length >= 4) return;
+  const task = activeBoardTask();
+  const hairballNeed = task?.type === "hairball" && !task.done ? Math.max(2, task.need || 2) : 0;
+  const messCap = Math.max(4, hairballNeed);
+  if (((hub.towerDay || 0) < 1 && !force) || villageMesses.length >= messCap) return;
   const now = nowSec();
-  if (now < villageNextMessAt) return;
+  if (!force && now < villageNextMessAt) return;
   const used = new Set(villageMesses.map(item => item.spotIndex));
   let spotIndex = Math.abs(Math.floor(villageHash(hub.towerDay + villageMesses.length, now) * VILLAGE_MESS_SPOTS.length)) % VILLAGE_MESS_SPOTS.length;
   for (let i = 0; i < VILLAGE_MESS_SPOTS.length; i++) {
@@ -3279,13 +3284,25 @@ function maybeSpawnVillageMess() {
   }
   if (!villageMessSpotSafe(x, y)) return;
   villageMesses.push({
-    id: `mess_${Math.round(now * 1000)}`,
+    id: `mess_${Math.round(now * 1000)}_${villageMesses.length}`,
     spotIndex,
     x,
     y
   });
-  villageNextMessAt = now + rand(12, 20);
+  villageNextMessAt = now + rand(force ? 3 : 12, force ? 6 : 20);
   if (villageMesses.length === 1) setVillageMessage("Village", "Hairball on the road. Clean it with E for hope.", 3.2);
+}
+
+function ensureHairballsForBoardTask(task = activeBoardTask()) {
+  if (!task || task.done || task.type !== "hairball") return;
+  const remaining = Math.max(1, (task.need || 1) - (Number(task.progress) || 0));
+  const wantedVisible = Math.min(remaining, 3);
+  let safety = VILLAGE_MESS_SPOTS.length;
+  while (villageMesses.length < wantedVisible && safety-- > 0) {
+    const before = villageMesses.length;
+    maybeSpawnVillageMess(true);
+    if (villageMesses.length === before) break;
+  }
 }
 
 function cleanVillageMess(id) {
@@ -3298,7 +3315,19 @@ function cleanVillageMess(id) {
   playAssetSfx("reward", 0.26);
   addParticles("reward", mess.x, mess.y - 8, -Math.PI / 2, 10);
   floatText.push({ x: mess.x - 24, y: mess.y - 26, text: "+1 hope", t: 0.9 });
-  setVillageMessage("Village", "You spent 1 energy cleaning a hairball. Gross, but the village noticed.", 2.6);
+  const task = activeBoardTask();
+  const trackingHairballs = task?.type === "hairball" && !task.done;
+  const completed = advanceVillageTask("hairball", 1);
+  if (!completed) {
+    if (trackingHairballs) {
+      const current = activeBoardTask();
+      const progress = current?.type === "hairball" ? `${Math.min(current.progress || 0, current.need || 1)}/${current.need || 1}` : "";
+      setVillageMessage("Daily board", `Hairball cleanup ${progress}.`, 2.4);
+      ensureHairballsForBoardTask(current);
+    } else {
+      setVillageMessage("Village", "You spent 1 energy cleaning a hairball. Gross, but the village noticed.", 2.6);
+    }
+  }
   checkVillageAchievements("hairball");
 }
 
@@ -5431,6 +5460,7 @@ function villageTaskMarkerTargets(task = activeBoardTask()) {
   if (task.type === "fish") return VILLAGE_FISHING_SPOTS.map(spot => ({ x: spot.x, y: spot.y, label: "BOARD" }));
   if (task.type === "farm") return VILLAGE_FARM_PLOTS.map(plot => ({ x: plot.x, y: plot.y, label: "BOARD" })).slice(0, 5);
   if (task.type === "project") return VILLAGE_PROJECTS.filter(project => hubProjectRank(project.id) < project.max).map(project => ({ x: project.x, y: project.y, label: "BOARD" }));
+  if (task.type === "hairball") return (villageMesses.length ? villageMesses : VILLAGE_MESS_SPOTS.slice(0, task.need || 2)).map(item => ({ x: item.x, y: item.y, label: "CLEAN" })).slice(0, 3);
   if (task.type === "villager" && task.villager) {
     const spot = VILLAGE_VILLAGER_SPOTS.find(item => item.id === task.villager);
     return spot ? [{ x: spot.x, y: spot.y, label: "BOARD" }] : [];
