@@ -16,6 +16,14 @@ const ASSET_PATHS = {
     player_alt: "./assets/sprites/player_alt.png",
     player_vanguard: "./assets/sprites/player_vanguard.png",
     player_phantom: "./assets/sprites/player_phantom.png",
+    player_platform_green: "./assets/sprites/platformer_green_front.png",
+    player_platform_pink: "./assets/sprites/platformer_pink_front.png",
+    player_platform_purple: "./assets/sprites/platformer_purple_front.png",
+    player_platform_beige: "./assets/sprites/platformer_beige_front.png",
+    enemy_bee: "./assets/sprites/platformer_enemy_bee.png",
+    enemy_frog: "./assets/sprites/platformer_enemy_frog.png",
+    enemy_mouse: "./assets/sprites/platformer_enemy_mouse.png",
+    enemy_fish_blue: "./assets/sprites/platformer_enemy_fish_blue.png",
     enemy_vanta: "./assets/sprites/enemy_vanta.png",
     enemy_mire: "./assets/sprites/enemy_mire.png",
     enemy_sable: "./assets/sprites/enemy_sable.png",
@@ -112,21 +120,16 @@ const ASSET_PATHS = {
     tiny_sword: "./assets/town/tiny_sword.png",
     tiny_log: "./assets/town/tiny_log.png",
     tiny_barrel: "./assets/town/tiny_barrel.png",
-    grave_crypt_large: "./assets/town/grave_crypt_large.png",
-    grave_crypt: "./assets/town/grave_crypt.png",
-    grave_stone_cross: "./assets/town/grave_stone_cross.png",
-    grave_stone_broken: "./assets/town/grave_stone_broken.png",
-    grave_pine_crooked: "./assets/town/grave_pine_crooked.png",
-    grave_lantern: "./assets/town/grave_lantern.png",
-    grave_altar: "./assets/town/grave_altar.png",
-    grave_iron_fence: "./assets/town/grave_iron_fence.png",
-    grave_rocks_tall: "./assets/town/grave_rocks_tall.png",
-    grave_trunk_long: "./assets/town/grave_trunk_long.png",
-    fantasy_cart: "./assets/town/fantasy_cart.png",
-    fantasy_fountain_round: "./assets/town/fantasy_fountain_round.png",
-    fantasy_fence_gate: "./assets/town/fantasy_fence_gate.png",
-    dungeon_chest: "./assets/town/dungeon_chest.png",
-    dungeon_rocks: "./assets/town/dungeon_rocks.png",
+    platformer_bridge: "./assets/town/platformer_bridge.png",
+    platformer_bridge_logs: "./assets/town/platformer_bridge_logs.png",
+    platformer_brick_grey: "./assets/town/platformer_brick_grey.png",
+    platformer_brick_brown: "./assets/town/platformer_brick_brown.png",
+    platformer_block_warning: "./assets/town/platformer_block_warning.png",
+    platformer_bush: "./assets/town/platformer_bush.png",
+    platformer_cactus: "./assets/town/platformer_cactus.png",
+    input_arrow_left: "./assets/ui/input_arrow_left.png",
+    input_arrow_right: "./assets/ui/input_arrow_right.png",
+    input_arrows_horizontal: "./assets/ui/input_arrows_horizontal.png",
     smoke_white_00: "./assets/fx/smoke/white_00.png",
     smoke_white_04: "./assets/fx/smoke/white_04.png",
     smoke_white_08: "./assets/fx/smoke/white_08.png",
@@ -743,7 +746,6 @@ const DEFAULT_HUB_SAVE = {
   townLog: [],
   homeRank: 0,
   homeRestDay: -1,
-  bridgeFixed: false,
   chest: { supplies: 0, seeds: 0, ore: 0, fish: 0, crops: 0 },
   helped: {
     maren: 0,
@@ -756,6 +758,7 @@ const DEFAULT_HUB_SAVE = {
   stumpHits: {},
   stumpDrops: {},
   mineCleared: {},
+  mineHits: {},
   farmPlots: {},
   seeds: 2,
   fish: 0,
@@ -766,6 +769,8 @@ const DEFAULT_HUB_SAVE = {
   towerDay: 0,
   fishingDay: -1,
   fishingUses: 0,
+  fishingRodRank: 0,
+  bait: 0,
   visitor: null,
   activeTask: null,
   boardTasks: [],
@@ -841,7 +846,11 @@ const SHAPES = [
   { id: "vampire", name: "Night Glass", cost: 42, req: 6, sprite: "enemy_vampire" },
   { id: "nullSuit", name: "Null Frame", cost: 55, req: 7, sprite: "enemy_null" },
   { id: "bossVanta", name: "Vanta Shell", cost: 70, req: 8, sprite: "boss_vanta" },
-  { id: "bossNull", name: "Null Crown", cost: 90, req: 8, sprite: "boss_null" }
+  { id: "bossNull", name: "Null Crown", cost: 90, req: 8, sprite: "boss_null" },
+  { id: "greenRunner", name: "Green Hopper", cost: 18, req: 3, sprite: "player_platform_green" },
+  { id: "pinkRunner", name: "Pink Lantern", cost: 22, req: 4, sprite: "player_platform_pink" },
+  { id: "purpleRunner", name: "Purple Jumper", cost: 28, req: 5, sprite: "player_platform_purple" },
+  { id: "beigeRunner", name: "Dust Walker", cost: 34, req: 6, sprite: "player_platform_beige" }
 ];
 
 const COLORS = [
@@ -1756,7 +1765,10 @@ const BOT_PROFILES = [
     reactionBoost: 0.06,
     peekBias: 0.75,
     smokeBias: 0.72
-  }
+  },
+  { name: "Buzz", callSign: "Needle Wing", color: "#ffd35a", model: "flit", sprite: "enemy_bee", weaponId: "smg", trait: "zigzags through short lanes and forces fast reactions", patience: 0.55, coverBias: 0.52, aggression: 0.9, aim: 0.58, reactionBoost: 0.04, peekBias: 0.82, smokeBias: 0.16 },
+  { name: "Croak", callSign: "Mud Anchor", color: "#7dffb2", model: "guard", sprite: "enemy_frog", weaponId: "shotgun", trait: "holds dirty corners and jumps after contact", patience: 0.9, coverBias: 0.9, aggression: 0.62, aim: 0.6, reactionBoost: 0.0, peekBias: 0.45, smokeBias: 0.12 },
+  { name: "Skitter", callSign: "Wall Mouse", color: "#c77dff", model: "runner", sprite: "enemy_mouse", weaponId: "revolver", trait: "takes side paths and punishes slow reloads", patience: 0.72, coverBias: 0.66, aggression: 0.78, aim: 0.66, reactionBoost: 0.03, peekBias: 0.74, smokeBias: 0.08 }
 ];
 
 const BOSS_PROFILES = [
@@ -1869,7 +1881,7 @@ const player = {
 
 let bots = [];
 
-const VILLAGE_WORLD = { w: 3000, h: 1680 };
+const VILLAGE_WORLD = { w: 3100, h: 1680 };
 const villagePlayer = {
   x: 1100,
   y: 650,
@@ -1886,6 +1898,7 @@ let villageEnergyFlash = 0;
 let villageHistoryOpen = false;
 let villageMesses = [];
 let villageNextMessAt = 0;
+let villageFishingGame = null;
 const achievementToasts = [];
 
 const VILLAGE_TOWER_GATE = { x: 1100, y: 155 };
@@ -1894,10 +1907,10 @@ const VILLAGE_WELL = { x: 912, y: 420 };
 const VILLAGE_POND = { x: 330, y: 300, rx: 156, ry: 88 };
 const VILLAGE_HOME = { x: 1320, y: 430, w: 180, h: 120 };
 const VILLAGE_CHEST = { x: 1248, y: 282 };
+const VILLAGE_RIVER = { x: 2260, y: 0, w: 128, h: VILLAGE_WORLD.h };
+const VILLAGE_BRIDGE = { x: 2324, y: 720, w: 210, h: 104, cost: { supplies: 12, ore: 4 }, req: { homeRank: 2, bestFloor: 4, text: "House rank 2 and floor 4" } };
+const VILLAGE_DARK_DISTRICT = { x: 2400, y: 0, w: VILLAGE_WORLD.w - 2400, h: VILLAGE_WORLD.h };
 const VILLAGE_VISITOR_SPOT = { x: 1395, y: 282 };
-const VILLAGE_RIVER = { x: 2210, y: 0, w: 116, h: VILLAGE_WORLD.h };
-const VILLAGE_BRIDGE = { x: 2268, y: 760, w: 190, h: 96, cost: { supplies: 12, ore: 4 }, req: { homeRank: 2, bestFloor: 4, text: "House rank 2 and floor 4" } };
-const VILLAGE_DARK_DISTRICT = { x: 2350, y: 0, w: VILLAGE_WORLD.w - 2350, h: VILLAGE_WORLD.h };
 const VILLAGE_DAILY_BOARD = { x: 846, y: 288, r: 58 };
 
 const VILLAGE_MESS_SPOTS = [
@@ -1923,16 +1936,16 @@ const VILLAGE_TOWNSFOLK = [
   { id: "pella", name: "Pella", title: "Builder", x: 1500, y: 520, sprite: "player_alt", icon: "tiny_axe", action: "help Pella", need: { supplies: 3 }, prep: "kitchen_stew", rewardHope: 2, text: "Pella can shore up the road before the next climb." },
   { id: "nix", name: "Nix", title: "Forager", x: 620, y: 610, sprite: "player_marine", icon: "tiny_flower", action: "help Nix", need: { crops: 1, seeds: 1 }, prep: "garden_tonic", rewardHope: 1, text: "Nix turns spare food into a small field tonic." },
   { id: "orin", name: "Orin", title: "Cartographer", x: 1640, y: 440, sprite: "player_phantom", icon: "tiny_target", action: "help Orin", need: { ore: 1 }, prep: "tavi_map", rewardHope: 1, text: "Orin marks a safer stair path for tonight." },
-  { id: "vesper", name: "Vesper", title: "Gate Keeper", x: 2580, y: 520, sprite: "enemy_vampire", icon: "grave_lantern", action: "help Vesper", need: { ore: 2 }, prep: "shrine_candle", rewardHope: 2, needsBridge: true, text: "Vesper tends the old graves and trades wards for ore." },
-  { id: "moss", name: "Moss", title: "Marsh Cook", x: 2750, y: 930, sprite: "rpg_orc", icon: "tiny_flower", action: "help Moss", need: { fish: 2 }, prep: "garden_tonic", rewardHope: 2, needsBridge: true, text: "Moss cooks in the dark district and sends tonics back across the bridge." }
+  { id: "vesper", name: "Vesper", title: "Gate Keeper", x: 2590, y: 510, sprite: "enemy_vampire", icon: "tiny_key", action: "help Vesper", need: { ore: 2 }, prep: "shrine_candle", rewardHope: 2, needsBridge: true, text: "Vesper trades grave wards for ore." },
+  { id: "moss", name: "Moss", title: "Marsh Cook", x: 2760, y: 920, sprite: "rpg_orc", icon: "tiny_flower", action: "help Moss", need: { fish: 2 }, prep: "garden_tonic", rewardHope: 2, needsBridge: true, text: "Moss cooks tonics across the bridge." }
 ];
 
 const VILLAGE_TOWNSFOLK_PATROLS = {
   pella: [{ x: 1500, y: 520 }, { x: 1580, y: 470 }, { x: 1685, y: 560 }, { x: 1515, y: 650 }, { x: 1420, y: 565 }, { x: 1500, y: 520 }],
   nix: [{ x: 620, y: 610 }, { x: 520, y: 550 }, { x: 440, y: 690 }, { x: 590, y: 820 }, { x: 745, y: 650 }, { x: 620, y: 610 }],
   orin: [{ x: 1640, y: 440 }, { x: 1740, y: 475 }, { x: 1840, y: 610 }, { x: 1690, y: 760 }, { x: 1510, y: 610 }, { x: 1640, y: 440 }],
-  vesper: [{ x: 2580, y: 520 }, { x: 2680, y: 470 }, { x: 2840, y: 610 }, { x: 2700, y: 740 }, { x: 2500, y: 650 }, { x: 2580, y: 520 }],
-  moss: [{ x: 2750, y: 930 }, { x: 2860, y: 850 }, { x: 2910, y: 1040 }, { x: 2660, y: 1120 }, { x: 2520, y: 960 }, { x: 2750, y: 930 }]
+  vesper: [{ x: 2590, y: 510 }, { x: 2690, y: 480 }, { x: 2860, y: 650 }, { x: 2700, y: 760 }, { x: 2520, y: 640 }, { x: 2590, y: 510 }],
+  moss: [{ x: 2760, y: 920 }, { x: 2890, y: 860 }, { x: 2940, y: 1040 }, { x: 2655, y: 1110 }, { x: 2520, y: 960 }, { x: 2760, y: 920 }]
 };
 
 const VILLAGE_RUBBLE = [
@@ -1950,7 +1963,9 @@ const VILLAGE_RUBBLE = [
   { id: "rubble_road", x: 1110, y: 1235, r: 24, label: "road debris" },
   { id: "blocker_old_oak", x: 725, y: 380, r: 38, label: "fallen old oak", kind: "oak", supplies: 3, shards: 1, req: { homeRank: 1, text: "House rank 1" } },
   { id: "blocker_cracked_boulder", x: 1515, y: 1285, r: 42, label: "cracked tower boulder", kind: "boulder", supplies: 2, ore: 2, shards: 1, req: { bestFloor: 4, text: "Reach floor 4" } },
-  { id: "blocker_sealed_cart", x: 2020, y: 1015, r: 42, label: "sealed supply cart", kind: "cart", supplies: 5, shards: 3, req: { homeRank: 3, bestFloor: 6, text: "House rank 3 and floor 6" } }
+  { id: "blocker_sealed_cart", x: 2020, y: 1015, r: 42, label: "sealed supply cart", kind: "cart", supplies: 5, shards: 3, req: { homeRank: 3, bestFloor: 6, text: "House rank 3 and floor 6" } },
+  { id: "blocker_crypt_vines", x: 2600, y: 680, r: 34, label: "crypt vines", kind: "oak", supplies: 3, shards: 2, req: { bridge: true, text: "Repair bridge" } },
+  { id: "blocker_grave_cache", x: 2860, y: 980, r: 38, label: "buried cache", kind: "cart", supplies: 4, ore: 2, shards: 2, req: { bridge: true, bestFloor: 5, text: "Bridge and floor 5" } }
 ];
 
 const VILLAGE_STUMPS = [
@@ -1970,17 +1985,27 @@ const VILLAGE_STUMPS = [
   { id: "stump_watch_south", x: 1920, y: 840, r: 20, hp: 3, supplies: 1 },
   { id: "stump_road_left", x: 760, y: 1280, r: 20, hp: 3, supplies: 1 },
   { id: "stump_road_right", x: 1430, y: 1274, r: 20, hp: 3, supplies: 1 },
+  { id: "tree_west_green", x: 330, y: 970, r: 28, hp: 5, supplies: 2, treeKey: "town_tree_green" },
+  { id: "tree_north_gold", x: 620, y: 260, r: 28, hp: 5, supplies: 2, shards: 1, treeKey: "town_tree_gold" },
+  { id: "tree_east_blue", x: 1850, y: 335, r: 30, hp: 6, supplies: 2, treeKey: "town_tree_blue" },
   { id: "stump_giant_oak", x: 520, y: 1160, r: 36, hp: 8, supplies: 4, shards: 2, longGoal: true, req: { homeRank: 2, text: "House rank 2" } },
   { id: "stump_ironroot", x: 1668, y: 1180, r: 40, hp: 10, supplies: 5, shards: 3, longGoal: true, req: { homeRank: 3, bestFloor: 4, text: "House rank 3 and floor 4" } },
-  { id: "stump_ancient_root", x: 2050, y: 1320, r: 44, hp: 12, supplies: 7, shards: 4, longGoal: true, req: { homeRank: 5, bestFloor: 6, text: "House rank 5 and floor 6" } }
+  { id: "stump_ancient_root", x: 2050, y: 1320, r: 44, hp: 12, supplies: 7, shards: 4, longGoal: true, req: { homeRank: 5, bestFloor: 6, text: "House rank 5 and floor 6" } },
+  { id: "tree_grave_pine_a", x: 2450, y: 300, r: 34, hp: 8, supplies: 3, shards: 1, longGoal: true, treeKey: "town_tree_blue", req: { bridge: true, text: "Repair bridge" } },
+  { id: "tree_grave_pine_b", x: 2770, y: 430, r: 36, hp: 9, supplies: 4, shards: 1, longGoal: true, treeKey: "town_tree_gold", req: { bridge: true, text: "Repair bridge" } },
+  { id: "stump_gloom_oak", x: 2505, y: 360, r: 38, hp: 10, supplies: 5, shards: 2, longGoal: true, req: { bridge: true, text: "Repair bridge" } },
+  { id: "stump_bone_root", x: 2845, y: 620, r: 42, hp: 12, supplies: 6, shards: 3, longGoal: true, req: { bridge: true, bestFloor: 5, text: "Bridge and floor 5" } },
+  { id: "stump_grave_heart", x: 2680, y: 1210, r: 46, hp: 15, supplies: 8, shards: 5, longGoal: true, req: { bridge: true, homeRank: 4, text: "Bridge and house rank 4" } }
 ];
 
 let villageToolSwing = { t: 0, x: 0, y: 0, angle: 0 };
 
 const VILLAGE_MINE_NODES = [
-  { id: "mine_north", x: 1762, y: 286, r: 24, ore: 1, shards: 1 },
-  { id: "mine_east", x: 2030, y: 488, r: 24, ore: 1, shards: 0 },
-  { id: "mine_watch", x: 1888, y: 860, r: 24, ore: 2, shards: 1 }
+  { id: "mine_north", x: 1762, y: 286, r: 24, ore: 1, shards: 1, hp: 3 },
+  { id: "mine_east", x: 2030, y: 488, r: 24, ore: 1, shards: 0, hp: 3 },
+  { id: "mine_watch", x: 1888, y: 860, r: 24, ore: 2, shards: 1, hp: 3 },
+  { id: "mine_grave_a", x: 2575, y: 820, r: 28, ore: 2, shards: 1, hp: 4, req: { bridge: true, text: "Repair bridge" } },
+  { id: "mine_grave_b", x: 2910, y: 1120, r: 30, ore: 3, shards: 2, hp: 5, req: { bridge: true, bestFloor: 5, text: "Bridge and floor 5" } }
 ];
 
 const VILLAGE_FISHING_SPOTS = [
@@ -2084,7 +2109,8 @@ const VILLAGE_TREE_LINES = [
   [1920, 1250, "town_tree_blue"], [2040, 1120, "town_tree_green"], [2140, 890, "town_tree_gold"],
   [120, 740, "town_tree_blue"], [2048, 720, "town_tree_green"], [80, 520, "town_tree_green"], [2100, 420, "town_tree_green"],
   [520, 1240, "town_tree_blue"], [1580, 1320, "town_tree_green"],
-  [2440, 260, "grave_pine_crooked"], [2760, 330, "grave_pine_crooked"], [2920, 720, "grave_pine_crooked"], [2480, 1250, "grave_pine_crooked"]
+  [2440, 260, "town_tree_blue"], [2620, 320, "town_tree_gold"], [2860, 420, "town_tree_blue"],
+  [2510, 1180, "town_tree_green"], [2920, 1320, "town_tree_gold"]
 ];
 
 const VILLAGE_PREP_DEFS = {
@@ -2157,6 +2183,9 @@ function loadSave() {
         mineCleared: {
           ...(parsed.hub?.mineCleared || {})
         },
+        mineHits: {
+          ...(parsed.hub?.mineHits || {})
+        },
         farmPlots: {
           ...(parsed.hub?.farmPlots || {})
         },
@@ -2165,7 +2194,6 @@ function loadSave() {
         townLog: Array.isArray(parsed.hub?.townLog) ? parsed.hub.townLog.slice(0, 32) : [],
         homeRank: Number(parsed.hub?.homeRank) || 0,
         homeRestDay: Number(parsed.hub?.homeRestDay ?? -1),
-        bridgeFixed: Boolean(parsed.hub?.bridgeFixed),
         chest: {
           ...structuredClone(DEFAULT_HUB_SAVE).chest,
           ...(parsed.hub?.chest || {})
@@ -2179,6 +2207,8 @@ function loadSave() {
         towerDay: Number(parsed.hub?.towerDay) || 0,
         fishingDay: Number(parsed.hub?.fishingDay ?? -1),
         fishingUses: Number(parsed.hub?.fishingUses) || 0,
+        fishingRodRank: Number(parsed.hub?.fishingRodRank) || 0,
+        bait: Number(parsed.hub?.bait) || 0,
         visitor: parsed.hub?.visitor || null,
         activeTask: parsed.hub?.activeTask || null,
         taskCounter: Number(parsed.hub?.taskCounter) || 0
@@ -2325,6 +2355,9 @@ function ensureHubSave() {
     mineCleared: {
       ...(save.hub?.mineCleared || {})
     },
+    mineHits: {
+      ...(save.hub?.mineHits || {})
+    },
     farmPlots: {
       ...(save.hub?.farmPlots || {})
     },
@@ -2333,7 +2366,6 @@ function ensureHubSave() {
     townLog: Array.isArray(save.hub?.townLog) ? save.hub.townLog.slice(0, 32) : [],
     homeRank: Number(save.hub?.homeRank) || 0,
     homeRestDay: Number(save.hub?.homeRestDay ?? -1),
-    bridgeFixed: Boolean(save.hub?.bridgeFixed),
     chest: {
       ...structuredClone(DEFAULT_HUB_SAVE).chest,
       ...(save.hub?.chest || {})
@@ -2347,6 +2379,8 @@ function ensureHubSave() {
     towerDay: Number(save.hub?.towerDay) || 0,
     fishingDay: Number(save.hub?.fishingDay ?? -1),
     fishingUses: Number(save.hub?.fishingUses) || 0,
+    fishingRodRank: Number(save.hub?.fishingRodRank) || 0,
+    bait: Number(save.hub?.bait) || 0,
     visitor: save.hub?.visitor || null,
     activeTask: save.hub?.activeTask || null,
     boardTasks: Array.isArray(save.hub?.boardTasks) ? save.hub.boardTasks : [],
@@ -2776,29 +2810,22 @@ function activeBoardTask() {
 }
 
 function villageTaskIcon(task) {
-  if (!task) return "📌";
-  if (task.type === "fish" || task.resource === "fish") return "🐟";
-  if (task.type === "mine" || task.resource === "ore") return "🪨";
-  if (task.type === "farm" || task.resource === "crops") return "🥕";
+  if (!task) return "•";
+  if (task.icon) return task.icon;
+  if (task.type === "fish" || task.resource === "fish") return "🎣";
+  if (task.type === "mine" || task.resource === "ore") return "⛏️";
+  if (task.type === "farm" || task.resource === "crops") return "🌽";
   if (task.type === "chop") return "🪓";
   if (task.type === "rubble") return "🧹";
   if (task.type === "hairball") return "🐾";
   if (task.type === "project") return "🔨";
+  if (task.type === "bridge") return "🌉";
+  if (task.resource === "supplies") return "📦";
+  if (task.prep === "maren_meal") return "🍲";
+  if (task.prep === "rowan_oil") return "🛢️";
+  if (task.prep === "tavi_map") return "🗺️";
   if (task.prep === "shrine_candle") return "🕯️";
   return "📌";
-}
-
-function villageTaskShort(task) {
-  if (!task) return "Pick a job";
-  if (task.type === "turnin" && task.resource) return `${villageTaskIcon(task)} Bring ${task.need} ${task.resource}`;
-  if (task.type === "fish") return `${villageTaskIcon(task)} Fish once`;
-  if (task.type === "mine") return `${villageTaskIcon(task)} Mine ore`;
-  if (task.type === "farm") return `${villageTaskIcon(task)} Harvest crop`;
-  if (task.type === "chop") return `${villageTaskIcon(task)} Chop wood`;
-  if (task.type === "rubble") return `${villageTaskIcon(task)} Clear debris`;
-  if (task.type === "hairball") return `${villageTaskIcon(task)} Clean ${task.need || 2} hairballs`;
-  if (task.type === "project") return `${villageTaskIcon(task)} Upgrade station`;
-  return `${villageTaskIcon(task)} ${task.title}`;
 }
 
 function villageTaskText(task = activeBoardTask()) {
@@ -2834,7 +2861,7 @@ function completeVillageTask(task, source = "work") {
   playAssetSfx("cache_upgrade", 0.42);
   playAssetSfx("ui_confirm_001", 0.34) || playAssetSfx("bonus_chime", 0.34);
   addParticles("reward", VILLAGE_DAILY_BOARD.x, VILLAGE_DAILY_BOARD.y - 22, -Math.PI / 2, 34);
-  floatText.push({ x: VILLAGE_DAILY_BOARD.x - 58, y: VILLAGE_DAILY_BOARD.y - 76, text: `BOARD +${supplies} +${shards} +hope`, t: 1.25 });
+  floatText.push({ x: VILLAGE_DAILY_BOARD.x - 58, y: VILLAGE_DAILY_BOARD.y - 76, text: `BOARD +${supplies} +${shards} +hope`, t: 2.5 });
   if (task.prep) grantVillagePrep(task.prep, task.giver || "Daily board");
   else setVillageMessage("Task complete", `${task.title} is done. You earned ${supplies} supply and ${shards} shard.`, 3.2);
   checkVillageAchievements("board");
@@ -3114,9 +3141,9 @@ function renderVillageDailyBoard() {
     return `
       <button class="dailyTaskCard ${selected ? "selected" : ""} ${task.done ? "completed" : ""}" data-action="selectVillageTask" data-task-id="${task.id}" ${task.done ? "disabled" : ""}>
         <span class="routeTag">${selected ? "SELECTED" : (task.giver || "BOARD")}</span>
-        <b>${villageTaskIcon(task)} ${task.title}</b>
-        <p>${villageTaskShort(task)}</p>
-        <small>${progress} · fills ${prep ? prep.slot : "reward"}: ${prep ? prep.name : "+reward"}</small>
+        <b><span style="font-size:22px; margin-right:8px; vertical-align:-2px;">${villageTaskIcon(task)}</span>${task.title}</b>
+        <p>${task.text}</p>
+        <small>${progress} · ${prep ? prep.slot.toUpperCase() : "REWARD"}: ${prep ? prep.name : "+reward"}</small>
       </button>
     `;
   }).join("");
@@ -3136,7 +3163,7 @@ function renderVillageDailyBoard() {
           <div class="powerIcon big">!</div>
           <div>
             <b>Daily board</b>
-            <p>${activeBoardTask() ? villageTaskShort(activeBoardTask()) : "Pick a board card."}</p>
+            <p>${villageTaskText(activeBoardTask()) || "Pick a board card, finish it, then check the gate."}</p>
           </div>
         </div>
       </div>
@@ -3275,8 +3302,7 @@ function returnToVillageFromOverlay() {
 }
 
 function setVillageMessage(speaker, text, t = 3.4) {
-  const base = Number(t) || 3.4;
-  const ttl = clamp(base * 2, 2.8, 10.0);
+  const ttl = clamp(Number(t) || 3.4, 1.4, 5.0);
   villageMessage = { speaker, text, t: ttl, maxT: ttl };
   pushVillageLogEntry(speaker, text);
 }
@@ -3624,71 +3650,9 @@ function moveChestResource(resource, direction) {
 }
 
 
-function villageBridgeFixed() {
-  return Boolean(ensureHubSave().bridgeFixed);
-}
-
-function villageBridgeCanRepair() {
-  return villageRequirementMet(VILLAGE_BRIDGE.req);
-}
-
-function villageBridgeCostText() {
-  return `${VILLAGE_BRIDGE.cost.supplies} supplies and ${VILLAGE_BRIDGE.cost.ore} ore`;
-}
-
-function villageBridgeActionText() {
-  if (villageBridgeFixed()) return "cross bridge";
-  if (!villageBridgeCanRepair()) return `need ${villageRequirementText(VILLAGE_BRIDGE.req)}. Then ${villageBridgeCostText()}`;
-  return `repair bridge: ${villageBridgeCostText()} + 1 energy`;
-}
-
-function villageBridgeNearPlayer() {
-  const bridge = VILLAGE_BRIDGE;
-  const approachX = villagePlayer.x < bridge.x ? bridge.x - bridge.w / 2 : bridge.x + bridge.w / 2;
-  const nearestX = clamp(villagePlayer.x, approachX - 86, approachX + 86);
-  const nearestY = clamp(villagePlayer.y, bridge.y - bridge.h, bridge.y + bridge.h);
-  return {
-    x: nearestX,
-    y: nearestY,
-    distance: Math.hypot(villagePlayer.x - nearestX, villagePlayer.y - nearestY)
-  };
-}
-
-function repairVillageBridge() {
-  const hub = ensureHubSave();
-  if (hub.bridgeFixed) {
-    setVillageMessage("Bridge", "The bridge is repaired. The dark quarter is open.", 3.0);
-    return;
-  }
-  if (!villageBridgeCanRepair()) {
-    const hub = ensureHubSave();
-    setVillageMessage(
-      "Bridge",
-      `Bridge repair goal: ${villageRequirementText(VILLAGE_BRIDGE.req)}. Current: house rank ${hub.homeRank || 0}, best floor ${save.bestFloor || 0}.`,
-      4.2
-    );
-    return;
-  }
-  for (const [key, value] of Object.entries(VILLAGE_BRIDGE.cost)) {
-    if ((Number(hub[key]) || 0) < value) {
-      setVillageMessage("Bridge", `Need ${villageBridgeCostText()} to repair the bridge.`, 3.0);
-      return;
-    }
-  }
-  if (!spendVillageEnergy(1, "repairing the bridge")) return;
-  for (const [key, value] of Object.entries(VILLAGE_BRIDGE.cost)) hub[key] = (Number(hub[key]) || 0) - value;
-  hub.bridgeFixed = true;
-  hub.hope = (Number(hub.hope) || 0) + 3;
-  saveGame();
-  villagePulse = 1;
-  playAssetSfx("town_building_work", 0.34);
-  playAssetSfx("bonus_chime", 0.32);
-  unlockAchievement("bridge_repaired", "Other Side Open", "Repaired the bridge into the dark quarter.");
-  setVillageMessage("Bridge", "Bridge repaired. The dark quarter is open now. +3 hope.", 4.0);
-}
-
 function villageRequirementMet(req = {}) {
   const hub = ensureHubSave();
+  if (req.bridge && !ensureHubSave().bridgeFixed) return false;
   if (req.homeRank && (Number(hub.homeRank) || 0) < req.homeRank) return false;
   if (req.bestFloor && (Number(save.bestFloor) || 0) < req.bestFloor) return false;
   if (req.project && hubProjectRank(req.project) < (req.projectRank || 1)) return false;
@@ -3698,6 +3662,7 @@ function villageRequirementMet(req = {}) {
 function villageRequirementText(req = {}) {
   if (req.text) return req.text;
   const parts = [];
+  if (req.bridge) parts.push("repair bridge");
   if (req.homeRank) parts.push(`House rank ${req.homeRank}`);
   if (req.bestFloor) parts.push(`floor ${req.bestFloor}`);
   if (req.project) parts.push(`${req.project} rank ${req.projectRank || 1}`);
@@ -3728,6 +3693,10 @@ function villageCircleRectBlocked(x, y, r, rect) {
 
 function villageBlocked(x, y, r) {
   if (x < r || y < r || x > VILLAGE_WORLD.w - r || y > VILLAGE_WORLD.h - r) return true;
+  if (x > VILLAGE_RIVER.x - r && x < VILLAGE_RIVER.x + VILLAGE_RIVER.w + r) {
+    const onBridgeLane = y > VILLAGE_BRIDGE.y - VILLAGE_BRIDGE.h * 0.62 && y < VILLAGE_BRIDGE.y + VILLAGE_BRIDGE.h * 0.62;
+    if (!onBridgeLane || !villageBridgeFixed()) return true;
+  }
   for (const rect of VILLAGE_OBSTACLES) {
     if (villageCircleRectBlocked(x, y, r, rect)) return true;
   }
@@ -3738,10 +3707,6 @@ function villageBlocked(x, y, r) {
   for (const stump of VILLAGE_STUMPS) {
     if (villageStumpCleared(stump.id)) continue;
     if (Math.hypot(x - stump.x, y - stump.y) < r + stump.r * 0.75) return true;
-  }
-  if (x > VILLAGE_RIVER.x - r && x < VILLAGE_RIVER.x + VILLAGE_RIVER.w + r) {
-    const onBridgeLane = y > VILLAGE_BRIDGE.y - VILLAGE_BRIDGE.h * 0.7 && y < VILLAGE_BRIDGE.y + VILLAGE_BRIDGE.h * 0.7;
-    if (!villageBridgeFixed() || !onBridgeLane) return true;
   }
   return false;
 }
@@ -3765,6 +3730,61 @@ function pointNearVillagePlayer(x, y, range = 62) {
 
 function villageRectCenter(rect) {
   return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
+}
+
+function villageBridgeFixed() {
+  return Boolean(ensureHubSave().bridgeFixed);
+}
+
+function villageBridgeCanRepair() {
+  return villageRequirementMet(VILLAGE_BRIDGE.req);
+}
+
+function villageBridgeCostText() {
+  return `${VILLAGE_BRIDGE.cost.supplies} supplies and ${VILLAGE_BRIDGE.cost.ore} ore`;
+}
+
+function villageBridgeActionText() {
+  if (villageBridgeFixed()) return "cross bridge";
+  if (!villageBridgeCanRepair()) return `need ${villageRequirementText(VILLAGE_BRIDGE.req)}`;
+  return `repair bridge: ${villageBridgeCostText()} + 1 energy`;
+}
+
+function villageBridgeNearPlayer() {
+  const bridge = VILLAGE_BRIDGE;
+  const approachX = villagePlayer.x < bridge.x ? bridge.x - bridge.w / 2 : bridge.x + bridge.w / 2;
+  const nearestX = clamp(villagePlayer.x, bridge.x - bridge.w / 2, bridge.x + bridge.w / 2);
+  const nearestY = clamp(villagePlayer.y, bridge.y - bridge.h / 2, bridge.y + bridge.h / 2);
+  const d = Math.min(Math.hypot(villagePlayer.x - approachX, villagePlayer.y - bridge.y), Math.hypot(villagePlayer.x - nearestX, villagePlayer.y - nearestY));
+  return { x: bridge.x, y: bridge.y, distance: d };
+}
+
+function repairVillageBridge() {
+  const hub = ensureHubSave();
+  if (hub.bridgeFixed) {
+    setVillageMessage("Bridge", "The bridge is repaired. The dark quarter is open.", 3.0);
+    return;
+  }
+  if (!villageBridgeCanRepair()) {
+    setVillageMessage("Bridge", `Bridge goal: ${villageRequirementText(VILLAGE_BRIDGE.req)}. Current: house rank ${hub.homeRank || 0}, best floor ${save.bestFloor || 0}.`, 4.0);
+    return;
+  }
+  for (const [key, value] of Object.entries(VILLAGE_BRIDGE.cost)) {
+    if ((Number(hub[key]) || 0) < value) {
+      setVillageMessage("Bridge", `Need ${villageBridgeCostText()} to repair the bridge.`, 3.2);
+      return;
+    }
+  }
+  if (!spendVillageEnergy(1, "repairing the bridge")) return;
+  for (const [key, value] of Object.entries(VILLAGE_BRIDGE.cost)) hub[key] = (Number(hub[key]) || 0) - value;
+  hub.bridgeFixed = true;
+  hub.hope = (Number(hub.hope) || 0) + 3;
+  save.shards += 3;
+  saveGame();
+  playAssetSfx("town_building_work", 0.35);
+  playAssetSfx("bonus_chime", 0.35);
+  unlockAchievement("bridge_repaired", "Other Side Open", "Repaired the bridge into the dark quarter.");
+  setVillageMessage("Bridge", "Bridge repaired. The dark quarter is open.", 4.5);
 }
 
 function findVillageInteractTarget() {
@@ -3815,14 +3835,7 @@ function findVillageInteractTarget() {
   }
 
   const bridgePoint = villageBridgeNearPlayer();
-  if (bridgePoint.distance <= 98) {
-    consider({
-      type: "bridge",
-      label: villageBridgeFixed() ? "east bridge" : "broken bridge",
-      action: villageBridgeActionText(),
-      distance: bridgePoint.distance
-    });
-  }
+  if (bridgePoint.distance <= 112) consider({ type: "bridge", label: villageBridgeFixed() ? "east bridge" : "broken bridge", action: villageBridgeActionText(), distance: bridgePoint.distance });
 
   const visitor = activeVillageVisitor();
   if (visitor) {
@@ -3877,7 +3890,7 @@ function clearVillageRubble(id) {
   if (!rubble || hub.rubbleCleared[id]) return;
   if (villageObjectLocked(rubble)) {
     playAssetSfx("ui_button_click", 0.18);
-    floatText.push({ x: rubble.x - 42, y: rubble.y - rubble.r - 28, text: "locked", t: 1.0 });
+    floatText.push({ x: rubble.x - 42, y: rubble.y - rubble.r - 28, text: "locked", t: 2.0 });
     setVillageMessage("Long term goal", `${rubble.label} needs ${villageRequirementText(rubble.req)} before you can remove it.`, 3.2);
     return;
   }
@@ -3886,13 +3899,11 @@ function clearVillageRubble(id) {
   const supplies = rubble.supplies || 1;
   const ore = rubble.ore || 0;
   const shards = rubble.shards || 0;
-  const seedGain = /wood|cart|garden|boards|root|oak/i.test(`${rubble.label || ""} ${rubble.kind || ""}`) ? 1 : 0;
   hub.supplies += supplies;
   hub.ore = (Number(hub.ore) || 0) + ore;
-  if (seedGain) hub.seeds = (Number(hub.seeds) || 0) + seedGain;
   if (shards) save.shards += shards;
   hub.hope = (Number(hub.hope) || 0) + 1;
-  hub.lastGain = `+${supplies} supplies${ore ? `, +${ore} ore` : ""}${seedGain ? `, +${seedGain} seed` : ""}${shards ? `, +${shards} shards` : ""}. +1 hope.`;
+  hub.lastGain = `+${supplies} supplies${ore ? `, +${ore} ore` : ""}${shards ? `, +${shards} shards` : ""}. +1 hope.`;
   hub.lastHelp = "";
   saveGame();
   villagePulse = 1;
@@ -3900,8 +3911,8 @@ function clearVillageRubble(id) {
   playAssetSfx("bonus_chime", 0.24);
   addParticles("dust", rubble.x, rubble.y, -Math.PI / 2, 18);
   addParticles("reward", rubble.x, rubble.y - 8, -Math.PI / 2, 12);
-  const rewardText = `+${supplies} supplies${ore ? `  +${ore} ore` : ""}${seedGain ? `  +${seedGain} seed` : ""}${shards ? `  +${shards} shards` : ""}  +1 hope`;
-  floatText.push({ x: rubble.x - 48, y: rubble.y - rubble.r - 12, text: rewardText, t: 1.0 });
+  const rewardText = `+${supplies} supplies${ore ? `  +${ore} ore` : ""}${shards ? `  +${shards} shards` : ""}  +1 hope`;
+  floatText.push({ x: rubble.x - 48, y: rubble.y - rubble.r - 12, text: rewardText, t: 2.0 });
   if (rubble.req) unlockAchievement("first_long_blocker", "That Was In The Way", "Removed a milestone locked town blocker.");
   setVillageMessage("Village", `You cleared ${rubble.label}. ${hub.lastGain}`);
   advanceVillageTask("rubble");
@@ -3914,25 +3925,51 @@ function villageMineClearedToday(id) {
   return hub.mineCleared?.[id] === hub.towerDay;
 }
 
+function villageMineHitCount(id) {
+  return Number(ensureHubSave().mineHits?.[id]) || 0;
+}
+
 function villageMineActionText(mine) {
-  return villageMineClearedToday(mine.id) ? "mine is empty today" : "mine ore (2 energy)";
+  if (villageObjectLocked(mine)) return villageLockedActionText(mine);
+  if (villageMineClearedToday(mine.id)) return "mine is empty today";
+  const left = Math.max(1, (mine.hp || 3) - villageMineHitCount(mine.id));
+  return `strike ore (${left} hit${left === 1 ? "" : "s"}, 2 energy on break)`;
 }
 
 function mineVillageNode(id) {
   const mine = VILLAGE_MINE_NODES.find(item => item.id === id);
   if (!mine) return;
   const hub = ensureHubSave();
+  if (villageObjectLocked(mine)) {
+    setVillageMessage("Ore node", `This ore needs ${villageRequirementText(mine.req)} first.`, 3.0);
+    return;
+  }
   if (villageMineClearedToday(id)) {
     setVillageMessage("Ore node", "This spot is empty. New ore will loosen after another tower fight.", 2.5);
     return;
   }
+  const hits = villageMineHitCount(id) + 1;
+  const hp = mine.hp || 3;
+  const hubNow = ensureHubSave();
+  hubNow.mineHits[id] = hits;
+  villageToolSwing = { t: 0.18, x: villagePlayer.x, y: villagePlayer.y, angle: Math.atan2(mine.y - villagePlayer.y, mine.x - villagePlayer.x) };
+  playAssetSfx("town_mine", 0.42);
+  addParticles("dust", mine.x, mine.y, -Math.PI / 2, 10);
+  if (hits < hp) {
+    saveGame();
+    const left = hp - hits;
+    floatText.push({ x: mine.x - 26, y: mine.y - 40, text: `${left} left`, t: 0.85 });
+    setVillageMessage("Ore node", `Strike it ${left} more time${left === 1 ? "" : "s"}. Ore breaks on the final hit.`, 2.2);
+    return;
+  }
   if (!spendVillageEnergy(2, "mining")) return;
-  hub.mineCleared[id] = hub.towerDay;
+  hubNow.mineCleared[id] = hubNow.towerDay;
+  delete hubNow.mineHits[id];
   let oreFound = mine.ore || 1;
   const event = activeVillageDailyEvent();
-  if (event?.id === "loose_stone" && !hub.dailyEventUsed.loose_stone) {
+  if (event?.id === "loose_stone" && !hubNow.dailyEventUsed.loose_stone) {
     oreFound += 1;
-    hub.dailyEventUsed.loose_stone = true;
+    hubNow.dailyEventUsed.loose_stone = true;
   }
   addHubResource("ore", oreFound);
   const bonusRoll = Math.random();
@@ -3940,34 +3977,35 @@ function mineVillageNode(id) {
   if (bonusRoll < 0.25) {
     addHubResource("seeds", 1);
     bonusText = " +1 seed";
-  } else if (bonusRoll < 0.40) {
+  } else if (bonusRoll < 0.42) {
     addHubResource("supplies", 1);
     bonusText = " +1 supply";
-  } else if (bonusRoll < 0.48) {
+  } else if (bonusRoll < 0.52) {
     save.shards += 1;
     bonusText = " +1 shard";
   }
   if (mine.shards) save.shards += mine.shards;
-  hub.lastGain = mine.shards ? `+${oreFound} ore and +1 shard from mining.${bonusText}` : `+${oreFound} ore from mining.${bonusText}`;
+  hubNow.lastGain = mine.shards ? `+${oreFound} ore and +${mine.shards} shard from mining.${bonusText}` : `+${oreFound} ore from mining.${bonusText}`;
   saveGame();
   villagePulse = 1;
-  playAssetSfx("town_mine", 0.42);
   playAssetSfx("bonus_chime", 0.16);
   addParticles("dust", mine.x, mine.y, -Math.PI / 2, 18);
   addParticles("reward", mine.x, mine.y - 8, -Math.PI / 2, 12);
-  floatText.push({ x: mine.x - 42, y: mine.y - 42, text: `${oreFound} ore${mine.shards ? " +shard" : ""}${bonusText}`, t: 1.0 });
-  setVillageMessage("Mining", mine.shards ? `You broke loose ${oreFound} ore and found a shard inside the rock.${bonusText}` : `You broke loose ${oreFound} ore for repairs and prep.${bonusText}`, 2.8);
+  floatText.push({ x: mine.x - 48, y: mine.y - 42, text: `${oreFound} ore${mine.shards ? " +shard" : ""}${bonusText}`, t: 2.8 });
+  setVillageMessage("Mining", `Ore broke loose: ${oreFound} ore${mine.shards ? " and shard" : ""}${bonusText}.`, 3.2);
   advanceVillageTask("mine");
 }
 
 function villageFishActionText() {
   const hub = ensureHubSave();
   const uses = hub.fishingDay === hub.towerDay ? Number(hub.fishingUses) || 0 : 0;
-  return uses >= 2 ? "pond is quiet today" : "fish pond (2 energy)";
+  if (villageFishingGame) return "fishing now";
+  return uses >= 2 ? "pond is quiet today" : "cast line (2 energy)";
 }
 
 function fishVillagePond() {
   const hub = ensureHubSave();
+  if (villageFishingGame) return;
   if (hub.fishingDay !== hub.towerDay) {
     hub.fishingDay = hub.towerDay;
     hub.fishingUses = 0;
@@ -3976,26 +4014,206 @@ function fishVillagePond() {
     setVillageMessage("Pond", "The fish stopped biting. Try again after another tower fight.", 2.5);
     return;
   }
-  if (!spendVillageEnergy(2, "fishing")) return;
+  if (!spendVillageEnergy(2, "casting a line")) return;
   hub.fishingUses = (Number(hub.fishingUses) || 0) + 1;
-  const lucky = villageHash(hub.towerDay, hub.fishingUses) > 0.58;
-  let fishFound = 1;
+  saveGame();
+  startVillageFishingGame(VILLAGE_FISHING_SPOTS[0]);
+}
+
+function startVillageFishingGame(spot) {
+  const hub = ensureHubSave();
+  const roll = villageHash(hub.towerDay * 37 + hub.fishingUses * 91, save.bestFloor + 17);
+  const tier = roll > 0.88 ? "rare" : roll > 0.58 ? "stout" : "common";
+  const need = tier === "rare" ? 24 : tier === "stout" ? 14 : 8;
+  const baitSlow = Math.min(0.26, (Number(hub.bait) || 0) * 0.03);
+  const rodPull = 1 + Math.min(0.6, (Number(hub.fishingRodRank) || 0) * 0.10);
+  villageFishingGame = {
+    phase: "wait",
+    x: spot.x,
+    y: spot.y,
+    t: 0,
+    biteAt: rand(2.4, 4.8),
+    react: 3.0,
+    progress: 0.58,
+    needed: need,
+    pulls: 0,
+    next: "left",
+    tier,
+    drain: Math.max(0.035, (tier === "rare" ? 0.105 : tier === "stout" ? 0.075 : 0.045) - baitSlow),
+    pullValue: 1.15 * rodPull,
+    lastGoodInput: "",
+    badInputs: 0
+  };
+  playAssetSfx("town_fish_cast", 0.42);
+  setVillageMessage("Fishing", "Fishing started. Wait for the splash, then alternate Left Arrow and Right Arrow.", 5.5);
+}
+
+function updateVillageFishingGame(dt) {
+  const game = villageFishingGame;
+  if (!game) return;
+  game.t += dt;
+  if (game.phase === "wait" && game.t >= game.biteAt) {
+    game.phase = "bite";
+    game.t = 0;
+    playAssetSfx("town_fish_reel", 0.34);
+    addParticles("reward", game.x, game.y - 8, -Math.PI / 2, 18);
+    setVillageMessage("BITE", "Press Left Arrow or Right Arrow. Then alternate arrows to reel.", 5.0);
+    return;
+  }
+  if (game.phase === "bite" && game.t > game.react) {
+    failVillageFishingGame("Too slow. Press an arrow when the splash cue appears.");
+    return;
+  }
+  if (game.phase === "struggle") {
+    game.progress = Math.max(0, game.progress - Math.max(0.025, game.drain) * dt);
+    if (game.tier === "rare" && Math.floor(game.t * 2) !== Math.floor((game.t - dt) * 2) && Math.random() < 0.18) {
+      game.progress = Math.max(0, game.progress - 0.035);
+      addParticles("dust", game.x, game.y, -Math.PI / 2, 5);
+    }
+    if (game.progress <= 0) failVillageFishingGame("Line went slack. Keep alternating Left and Right arrows.");
+  }
+}
+
+function handleVillageFishingInput(key) {
+  const game = villageFishingGame;
+  if (!game) return false;
+  const input = key === "arrowleft" ? "left" : key === "arrowright" ? "right" : "";
+  if (!input) return false;
+  if (game.phase === "wait") return false;
+  if (game.phase === "bite") {
+    game.phase = "struggle";
+    game.t = 0;
+    game.progress = 0.62;
+    game.next = input === "left" ? "right" : "left";
+    game.lastGoodInput = input;
+    game.pulls = 1;
+    game.progress += 0.075;
+    playAssetSfx("town_fish_reel", 0.28);
+    return true;
+  }
+  if (game.phase === "struggle") {
+    if (input !== game.next) {
+      game.badInputs = (game.badInputs || 0) + 1;
+      game.progress = Math.max(0.12, game.progress - 0.025);
+      playAssetSfx("ui_error_001", 0.08);
+      return true;
+    }
+    game.pulls += game.pullValue;
+    game.progress = Math.min(1, game.progress + 0.055 + game.pullValue * 0.008);
+    game.lastGoodInput = input;
+    game.next = input === "left" ? "right" : "left";
+    playAssetSfx("town_fish_reel", 0.16);
+    if (game.pulls >= game.needed || game.progress >= 1) finishVillageFishingGame();
+    return true;
+  }
+  return true;
+}
+
+function failVillageFishingGame(text) {
+  const game = villageFishingGame;
+  villageFishingGame = null;
+  if (game) addParticles("dust", game.x, game.y, -Math.PI / 2, 10);
+  setVillageMessage("Fishing", text, 5.0);
+}
+
+function finishVillageFishingGame() {
+  const game = villageFishingGame;
+  if (!game) return;
+  villageFishingGame = null;
+  const hub = ensureHubSave();
+  let fishFound = game.tier === "rare" ? 3 : game.tier === "stout" ? 2 : 1;
   const event = activeVillageDailyEvent();
   if (event?.id === "fish_biting" && !hub.dailyEventUsed.fish_biting) {
     fishFound += 1;
     hub.dailyEventUsed.fish_biting = true;
   }
   addHubResource("fish", fishFound);
-  if (lucky) save.shards += 1;
-  hub.lastGain = lucky ? `+${fishFound} fish and +1 shard from fishing.` : `+${fishFound} fish from fishing.`;
+  const shard = game.tier !== "common";
+  if (shard) save.shards += game.tier === "rare" ? 2 : 1;
+  if (game.tier === "rare") hub.bait = (Number(hub.bait) || 0) + 1;
+  hub.lastGain = `+${fishFound} fish${shard ? " and shard" : ""}.`;
   saveGame();
   villagePulse = 1;
-  playAssetSfx("town_fish_cast", 0.42);
-  setTimeout(() => playAssetSfx("town_fish_reel", 0.28), 120);
-  addParticles("reward", VILLAGE_FISHING_SPOTS[0].x, VILLAGE_FISHING_SPOTS[0].y, -Math.PI / 2, 18);
-  floatText.push({ x: VILLAGE_FISHING_SPOTS[0].x - 34, y: VILLAGE_FISHING_SPOTS[0].y - 44, text: lucky ? `+${fishFound} fish  +shard` : `+${fishFound} fish`, t: 1.0 });
-  setVillageMessage("Fishing", lucky ? `You caught ${fishFound} fish and pulled a shard from the mud.` : `You caught ${fishFound} fish. Maren can turn fish into tower prep.`, 2.8);
+  playAssetSfx("bonus_chime", 0.32);
+  addParticles("reward", game.x, game.y - 8, -Math.PI / 2, 26);
+  floatText.push({ x: game.x - 42, y: game.y - 44, text: `+${fishFound} fish${shard ? " +shard" : ""}`, t: 3.0 });
+  setVillageMessage("Fishing", `${game.tier === "rare" ? "Rare catch" : "Caught"}: +${fishFound} fish${shard ? " and shard" : ""}.`, 5.0);
   advanceVillageTask("fish");
+}
+
+function drawFishingKeyPrompt(x, y, side, active = false) {
+  const key = side === "left" ? "input_arrow_left" : "input_arrow_right";
+  const w = active ? 58 : 46;
+  const h = active ? 58 : 46;
+  ctx.save();
+  ctx.globalAlpha = active ? 1 : 0.58;
+  const drawn = drawImageAsset(key, x, y, w, h);
+  if (!drawn) {
+    ctx.fillStyle = active ? "rgba(255,211,90,0.95)" : "rgba(245,241,255,0.22)";
+    ctx.strokeStyle = active ? "rgba(255,255,255,0.95)" : "rgba(245,241,255,0.38)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(x - w / 2, y - h / 2, w, h, 8);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = active ? "#111827" : "#f5f1ff";
+    ctx.font = "900 24px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(side === "left" ? "←" : "→", x, y + 1);
+  }
+  ctx.restore();
+}
+
+function drawVillageFishingGame() {
+  const game = villageFishingGame;
+  if (!game) return;
+  ctx.save();
+  const panelW = 520;
+  const panelH = 126;
+  const x = W / 2 - panelW / 2;
+  const y = H - 168;
+  ctx.fillStyle = "rgba(3,5,12,0.76)";
+  ctx.fillRect(x, y, panelW, panelH);
+  ctx.strokeStyle = game.phase === "bite" ? "rgba(255,211,90,0.95)" : "rgba(124,199,255,0.58)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x + 0.5, y + 0.5, panelW - 1, panelH - 1);
+
+  const leftActive = game.phase === "bite" || game.next === "left";
+  const rightActive = game.phase === "bite" || game.next === "right";
+  drawFishingKeyPrompt(x + 70, y + 62, "left", leftActive);
+  drawFishingKeyPrompt(x + panelW - 70, y + 62, "right", rightActive);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = game.phase === "bite" ? "#ffd35a" : "#7cc7ff";
+  ctx.font = "900 13px ui-monospace, monospace";
+  const title = game.phase === "wait" ? "WAIT FOR SPLASH" : game.phase === "bite" ? "BITE! PRESS EITHER ARROW" : `REEL: PRESS ${game.next === "left" ? "LEFT" : "RIGHT"}`;
+  ctx.fillText(title, W / 2, y + 25);
+
+  ctx.fillStyle = "rgba(245,241,255,0.82)";
+  ctx.font = "800 10px ui-monospace, monospace";
+  const help = game.phase === "wait"
+    ? "Do nothing yet. Watch the bobber."
+    : game.phase === "bite"
+      ? "You have 3 seconds. Press ← or →."
+      : "Alternate arrows. Use the highlighted key next.";
+  ctx.fillText(help, W / 2, y + 44);
+
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  ctx.fillRect(x + 132, y + 62, panelW - 264, 15);
+  const fill = game.phase === "wait" ? clamp(game.t / game.biteAt, 0, 1) : game.phase === "bite" ? clamp(1 - game.t / game.react, 0, 1) : game.progress;
+  ctx.fillStyle = game.phase === "bite" ? "#ffd35a" : game.phase === "struggle" ? "#7dffb2" : "#7cc7ff";
+  ctx.fillRect(x + 132, y + 62, (panelW - 264) * fill, 15);
+  ctx.strokeStyle = "rgba(245,241,255,0.24)";
+  ctx.strokeRect(x + 132.5, y + 62.5, panelW - 265, 14);
+
+  ctx.fillStyle = "rgba(245,241,255,0.78)";
+  ctx.font = "800 10px ui-monospace, monospace";
+  const meta = game.phase === "struggle"
+    ? `${game.tier.toUpperCase()} FISH  ·  pulls ${Math.floor(game.pulls)}/${game.needed}  ·  mistakes ${game.badInputs || 0}`
+    : `${game.tier.toUpperCase()} FISH  ·  arrows only after splash`;
+  ctx.fillText(meta, W / 2, y + 99);
+  ctx.restore();
 }
 
 function villageFarmActionText(id) {
@@ -4095,7 +4313,7 @@ function interactVillageVisitor() {
     if ((Number(hub[key]) || 0) < value) {
       playAssetSfx("ui_button_click", 0.16);
       setVillageMessage(visitor.name, `Need ${costText}. ${visitor.text}`, 3.0);
-      floatText.push({ x: VILLAGE_VISITOR_SPOT.x - 36, y: VILLAGE_VISITOR_SPOT.y - 48, text: "need trade", t: 1.0 });
+      floatText.push({ x: VILLAGE_VISITOR_SPOT.x - 36, y: VILLAGE_VISITOR_SPOT.y - 48, text: "need trade", t: 2.0 });
       return;
     }
   }
@@ -4120,10 +4338,6 @@ function interactVillageTownsperson(id) {
   const npc = VILLAGE_TOWNSFOLK.find(item => item.id === id);
   if (!npc) return;
   const hub = ensureHubSave();
-  if (npc.needsBridge && !villageBridgeFixed()) {
-    setVillageMessage(npc.name, "Repair the east bridge before asking for help here.", 3.0);
-    return;
-  }
   const need = npc.need || {};
   for (const [key, value] of Object.entries(need)) {
     if ((Number(hub[key]) || 0) < value) {
@@ -4142,7 +4356,7 @@ function interactVillageTownsperson(id) {
   if (npc.prep) grantVillagePrep(npc.prep, npc.name);
   playAssetSfx("bonus_chime", 0.28);
   addParticles("reward", point.x, point.y - 10, -Math.PI / 2, 18);
-  floatText.push({ x: point.x - 36, y: point.y - 48, text: `+${npc.rewardHope || 1} hope`, t: 1.0 });
+  floatText.push({ x: point.x - 36, y: point.y - 48, text: `+${npc.rewardHope || 1} hope`, t: 2.0 });
   setVillageMessage(npc.name, `${npc.text} You helped ${npc.name} and got +${npc.rewardHope || 1} hope.`, 3.0);
 }
 
@@ -4162,18 +4376,16 @@ function collectVillageStumpDrops() {
     const d = Math.hypot(villagePlayer.x - stump.x, villagePlayer.y - stump.y);
     if (d > 34) continue;
     delete hub.stumpDrops[stump.id];
-    const seedGain = stump.longGoal ? 3 : 1;
     hub.supplies += stump.supplies || 1;
-    hub.seeds = (Number(hub.seeds) || 0) + seedGain;
     hub.hope = (Number(hub.hope) || 0) + 1;
     if (stump.shards) save.shards += stump.shards;
-    hub.lastGain = stump.shards ? `Picked up wood, ${stump.supplies || 1} supplies, ${seedGain} seeds, and ${stump.shards} shard${stump.shards === 1 ? "" : "s"}.` : `Picked up wood, ${stump.supplies || 1} suppl${(stump.supplies || 1) === 1 ? "y" : "ies"}, and ${seedGain} seed${seedGain === 1 ? "" : "s"}.`;
+    hub.lastGain = stump.shards ? `Picked up wood, ${stump.supplies || 1} supplies, and ${stump.shards} shard${stump.shards === 1 ? "" : "s"}.` : `Picked up wood and ${stump.supplies || 1} suppl${(stump.supplies || 1) === 1 ? "y" : "ies"}.`;
     collected = true;
     villagePulse = 1;
     playAssetSfx("reward", 0.42);
     playAssetSfx("bonus_chime", 0.26);
     addParticles("reward", stump.x, stump.y - 10, -Math.PI / 2, 22);
-    floatText.push({ x: stump.x - 60, y: stump.y - stump.r - 28, text: stump.shards ? `+${stump.supplies || 1} supply  +${seedGain} seed  +${stump.shards} shard` : `+${stump.supplies || 1} supply  +${seedGain} seed`, t: 1.0 });
+    floatText.push({ x: stump.x - 54, y: stump.y - stump.r - 28, text: stump.shards ? `+${stump.supplies || 1} supply  +${stump.shards} shard  +1 hope` : `+${stump.supplies || 1} supply  +1 hope`, t: 2.0 });
     setVillageMessage("Supplies picked up", stump.shards ? "You picked up the chopped wood and found a shard under it." : "You picked up the chopped wood for the village.", 2.6);
     advanceVillageTask("chop");
   }
@@ -4191,7 +4403,7 @@ function villageStumpActionText(stump) {
   if (villageObjectLocked(stump)) return villageLockedActionText(stump);
   const hits = villageStumpHitCount(stump.id);
   const left = Math.max(1, stump.hp - hits);
-  const label = stump.longGoal ? "old growth" : "stump";
+  const label = stump.treeKey ? "tree" : stump.longGoal ? "old growth" : "stump";
   return `chop ${label} (${left} hit${left === 1 ? "" : "s"}, 1 energy on break)`;
 }
 
@@ -4200,8 +4412,8 @@ function chopVillageStump(id) {
   if (!stump || villageStumpCleared(id)) return false;
   if (villageObjectLocked(stump)) {
     playAssetSfx("ui_button_click", 0.18);
-    floatText.push({ x: stump.x - 42, y: stump.y - stump.r - 24, text: "locked", t: 1.0 });
-    setVillageMessage("Long term goal", `${stump.longGoal ? "This old growth stump" : "This stump"} needs ${villageRequirementText(stump.req)} before you can remove it.`, 3.2);
+    floatText.push({ x: stump.x - 42, y: stump.y - stump.r - 24, text: "locked", t: 2.0 });
+    setVillageMessage("Long term goal", `${stump.treeKey ? "This tree" : stump.longGoal ? "This old growth stump" : "This stump"} needs ${villageRequirementText(stump.req)} before you can remove it.`, 3.2);
     return false;
   }
 
@@ -4238,7 +4450,7 @@ function chopVillageStump(id) {
   playAssetSfx("platformer_break", 0.18);
   addParticles("dust", stump.x, stump.y, -Math.PI / 2, 18);
   addParticles("reward", stump.x, stump.y - 8, -Math.PI / 2, 14);
-  floatText.push({ x: stump.x - 40, y: stump.y - 42, text: "PICK UP", t: 1.0 });
+  floatText.push({ x: stump.x - 40, y: stump.y - 42, text: "PICK UP", t: 2.0 });
   setVillageMessage("Stump chopped", "The stump broke into usable wood. Walk over the log pile to pick it up.", 2.6);
   updateHud();
   return true;
@@ -4293,9 +4505,9 @@ function villageTargetWorldPoint(target) {
     const item = villageMesses.find(mess => mess.id === target.id);
     return item ? { x: item.x, y: item.y } : null;
   }
+  if (target.type === "bridge") return villageBridgeNearPlayer();
   if (target.type === "fish") return { ...VILLAGE_FISHING_SPOTS[0] };
   if (target.type === "visitor") return { ...VILLAGE_VISITOR_SPOT };
-  if (target.type === "bridge") return villageBridgeNearPlayer();
   if (target.type === "townsperson") {
     const item = VILLAGE_TOWNSFOLK.find(npc => npc.id === target.id);
     return item ? villageTownfolkPoint(item) : null;
@@ -4338,7 +4550,7 @@ function clickVillageActionAt(x, y) {
     const point = villageTargetWorldPoint(target);
     const clickedPrompt = y - camera.y > H - 96;
     const clickedTarget = point && Math.hypot(x - point.x, y - point.y) <= (target.type === "fish" ? 118 : 96);
-    if (clickedPrompt || clickedTarget || target.type === "bridge" || target.type === "mine" || target.type === "farm" || target.type === "fish" || target.type === "visitor" || target.type === "townsperson") {
+    if (clickedPrompt || clickedTarget || target.type === "mine" || target.type === "farm" || target.type === "fish" || target.type === "visitor" || target.type === "townsperson") {
       interactVillage();
       return true;
     }
@@ -4390,7 +4602,7 @@ function improveVillageProject(id) {
   if (hub.supplies < cost) {
     playAssetSfx("ui_button_click", 0.16);
     addParticles("dust", project.x, project.y + 8, -Math.PI / 2, 8);
-    floatText.push({ x: project.x - 38, y: project.y - 58, text: `need ${cost}`, t: 1.0 });
+    floatText.push({ x: project.x - 38, y: project.y - 58, text: `need ${cost}`, t: 2.0 });
     setVillageMessage(project.name, `Need ${cost} supplies. You have ${hub.supplies}. Chop stumps, clear rubble, or bring supplies back from the tower. Nothing was spent.`);
     return;
   }
@@ -4461,12 +4673,12 @@ function interactVillage() {
     fishVillagePond();
     return;
   }
-  if (target.type === "visitor") {
-    interactVillageVisitor();
-    return;
-  }
   if (target.type === "bridge") {
     repairVillageBridge();
+    return;
+  }
+  if (target.type === "visitor") {
+    interactVillageVisitor();
     return;
   }
   if (target.type === "townsperson") {
@@ -4533,6 +4745,7 @@ function updateVillage(dt) {
   villagePlayer.interactCooldown = Math.max(0, villagePlayer.interactCooldown - dt);
   villageToolSwing.t = Math.max(0, villageToolSwing.t - dt);
   villageMessage.t = Math.max(0, villageMessage.t - dt);
+  updateVillageFishingGame(dt);
   const hub = ensureHubSave();
   if (hub.nightFallPending) {
     hub.nightFallPending = false;
@@ -4557,7 +4770,7 @@ function drawVillage() {
 
   drawVillageGround();
   drawVillagePond();
-  drawVillageRiverAndDarkDistrict();
+  drawVillageRiverAndBridge();
   drawVillagePaths();
   drawVillageExtraAreas();
   drawVillageHomeAndChest();
@@ -4584,6 +4797,7 @@ function drawVillage() {
 
   ctx.restore();
   drawVillageScreenUi();
+  drawVillageFishingGame();
   drawAchievementToasts();
   drawScreenFlash();
 }
@@ -4681,6 +4895,45 @@ function drawVillageGround() {
   }
 }
 
+function drawVillageRiverAndBridge() {
+  const river = VILLAGE_RIVER;
+  ctx.save();
+  ctx.fillStyle = "rgba(7, 19, 18, 0.22)";
+  ctx.fillRect(river.x - 8, 0, river.w + 16, VILLAGE_WORLD.h);
+  for (let y = -16; y < VILLAGE_WORLD.h + 32; y += 32) {
+    for (let x = river.x; x < river.x + river.w; x += 32) {
+      drawTownAssetRect(villageHash(x, y) > 0.5 ? "town_water_a" : "town_water_b", x, y, 34, 34, 0.95);
+    }
+  }
+  ctx.fillStyle = "rgba(4, 12, 20, 0.20)";
+  ctx.fillRect(VILLAGE_DARK_DISTRICT.x, 0, VILLAGE_DARK_DISTRICT.w, VILLAGE_WORLD.h);
+  ctx.fillStyle = "rgba(84, 34, 84, 0.10)";
+  ctx.fillRect(VILLAGE_DARK_DISTRICT.x, 0, VILLAGE_DARK_DISTRICT.w, VILLAGE_WORLD.h);
+  const b = VILLAGE_BRIDGE;
+  if (villageBridgeFixed()) {
+    for (let x = b.x - b.w / 2; x <= b.x + b.w / 2; x += 34) drawTownAsset("platformer_bridge", x, b.y, 44, 0, 0.95) || drawTownAsset("town_bridge", x, b.y, 42, 0, 0.95);
+    drawTownAsset("platformer_bridge_logs", b.x - 58, b.y + 16, 54, 0, 0.95);
+    drawTownAsset("platformer_bridge_logs", b.x + 58, b.y + 16, 54, 0, 0.95);
+  } else {
+    drawTownAsset("platformer_bridge_logs", b.x - 56, b.y + 18, 68, -0.42, 0.85) || drawTownAsset("town_bridge", b.x - 56, b.y + 18, 64, -0.42, 0.85);
+    drawTownAsset("platformer_bridge_logs", b.x + 56, b.y - 12, 64, 0.38, 0.75) || drawTownAsset("town_bridge", b.x + 56, b.y - 12, 58, 0.38, 0.75);
+    ctx.fillStyle = "rgba(255,92,122,0.82)";
+    ctx.font = "900 10px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("BRIDGE OUT", b.x, b.y - 48);
+  }
+  const gravestones = [
+    [2460, 520], [2550, 560], [2760, 530], [2920, 700], [2500, 970], [2675, 1140], [2860, 1220]
+  ];
+  for (const [x, y] of gravestones) {
+    drawTownAsset("platformer_brick_grey", x, y, 26, 0, 0.42) || drawTownAsset("town_stone_dark", x, y, 26, 0, 0.5);
+    drawTownAsset("tiny_fence_h", x + 34, y + 24, 42, 0, 0.32);
+  }
+  drawTownAsset("platformer_block_warning", 2520, 820, 40, 0, 0.70);
+  drawTownAsset("platformer_bush", 2860, 990, 44, 0, 0.55) || drawTownAsset("town_bush", 2860, 990, 44, 0, 0.55);
+  ctx.restore();
+}
+
 function drawVillagePond() {
   const px = VILLAGE_POND.x;
   const py = VILLAGE_POND.y;
@@ -4707,75 +4960,6 @@ function drawVillagePond() {
   ctx.fill();
   drawTownAsset("town_bridge", px + 116, py + 20, 34, 0.1, 0.9);
   drawTownAsset("town_bridge", px + 148, py + 18, 34, 0.1, 0.9);
-}
-
-function drawVillageRiverAndDarkDistrict() {
-  const river = VILLAGE_RIVER;
-  const bridge = VILLAGE_BRIDGE;
-  ctx.save();
-  ctx.fillStyle = "rgba(16, 19, 35, 0.30)";
-  ctx.fillRect(VILLAGE_DARK_DISTRICT.x, 0, VILLAGE_DARK_DISTRICT.w, VILLAGE_DARK_DISTRICT.h);
-  ctx.fillStyle = "rgba(54, 62, 48, 0.20)";
-  ctx.fillRect(VILLAGE_DARK_DISTRICT.x, 0, VILLAGE_DARK_DISTRICT.w, VILLAGE_DARK_DISTRICT.h);
-
-  for (let y = 0; y < VILLAGE_WORLD.h; y += 32) {
-    for (let x = river.x; x < river.x + river.w; x += 32) {
-      drawTownAssetRect(villageHash(x, y) > 0.5 ? "town_water_a" : "town_water_b", x, y, 34, 34, 0.94);
-    }
-  }
-  ctx.strokeStyle = "rgba(42,34,32,0.55)";
-  ctx.lineWidth = 8;
-  ctx.beginPath();
-  ctx.moveTo(river.x - 4, 0);
-  ctx.lineTo(river.x - 10, VILLAGE_WORLD.h);
-  ctx.moveTo(river.x + river.w + 5, 0);
-  ctx.lineTo(river.x + river.w + 12, VILLAGE_WORLD.h);
-  ctx.stroke();
-
-  ctx.fillStyle = villageBridgeFixed() ? "rgba(114,76,42,0.92)" : "rgba(73,49,38,0.56)";
-  ctx.fillRect(bridge.x - bridge.w / 2, bridge.y - 30, bridge.w, 60);
-  for (let i = -2; i <= 2; i++) {
-    drawTownAsset("town_bridge", bridge.x + i * 34, bridge.y, 42, 0, villageBridgeFixed() ? 0.98 : 0.48);
-  }
-  if (!villageBridgeFixed()) {
-    drawTownAsset("grave_trunk_long", bridge.x - 16, bridge.y + 4, 92, 0.12, 0.92);
-    drawTownAsset("town_crate_big", bridge.x + 58, bridge.y + 9, 34, 0, 0.86);
-    ctx.textAlign = "center";
-    ctx.font = "900 10px ui-monospace, monospace";
-    if (villageBridgeCanRepair()) {
-      ctx.fillStyle = "rgba(125,255,178,0.9)";
-      ctx.fillText("REPAIR BRIDGE", bridge.x, bridge.y - 56);
-      ctx.fillStyle = "rgba(245,241,255,0.82)";
-      ctx.fillText(villageBridgeCostText().toUpperCase(), bridge.x, bridge.y - 42);
-    } else {
-      ctx.fillStyle = "rgba(255,92,122,0.86)";
-      ctx.fillText("BRIDGE LOCKED", bridge.x, bridge.y - 58);
-      ctx.fillStyle = "rgba(245,241,255,0.78)";
-      ctx.font = "900 8px ui-monospace, monospace";
-      ctx.fillText(villageRequirementText(VILLAGE_BRIDGE.req).toUpperCase(), bridge.x, bridge.y - 44);
-    }
-  }
-
-  const gx = 2580;
-  const gy = 520;
-  ctx.fillStyle = "rgba(0,0,0,0.22)";
-  ctx.beginPath();
-  ctx.ellipse(gx + 80, gy + 260, 380, 86, -0.08, 0, Math.PI * 2);
-  ctx.fill();
-  drawTownAsset("grave_crypt_large", gx, gy, 150, 0, 0.98) || drawTownAsset("town_wall_c", gx, gy, 96, 0, 0.9);
-  drawTownAsset("grave_altar", gx + 240, gy + 36, 72, 0, 0.95);
-  drawTownAsset("grave_lantern", gx + 170, gy + 118, 52, 0, 0.95);
-  drawTownAsset("grave_pine_crooked", gx + 360, gy + 108, 92, 0.05, 0.92);
-  drawTownAsset("grave_pine_crooked", gx - 190, gy + 250, 90, -0.08, 0.92);
-  for (let i = 0; i < 8; i++) {
-    const x = gx - 210 + (i % 4) * 92;
-    const y = gy + 205 + Math.floor(i / 4) * 78;
-    drawTownAsset(i % 2 ? "grave_stone_cross" : "grave_stone_broken", x, y, 46, 0, 0.9);
-  }
-  for (let i = 0; i < 7; i++) drawTownAsset("grave_iron_fence", gx - 280 + i * 72, gy + 342, 58, 0, 0.72);
-  drawTownAsset("fantasy_cart", gx + 430, gy + 320, 80, 0, 0.92);
-  drawTownAsset("dungeon_chest", gx + 365, gy + 250, 58, 0, 0.95);
-  ctx.restore();
 }
 
 function drawVillagePaths() {
@@ -4810,9 +4994,6 @@ function drawVillagePaths() {
   branch([{ x: cx, y: 500 }, { x: 1225, y: 470 }, { x: VILLAGE_HOME.x, y: VILLAGE_HOME.y + 72 }]);
   branch([{ x: cx, y: 690 }, { x: 1240, y: 760 }, { x: VILLAGE_PROJECTS[1].x, y: VILLAGE_PROJECTS[1].y }]);
   branch([{ x: cx, y: 640 }, { x: 1500, y: 620 }, { x: VILLAGE_PROJECTS[2].x, y: VILLAGE_PROJECTS[2].y }]);
-  branch([{ x: cx, y: 650 }, { x: 1770, y: 735 }, { x: VILLAGE_BRIDGE.x, y: VILLAGE_BRIDGE.y }]);
-  branch([{ x: VILLAGE_BRIDGE.x + 82, y: VILLAGE_BRIDGE.y }, { x: 2480, y: 780 }, { x: 2700, y: 650 }]);
-  branch([{ x: VILLAGE_BRIDGE.x + 82, y: VILLAGE_BRIDGE.y }, { x: 2540, y: 990 }, { x: 2760, y: 1030 }]);
   branch([{ x: cx, y: 820 }, { x: 870, y: 925 }, { x: VILLAGE_SERVICE_BUILDINGS.power.x + 96, y: VILLAGE_SERVICE_BUILDINGS.power.y + 116 }]);
   branch([{ x: cx, y: 910 }, { x: 1380, y: 970 }, { x: VILLAGE_SERVICE_BUILDINGS.collection.x + 96, y: VILLAGE_SERVICE_BUILDINGS.collection.y + 114 }]);
   branch([{ x: cx, y: 1060 }, { x: 1080, y: 1190 }, { x: VILLAGE_SERVICE_BUILDINGS.road.x + 82, y: VILLAGE_SERVICE_BUILDINGS.road.y + 110 }]);
@@ -5239,10 +5420,15 @@ function drawVillageStumps() {
       ctx.restore();
       continue;
     }
-    drawTownAsset("town_stump", stump.x, stump.y, Math.max(34, stump.r * 1.7), 0, 0.95);
+    if (stump.treeKey) {
+      drawTownAsset(stump.treeKey, stump.x, stump.y - stump.r * 0.25, Math.max(62, stump.r * 2.2), 0, 0.98);
+      drawTownAsset("town_stump", stump.x, stump.y + stump.r * 0.55, Math.max(28, stump.r * 1.0), 0, 0.82);
+    } else {
+      drawTownAsset("town_stump", stump.x, stump.y, Math.max(34, stump.r * 1.7), 0, 0.95);
+    }
     if (stump.longGoal) {
-      drawTownAsset("grave_trunk_long", stump.x, stump.y - stump.r * 0.25, Math.max(64, stump.r * 2.4), -0.18, 0.96) || drawTownAsset("town_bush", stump.x + stump.r * 0.55, stump.y + stump.r * 0.14, stump.r * 0.92, 0, 0.55);
-      drawTownAsset("grave_rocks_tall", stump.x - stump.r * 0.55, stump.y + stump.r * 0.2, stump.r * 0.75, 0, 0.85);
+      drawTownAsset("tiny_log", stump.x + stump.r * 0.38, stump.y - stump.r * 0.1, Math.max(42, stump.r * 1.7), -0.22, 0.78);
+      drawTownAsset("town_bush", stump.x + stump.r * 0.55, stump.y + stump.r * 0.14, stump.r * 0.92, 0, 0.55);
     }
     if (hits > 0) {
       ctx.strokeStyle = "rgba(255,211,90,0.65)";
@@ -5600,8 +5786,19 @@ function drawVillageMineNodes() {
     ctx.globalAlpha = spent ? 0.42 : 1;
     drawTownAsset("town_stone_dark", mine.x, mine.y, 42, 0, 0.95);
     drawTownAsset("tiny_tool_pickaxe", mine.x + 22, mine.y - 14, 24, -0.55, 0.9);
+    const hits = villageMineHitCount(mine.id);
+    if (hits > 0 && !spent) {
+      ctx.strokeStyle = "rgba(255,211,90,0.72)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(mine.x - 10, mine.y - 8);
+      ctx.lineTo(mine.x + 10, mine.y + 9);
+      ctx.moveTo(mine.x + 8, mine.y - 10);
+      ctx.lineTo(mine.x - 7, mine.y + 10);
+      ctx.stroke();
+    }
     if (!spent) {
-      ctx.strokeStyle = "rgba(255,211,90,0.42)";
+      ctx.strokeStyle = villageObjectLocked(mine) ? "rgba(255,92,122,0.55)" : "rgba(255,211,90,0.42)";
       ctx.beginPath();
       ctx.arc(mine.x, mine.y, 30 + Math.sin(nowSec() * 2 + mine.x) * 2, 0, Math.PI * 2);
       ctx.stroke();
@@ -5907,13 +6104,13 @@ function drawVillageScreenUi() {
   ctx.fillText("JOB", todayX + 10, todayY + 13);
   ctx.fillStyle = "rgba(245,241,255,0.78)";
   ctx.font = "900 9px ui-monospace, monospace";
-  const taskText = task ? villageTaskShort(task) : "Board has jobs";
+  const taskText = task ? villageTaskText(task) : "Board has jobs";
   ctx.fillText((linesFor(taskText, todayW - 20)[0] || "").slice(0, 42), todayX + 10, todayY + 27);
 
   const returnCard = hub.lastReturnCard;
   const returnAge = returnCard?.ts ? Math.max(0, (Date.now() - returnCard.ts) / 1000) : 99;
-  if (returnCard && returnCard.floor && returnAge < 10) {
-    const alpha = clamp(1 - returnAge / 10, 0, 1);
+  if (returnCard && returnCard.floor && returnAge < 5) {
+    const alpha = clamp(1 - returnAge / 5, 0, 1);
     ctx.save();
     ctx.globalAlpha = 0.85 * alpha;
     ctx.fillStyle = "rgba(3,5,12,0.45)";
@@ -6558,6 +6755,9 @@ function unlockRows() {
     { done: save.bestFloor >= 6, text: "Reach floor 6.", reward: "Breaker suit" },
     { done: save.bestFloor >= 7, text: "Reach floor 7.", reward: "Night Glass suit" },
     { done: save.bestFloor >= 8, text: "Clear the tower.", reward: "Null Frame suit" },
+    { done: save.bestFloor >= 3, text: "Reach floor 3.", reward: "Green Hopper suit" },
+    { done: save.bestFloor >= 4, text: "Reach floor 4.", reward: "Pink Lantern suit" },
+    { done: save.bestFloor >= 5, text: "Reach floor 5.", reward: "Purple Jumper suit" },
     { done: save.bestFloor >= 5, text: "Open Broadcast Layer.", reward: "Bloodline trace" },
     { done: save.bestFloor >= 6, text: "Open Cold Floor.", reward: "Whiteout trace" },
     { done: save.bestFloor >= 7, text: "Open Core route.", reward: "Toxin trace" },
@@ -9038,7 +9238,7 @@ function pulse() {
     if (!bot.alive) continue;
     if (dist(player, bot) < runStats.pulseRange) {
       revealStealth(bot, 1.65);
-      floatText.push({ x: bot.x, y: bot.y - 18, text: "echo", t: 1.0 });
+      floatText.push({ x: bot.x, y: bot.y - 18, text: "echo", t: 2.0 });
     }
   }
 }
@@ -9765,7 +9965,7 @@ function summonWeakFlanker(boss) {
   summon.bossSummon = true;
   bots.push(summon);
   addParticles("spark", p.x, p.y, rand(-Math.PI, Math.PI), 24, "#b6ff9c");
-  floatText.push({ x: boss.x - 26, y: boss.y - 38, text: "behind you", t: 1.0 });
+  floatText.push({ x: boss.x - 26, y: boss.y - 38, text: "behind you", t: 2.0 });
   return true;
 }
 
@@ -10596,31 +10796,31 @@ function drawSmokes() {
 
 function drawStageThemeProps(palette) {
   if (!activeStage) return;
-  ctx.save();
   const id = activeStage.baseId || activeStage.id;
-  const points = [
-    { x: worldW * 0.18, y: worldH * 0.18 },
-    { x: worldW * 0.82, y: worldH * 0.20 },
-    { x: worldW * 0.20, y: worldH * 0.78 },
-    { x: worldW * 0.78, y: worldH * 0.74 },
+  const pts = [
+    { x: worldW * 0.18, y: worldH * 0.20 },
+    { x: worldW * 0.78, y: worldH * 0.22 },
+    { x: worldW * 0.22, y: worldH * 0.76 },
+    { x: worldW * 0.74, y: worldH * 0.76 },
     { x: worldW * 0.50, y: worldH * 0.50 }
   ];
-  if (["undercrypt", "violet_split", "red_lock"].includes(id)) {
-    drawTownAsset("grave_crypt", points[0].x, points[0].y, 82, 0, 0.30);
-    drawTownAsset("grave_stone_cross", points[1].x, points[1].y, 44, 0, 0.36);
-    drawTownAsset("grave_stone_broken", points[2].x, points[2].y, 44, 0, 0.36);
-    drawTownAsset("grave_lantern", points[3].x, points[3].y, 42, 0, 0.34);
-  } else if (["forest_wire", "whiteout"].includes(id)) {
-    drawTownAsset("grave_pine_crooked", points[0].x, points[0].y, 74, 0, 0.28);
-    drawTownAsset("town_tree_blue", points[1].x, points[1].y, 72, 0, 0.24);
-    drawTownAsset("town_bush", points[2].x, points[2].y, 48, 0, 0.30);
+  ctx.save();
+  ctx.globalAlpha = 0.45;
+  if (["forest_wire", "whiteout"].includes(id)) {
+    drawTownAsset("platformer_bush", pts[0].x, pts[0].y, 72, 0, 0.7) || drawTownAsset("town_bush", pts[0].x, pts[0].y, 72, 0, 0.7);
+    drawTownAsset("town_tree_blue", pts[1].x, pts[1].y, 76, 0, 0.55);
+    drawTownAsset("platformer_cactus", pts[2].x, pts[2].y, 64, 0, 0.55) || drawTownAsset("town_tree_small", pts[2].x, pts[2].y, 64, 0, 0.55);
+  } else if (["undercrypt", "red_lock", "violet_split"].includes(id)) {
+    drawTownAsset("platformer_brick_grey", pts[0].x, pts[0].y, 80, 0.1, 0.62) || drawTownAsset("town_stone_dark", pts[0].x, pts[0].y, 74, 0, 0.62);
+    drawTownAsset("platformer_block_warning", pts[1].x, pts[1].y, 54, 0, 0.66) || drawTownAsset("town_stone_a", pts[1].x, pts[1].y, 54, 0, 0.66);
+    drawTownAsset("tiny_fence_h", pts[2].x, pts[2].y, 66, 0, 0.38);
   } else if (["amber_cross", "graybox"].includes(id)) {
-    drawTownAsset("fantasy_cart", points[0].x, points[0].y, 76, 0, 0.24);
-    drawTownAsset("town_crate_big", points[1].x, points[1].y, 48, 0, 0.28);
-    drawTownAsset("town_barrel_a", points[2].x, points[2].y, 38, 0, 0.26);
+    drawTownAsset("platformer_brick_brown", pts[0].x, pts[0].y, 72, 0, 0.60) || drawTownAsset("town_crate_big", pts[0].x, pts[0].y, 52, 0, 0.55);
+    drawTownAsset("town_barrel_a", pts[1].x, pts[1].y, 42, 0, 0.55);
+    drawTownAsset("town_crate_small", pts[2].x, pts[2].y, 44, 0, 0.55);
   } else {
-    drawTownAsset("dungeon_chest", points[0].x, points[0].y, 52, 0, 0.24);
-    drawTownAsset("dungeon_rocks", points[1].x, points[1].y, 52, 0, 0.24);
+    drawTownAsset("platformer_bridge", pts[0].x, pts[0].y, 64, 0, 0.42) || drawTownAsset("town_bridge", pts[0].x, pts[0].y, 54, 0, 0.42);
+    drawTownAsset("platformer_block_warning", pts[1].x, pts[1].y, 52, 0, 0.52) || drawTownAsset("town_stone_b", pts[1].x, pts[1].y, 52, 0, 0.52);
   }
   ctx.restore();
 }
@@ -11563,6 +11763,10 @@ window.addEventListener("keydown", e => {
     return;
   }
   if (mode === "village") {
+    if (handleVillageFishingInput(key)) {
+      e.preventDefault();
+      return;
+    }
     if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"].includes(key)) keys.add(key);
     if (key === "enter") {
       e.preventDefault();
