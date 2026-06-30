@@ -412,6 +412,12 @@ function saveTowerProgress(reason = "progress") {
   saveGame();
 }
 
+function exitToMainMenu(reason = "main menu") {
+  saveTowerProgress(reason);
+  saveGame();
+  renderMenu();
+}
+
 function updateCursorMode() {
   const villageLike = mode === "village" || mode === "villagePaused" || villageMapOpen || villageBuildMode || (isOverlayVisible() && !["running", "countdown", "killReplay"].includes(mode));
   const cursor = villageBuildMode ? (villageMoveState ? "grabbing" : "grab") : villageLike ? "auto" : "none";
@@ -446,6 +452,16 @@ function handleOverlayEscape() {
     resumeVillage();
     return true;
   }
+  if (mode === "collection") {
+    if (collectionBackAction === "backVillage") returnToVillageFromOverlay();
+    else exitToMainMenu("collection escape");
+    return true;
+  }
+  if (mode === "powerups") {
+    if (powerupBackAction === "backVillage") returnToVillageFromOverlay();
+    else exitToMainMenu("power escape");
+    return true;
+  }
   if (mode === "paused" || mode === "pauseRequest") {
     resumeFight();
     return true;
@@ -453,21 +469,21 @@ function handleOverlayEscape() {
   if (mode === "routeChoice" || mode === "floorClear") {
     saveTowerProgress("menu exit");
     if (activeStoryMode && villagePendingRouteFloor > 0) returnToVillageFromOverlay();
-    else renderMenu();
+    else exitToMainMenu("menu exit");
     return true;
   }
   if (mode === "gameOver") {
     saveTowerProgress("result exit");
     if (activeStoryMode) returnToVillageFromOverlay();
-    else renderMenu();
+    else exitToMainMenu("result exit");
     return true;
   }
   if (mode === "storyBriefing" || mode === "storyScene") {
-    renderMenu();
+    exitToMainMenu("story exit");
     return true;
   }
   if (screen && screen !== "game") {
-    renderMenu();
+    exitToMainMenu("screen exit");
     return true;
   }
   return false;
@@ -871,6 +887,7 @@ const DEFAULT_HUB_SAVE = {
   bridgeFixed: false,
   bridgeCutsceneSeen: false,
   layout: {},
+  layoutOptions: { gridSnap: false, roadSnap: false },
   townSinksUsed: {}
 };
 
@@ -1973,7 +1990,10 @@ const villagePlayer = {
   speed: 178,
   angle: -Math.PI / 2,
   bob: 0,
-  interactCooldown: 0
+  interactCooldown: 0,
+  dashTime: 0,
+  dashMax: 0,
+  dashAngle: 0
 };
 let villageInteractTarget = null;
 let villageMessage = { speaker: "Maren", text: "Walk the village. Press E near people, buildings, rubble, the shrine, or the tower gate.", t: 5 };
@@ -2506,6 +2526,10 @@ function ensureHubSave() {
     layout: {
       ...(save.hub?.layout || {})
     },
+    layoutOptions: {
+      ...structuredClone(DEFAULT_HUB_SAVE).layoutOptions,
+      ...(save.hub?.layoutOptions || {})
+    },
     townSinksUsed: {
       ...(save.hub?.townSinksUsed || {})
     },
@@ -2702,12 +2726,86 @@ function findVillagePlaceableAt(x, y) {
   return best;
 }
 
+function villageLayoutOptions() {
+  const hub = ensureHubSave();
+  hub.layoutOptions = {
+    ...structuredClone(DEFAULT_HUB_SAVE).layoutOptions,
+    ...(hub.layoutOptions || {})
+  };
+  return hub.layoutOptions;
+}
+
+function toggleVillageLayoutOption(name) {
+  if (!villageBuildMode) return;
+  const options = villageLayoutOptions();
+  options[name] = !options[name];
+  saveGame();
+  const label = name === "roadSnap" ? "Road snap" : "Grid snap";
+  setVillageMessage("Move Mode", `${label} ${options[name] ? "on" : "off"}.`, 1.8);
+}
+
+function snapValueToGrid(value, size = 24) {
+  return Math.round(value / size) * size;
+}
+
+function villageRoadSnapPoints() {
+  const cx = VILLAGE_TOWER_GATE.x;
+  const points = [];
+  for (let y = 230; y < VILLAGE_WORLD.h - 90; y += 86) points.push({ x: cx, y });
+  points.push(
+    { x: VILLAGE_POND.x + 160, y: VILLAGE_POND.y + 30 },
+    { x: VILLAGE_HOME.x, y: VILLAGE_HOME.y + 72 },
+    { x: VILLAGE_PROJECTS[0].x, y: VILLAGE_PROJECTS[0].y },
+    { x: VILLAGE_PROJECTS[1].x, y: VILLAGE_PROJECTS[1].y },
+    { x: VILLAGE_PROJECTS[2].x, y: VILLAGE_PROJECTS[2].y },
+    { x: VILLAGE_SERVICE_BUILDINGS.power.x + 96, y: VILLAGE_SERVICE_BUILDINGS.power.y + 116 },
+    { x: VILLAGE_SERVICE_BUILDINGS.collection.x + 96, y: VILLAGE_SERVICE_BUILDINGS.collection.y + 114 },
+    { x: VILLAGE_SERVICE_BUILDINGS.road.x + 82, y: VILLAGE_SERVICE_BUILDINGS.road.y + 110 },
+    { x: VILLAGE_VILLAGER_SPOTS[0].x, y: VILLAGE_VILLAGER_SPOTS[0].y + 70 },
+    { x: VILLAGE_VILLAGER_SPOTS[1].x, y: VILLAGE_VILLAGER_SPOTS[1].y + 70 },
+    { x: VILLAGE_VILLAGER_SPOTS[2].x, y: VILLAGE_VILLAGER_SPOTS[2].y + 70 },
+    { x: VILLAGE_BRIDGE.x - 84, y: VILLAGE_BRIDGE.y },
+    { x: VILLAGE_BRIDGE.x + 112, y: VILLAGE_BRIDGE.y }
+  );
+  return points;
+}
+
+function nearestVillageRoadSnap(x, y) {
+  let best = null;
+  for (const point of villageRoadSnapPoints()) {
+    const d = Math.hypot(x - point.x, y - point.y);
+    if (!best || d < best.d) best = { ...point, d };
+  }
+  return best && best.d < 180 ? best : null;
+}
+
+function snapVillageBuildPosition(entry, x, y) {
+  const options = villageLayoutOptions();
+  let nx = x;
+  let ny = y;
+  if (options.roadSnap) {
+    const snap = nearestVillageRoadSnap(nx, ny);
+    if (snap) {
+      nx = snap.x;
+      ny = snap.y;
+    }
+  }
+  if (options.gridSnap) {
+    nx = snapValueToGrid(nx);
+    ny = snapValueToGrid(ny);
+  }
+  return {
+    x: clamp(nx, 32, VILLAGE_WORLD.w - 32),
+    y: clamp(ny, 32, VILLAGE_WORLD.h - 32)
+  };
+}
+
 function toggleVillageBuildMode() {
   if (mode !== "village" || villageHasVisibleOverlay()) return;
   villageBuildMode = !villageBuildMode;
   villageMapOpen = false;
   villageMoveState = null;
-  setVillageMessage("Move Mode", villageBuildMode ? "Click a town object, drag it, click again to place." : "Town layout saved.", 3.2);
+  setVillageMessage("Move Mode", villageBuildMode ? "Click object. R road snap. G grid snap. B done." : "Town layout saved.", 3.2);
 }
 
 function handleVillageBuildMouseDown(x, y) {
@@ -2720,7 +2818,7 @@ function handleVillageBuildMouseDown(x, y) {
   }
   const entry = findVillagePlaceableAt(x, y);
   if (!entry) {
-    setVillageMessage("Move Mode", "Click an object to move it. Press B to finish.", 2.2);
+    setVillageMessage("Move Mode", "Click an object. R road snap. G grid snap.", 2.2);
     return true;
   }
   villageMoveState = { entry, dx: entry.x - x, dy: entry.y - y };
@@ -2731,11 +2829,12 @@ function handleVillageBuildMouseDown(x, y) {
 function updateVillageBuildMove() {
   if (!villageBuildMode || !villageMoveState?.entry) return;
   const entry = villageMoveState.entry;
-  const x = clamp(mouse.x + villageMoveState.dx, 32, VILLAGE_WORLD.w - 32);
-  const y = clamp(mouse.y + villageMoveState.dy, 32, VILLAGE_WORLD.h - 32);
-  entry.x = x;
-  entry.y = y;
-  entry.set(x, y);
+  const rawX = clamp(mouse.x + villageMoveState.dx, 32, VILLAGE_WORLD.w - 32);
+  const rawY = clamp(mouse.y + villageMoveState.dy, 32, VILLAGE_WORLD.h - 32);
+  const snapped = snapVillageBuildPosition(entry, rawX, rawY);
+  entry.x = snapped.x;
+  entry.y = snapped.y;
+  entry.set(snapped.x, snapped.y);
 }
 
 function villageObstacleRects() {
@@ -2857,8 +2956,12 @@ function hubHopePercent() {
   return Math.round((hubTotalHelp() / Math.max(1, hubHopeMax())) * 100);
 }
 
+function completedStoryChapterCount() {
+  return new Set(Array.isArray(save.completedChapters) ? save.completedChapters : []).size;
+}
+
 function villageMaxEnergy() {
-  return 7;
+  return 7 + completedStoryChapterCount();
 }
 
 function villageEnergy() {
@@ -2919,6 +3022,20 @@ function refillVillageEnergy(source = "after tower") {
   playAssetSfx("town_leaves", 0.12) || playAssetSfx("town_building_work", 0.08);
   saveGame();
   return { omen, event };
+}
+
+function restoreVillageAfterTowerReturn(source = "after tower", force = false) {
+  const hub = ensureHubSave();
+  const floorKey = Math.max(1, Number(currentFloor) || 1);
+  if (!force && Number(hub.lastTownReturnFloor) === floorKey) {
+    hub.energy = clamp(Number(hub.energy) || 0, 0, villageMaxEnergy());
+    saveGame();
+    return { restored: false, omen: activeVillageOmen(), event: activeVillageDailyEvent() };
+  }
+  const result = refillVillageEnergy(source);
+  hub.lastTownReturnFloor = floorKey;
+  saveGame();
+  return { restored: true, ...result };
 }
 
 function spendVillageEnergy(cost, label = "work") {
@@ -3614,7 +3731,7 @@ function enterVillageBetweenStoryFloors(nextFloor, info = {}) {
   mode = "village";
   running = false;
   gameOver = false;
-  refillVillageEnergy(`floor ${Math.max(1, nextFloor - 1)}`);
+  restoreVillageAfterTowerReturn(`floor ${Math.max(1, nextFloor - 1)}`);
   towerCleared = false;
   activeStoryMode = true;
   villagePendingRouteFloor = nextFloor;
@@ -3628,7 +3745,6 @@ function enterVillageBetweenStoryFloors(nextFloor, info = {}) {
   mouse.down = false;
   villageInteractTarget = null;
   const hub = ensureHubSave();
-  hub.lastTownReturnFloor = currentFloor;
   ensureVillageBoardTasks();
   const task = activeBoardTask();
   const omen = activeVillageOmen();
@@ -3657,10 +3773,8 @@ function enterVillageBetweenStoryFloors(nextFloor, info = {}) {
 function returnToVillageFromOverlay() {
   if (activeStoryMode && villagePendingRouteFloor > 0 && runStats) {
     const hub = ensureHubSave();
-    if ((mode === "routeChoice" || mode === "floorClear") && hub.lastTownReturnFloor !== currentFloor) {
-      refillVillageEnergy(`floor ${Math.max(1, villagePendingRouteFloor - 1)}`);
-      hub.lastTownReturnFloor = currentFloor;
-      saveGame();
+    if (mode === "routeChoice" || mode === "floorClear") {
+      restoreVillageAfterTowerReturn(`floor ${Math.max(1, villagePendingRouteFloor - 1)}`);
     }
     mode = "village";
     running = false;
@@ -4023,7 +4137,7 @@ function renderVillageChest() {
   `, "chestMenu");
 }
 
-function moveChestResource(resource, direction, wholeStack = false) {
+function moveChestResource(resource, direction, wholeStack = false, refreshChestMenu = true) {
   if (!CHEST_RESOURCES.includes(resource)) return;
   const hub = ensureHubSave();
   hub.chest = { ...structuredClone(DEFAULT_HUB_SAVE).chest, ...(hub.chest || {}) };
@@ -4049,7 +4163,7 @@ function moveChestResource(resource, direction, wholeStack = false) {
   saveGame();
   playAssetSfx("ui_confirm_001", 0.18) || playAssetSfx("select", 0.16);
   checkVillageAchievements("chest");
-  renderVillageChest();
+  if (refreshChestMenu && isOverlayVisible()) renderVillageChest();
 }
 
 
@@ -5114,7 +5228,7 @@ function interactVillage() {
     return;
   }
   if (target.type === "menu") {
-    renderMenu();
+    exitToMainMenu("village menu sign");
     return;
    }
   if (target.type === "home") {
@@ -5130,6 +5244,48 @@ function interactVillage() {
   }
 }
 
+function villageCanDash() {
+  return mode === "village"
+    && !villageMapOpen
+    && !villageBuildMode
+    && !villageBridgeCutscene
+    && !villageFishingGame
+    && !villageHasVisibleOverlay();
+}
+
+function villageDashDirection() {
+  let dx = 0;
+  let dy = 0;
+  if (keys.has("w") || keys.has("arrowup")) dy -= 1;
+  if (keys.has("s") || keys.has("arrowdown")) dy += 1;
+  if (keys.has("a") || keys.has("arrowleft")) dx -= 1;
+  if (keys.has("d") || keys.has("arrowright")) dx += 1;
+  if (!dx && !dy) {
+    dx = Math.cos(villagePlayer.angle || 0);
+    dy = Math.sin(villagePlayer.angle || 0);
+  }
+  const l = Math.hypot(dx, dy) || 1;
+  return { x: dx / l, y: dy / l };
+}
+
+function villageDashSpeed() {
+  return 640;
+}
+
+function doVillageDash() {
+  if (!villageCanDash() || villagePlayer.dashTime > 0) return false;
+  const dir = villageDashDirection();
+  villagePlayer.dashAngle = Math.atan2(dir.y, dir.x);
+  villagePlayer.angle = villagePlayer.dashAngle;
+  villagePlayer.dashTime = 0.18;
+  villagePlayer.dashMax = 0.18;
+  villagePlayer.bob += 0.45;
+  villagePulse = Math.max(villagePulse, 0.28);
+  addParticles("dust", villagePlayer.x, villagePlayer.y, villagePlayer.dashAngle, 10);
+  playAssetSfx("footstep_nature_1", 0.12, "footsteps");
+  return true;
+}
+
 function updateVillage(dt) {
   applyVillageLayout();
   updateVillageBuildMove();
@@ -5143,7 +5299,16 @@ function updateVillage(dt) {
   if (!movementLocked && (keys.has("s") || keys.has("arrowdown"))) dy += 1;
   if (!movementLocked && (keys.has("a") || keys.has("arrowleft"))) dx -= 1;
   if (!movementLocked && (keys.has("d") || keys.has("arrowright"))) dx += 1;
-  if (dx || dy) {
+
+  if (!movementLocked && p.dashTime > 0) {
+    const dashPct = clamp(p.dashTime / Math.max(0.01, p.dashMax || 0.18), 0, 1);
+    const speed = villageDashSpeed() * (0.62 + dashPct * 0.55);
+    moveVillagePlayer(Math.cos(p.dashAngle) * speed * dt, Math.sin(p.dashAngle) * speed * dt);
+    p.dashTime = Math.max(0, p.dashTime - dt);
+    p.bob += dt * 18;
+    if (Math.random() < 0.55) addParticles("dust", p.x, p.y, p.dashAngle, 1);
+  } else if (dx || dy) {
+    p.dashTime = 0;
     const l = Math.hypot(dx, dy) || 1;
     dx /= l;
     dy /= l;
@@ -5156,6 +5321,7 @@ function updateVillage(dt) {
       lastPlayerFootstepAt = nowSec();
     }
   } else {
+    p.dashTime = Math.max(0, p.dashTime - dt);
     p.bob *= Math.pow(0.05, dt);
   }
 
@@ -5220,6 +5386,7 @@ function drawVillage() {
 
   ctx.restore();
   drawVillageScreenUi();
+  drawVillageInventoryHotbar();
   drawVillageDistrictLabel();
   drawVillageBuildModeUi();
   drawVillageMapOverlay();
@@ -6169,11 +6336,6 @@ function drawVillageWatchPost(project, rank) {
   for (let i = 0; i < rank; i++) {
     drawTownAsset("town_lamp", cx - 58 + i * 38, project.y - 18 - (i % 2) * 10, 34, 0, 0.96);
   }
-  ctx.strokeStyle = hexToRgba(project.color, 0.18 + rank * 0.08);
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(cx, project.y - 24, 78 + rank * 6, 0, Math.PI * 2);
-  ctx.stroke();
   drawTownAsset("tiny_target", cx + 92, project.y - 20, 30, 0, 0.95);
   drawTownAsset("tiny_tool_pickaxe", cx - 94, project.y + 26, 26, 0.5, 0.9);
   drawVillageProjectLabel(project, rank);
@@ -6271,10 +6433,13 @@ function drawVillageMesses() {
     ctx.arc(mess.x + 3, mess.y + 2, 6, 0, Math.PI * 2);
     ctx.arc(mess.x + 9, mess.y - 1, 4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "rgba(255,211,90,0.55)";
-    ctx.beginPath();
-    ctx.arc(mess.x, mess.y, 18 + Math.sin(nowSec() * 3 + mess.x) * 2, 0, Math.PI * 2);
-    ctx.stroke();
+    const close = Math.hypot(villagePlayer.x - mess.x, villagePlayer.y - mess.y) < 74;
+    if (close) {
+      ctx.strokeStyle = "rgba(255,211,90,0.50)";
+      ctx.beginPath();
+      ctx.arc(mess.x, mess.y, 16 + Math.sin(nowSec() * 3 + mess.x) * 1.4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
   }
   ctx.restore();
 }
@@ -6389,6 +6554,15 @@ function drawVillagePlayer() {
   ctx.fill();
   const bob = Math.sin(p.bob) * 3;
   const sprite = shapeById(save.selectedShape).sprite;
+  if (p.dashTime > 0) {
+    const pct = clamp(p.dashTime / Math.max(0.01, p.dashMax || 0.18), 0, 1);
+    for (let i = 1; i <= 2; i++) {
+      const back = i * 20 * pct;
+      const gx = p.x - Math.cos(p.dashAngle) * back;
+      const gy = p.y - Math.sin(p.dashAngle) * back + bob;
+      drawImageAsset(sprite, gx, gy, 44, 44, 0, 0.12 * pct * (3 - i));
+    }
+  }
   if (!drawImageAsset(sprite, p.x, p.y + bob, 44, 44)) {
     ctx.fillStyle = colorById(save.selectedColor).value;
     ctx.beginPath();
@@ -6449,6 +6623,88 @@ function drawVillageTaskMarkers() {
     ctx.fillStyle = "rgba(255,211,90,0.70)";
     ctx.font = "900 7px ui-monospace, monospace";
     ctx.fillText(target.label, target.x, target.y - 41 + bob);
+  }
+  ctx.restore();
+}
+
+function villageInventoryHotbarLayout() {
+  const slot = 38;
+  const gap = 4;
+  const count = 9;
+  const w = count * slot + (count - 1) * gap;
+  return { x: W / 2 - w / 2, y: H - 50, slot, gap, count, w, h: slot };
+}
+
+function villageHotbarSlotAt(screenX, screenY) {
+  const layout = villageInventoryHotbarLayout();
+  if (screenY < layout.y || screenY > layout.y + layout.h || screenX < layout.x || screenX > layout.x + layout.w) return null;
+  const local = screenX - layout.x;
+  const pitch = layout.slot + layout.gap;
+  const index = Math.floor(local / pitch);
+  const offset = local - index * pitch;
+  if (index < 0 || index >= layout.count || offset > layout.slot) return null;
+  return { index, resource: CHEST_RESOURCES[index] || null };
+}
+
+function villageNearChestForTransfer() {
+  return pointNearVillagePlayer(VILLAGE_CHEST.x, VILLAGE_CHEST.y, 88);
+}
+
+function handleVillageHotbarClick(screenX, screenY, wholeStack = false) {
+  if (villageMapOpen || villageBuildMode || villageBridgeCutscene || villageFishingGame || villageHasVisibleOverlay()) return false;
+  const slot = villageHotbarSlotAt(screenX, screenY);
+  if (!slot) return false;
+  if (!slot.resource) return true;
+  const amount = hubResource(slot.resource);
+  if (amount <= 0) return true;
+  if (!villageNearChestForTransfer()) {
+    setVillageMessage("Inventory", "Stand by the chest to store items.", 1.8);
+    return true;
+  }
+  moveChestResource(slot.resource, "store", wholeStack, false);
+  setVillageMessage("Chest", wholeStack ? `Stored all ${slot.resource}.` : `Stored 1 ${slot.resource}.`, 1.4);
+  return true;
+}
+
+function drawVillageInventoryHotbar() {
+  if (villageMapOpen || villageBridgeCutscene || villageBuildMode || villageFishingGame) return;
+  const layout = villageInventoryHotbarLayout();
+  const nearChest = villageNearChestForTransfer();
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.fillStyle = "rgba(3,5,12,0.46)";
+  ctx.fillRect(layout.x - 8, layout.y - 8, layout.w + 16, layout.h + 16);
+  ctx.strokeStyle = nearChest ? "rgba(255,211,90,0.62)" : "rgba(255,255,255,0.18)";
+  ctx.strokeRect(layout.x - 8, layout.y - 8, layout.w + 16, layout.h + 16);
+  for (let i = 0; i < layout.count; i++) {
+    const x = layout.x + i * (layout.slot + layout.gap);
+    const y = layout.y;
+    const resource = CHEST_RESOURCES[i];
+    const amount = resource ? hubResource(resource) : 0;
+    ctx.fillStyle = "rgba(15,21,36,0.82)";
+    ctx.fillRect(x, y, layout.slot, layout.slot);
+    ctx.strokeStyle = amount > 0 ? "rgba(217,222,234,0.52)" : "rgba(217,222,234,0.18)";
+    ctx.strokeRect(x + 1, y + 1, layout.slot - 2, layout.slot - 2);
+    if (resource) {
+      const meta = CHEST_RESOURCE_META[resource];
+      ctx.globalAlpha = amount > 0 ? 1 : 0.32;
+      ctx.font = "900 18px ui-monospace, monospace";
+      ctx.fillStyle = "#f5f1ff";
+      ctx.fillText(meta.glyph, x + layout.slot / 2, y + 24);
+      if (amount > 0) {
+        ctx.font = "900 10px ui-monospace, monospace";
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(String(amount), x + layout.slot - 5, y + layout.slot - 5);
+        ctx.textAlign = "center";
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+  if (nearChest) {
+    ctx.fillStyle = "rgba(245,241,255,0.72)";
+    ctx.font = "900 8px ui-monospace, monospace";
+    ctx.fillText("CLICK ITEM TO STORE · SHIFT CLICK STACK", W / 2, layout.y - 14);
   }
   ctx.restore();
 }
@@ -6570,17 +6826,19 @@ function drawVillageScreenUi() {
 
   const target = villageInteractTarget;
   if (target) {
+    const hotbar = villageInventoryHotbarLayout();
+    const promptY = hotbar.y - 58;
     ctx.fillStyle = "rgba(3,5,12,0.55)";
-    ctx.fillRect(W / 2 - 178, H - 62, 356, 38);
+    ctx.fillRect(W / 2 - 178, promptY, 356, 38);
     ctx.strokeStyle = "rgba(255,211,90,0.52)";
-    ctx.strokeRect(W / 2 - 178, H - 62, 356, 38);
+    ctx.strokeRect(W / 2 - 178, promptY, 356, 38);
     ctx.fillStyle = "rgba(255,211,90,0.92)";
     ctx.font = "900 11px ui-monospace, monospace";
     ctx.textAlign = "center";
-    ctx.fillText(`E / CLICK  ${target.action.toUpperCase()}`.slice(0, 44), W / 2, H - 42);
+    ctx.fillText(`E / CLICK  ${target.action.toUpperCase()}`.slice(0, 44), W / 2, promptY + 20);
     ctx.fillStyle = "rgba(217,222,234,0.62)";
     ctx.font = "800 8px ui-monospace, monospace";
-    ctx.fillText(String(target.label).slice(0, 42), W / 2, H - 28);
+    ctx.fillText(String(target.label).slice(0, 42), W / 2, promptY + 34);
     ctx.textAlign = "left";
   }
 
@@ -6589,7 +6847,7 @@ function drawVillageScreenUi() {
     const msgLines = linesFor(villageMessage.text, 336).slice(0, 2);
     const boxH = 34 + msgLines.length * 14;
     const boxW = 374;
-    const bottomGap = target ? 74 : 24;
+    const bottomGap = target ? 124 : 74;
     const boxY = H - (boxH + bottomGap);
     ctx.save();
     ctx.globalAlpha = 0.82 * msgAlpha;
@@ -6633,17 +6891,21 @@ function drawVillageDistrictLabel() {
 function drawVillageBuildModeUi() {
   if (!villageBuildMode) return;
   ctx.save();
-  const panelW = 430;
+  const options = villageLayoutOptions();
+  const panelW = 540;
   const panelX = W / 2 - panelW / 2;
   const panelY = 112;
   ctx.fillStyle = "rgba(3,5,12,0.54)";
-  ctx.fillRect(panelX, panelY, panelW, 30);
+  ctx.fillRect(panelX, panelY, panelW, 44);
   ctx.strokeStyle = "rgba(255,211,90,0.40)";
-  ctx.strokeRect(panelX, panelY, panelW, 30);
+  ctx.strokeRect(panelX, panelY, panelW, 44);
   ctx.fillStyle = "#ffd35a";
   ctx.font = "900 10px ui-monospace, monospace";
   ctx.textAlign = "center";
-  ctx.fillText(villageMoveState?.entry ? `MOVING ${villageMoveState.entry.label.toUpperCase()} · CLICK TO PLACE` : "MOVE MODE · CLICK OBJECT · CLICK PLACE · B DONE", W / 2, panelY + 20);
+  ctx.fillText(villageMoveState?.entry ? `MOVING ${villageMoveState.entry.label.toUpperCase()} · CLICK TO PLACE` : "MOVE MODE · CLICK OBJECT · CLICK PLACE · B DONE", W / 2, panelY + 16);
+  ctx.fillStyle = "rgba(245,241,255,0.84)";
+  ctx.font = "900 9px ui-monospace, monospace";
+  ctx.fillText(`R ROAD ${options.roadSnap ? "ON" : "OFF"} · G GRID ${options.gridSnap ? "ON" : "OFF"} · SPACE disabled while moving`, W / 2, panelY + 32);
   ctx.translate(-camera.x, -camera.y);
   ctx.textAlign = "center";
   for (const entry of villagePlaceableEntries()) {
@@ -6952,7 +7214,7 @@ function abandonRun() {
   stopMusic();
   saveTowerProgress("run ended");
   addLog("Run ended from pause menu. Progress saved.");
-  renderMenu();
+  exitToMainMenu("run ended");
 }
 
 function renderMenu() {
@@ -7002,11 +7264,31 @@ function renderMenu() {
   `, "mainMenu");
 }
 
+function completedStoryChapterSet() {
+  return new Set(Array.isArray(save.completedChapters) ? save.completedChapters : []);
+}
+
+function nextVisibleStoryChapter() {
+  const completed = completedStoryChapterSet();
+  return STORY_CHAPTERS.find(chapter => !completed.has(chapter.id)) || null;
+}
+
+function storyChapterVisible(chapter) {
+  const completed = completedStoryChapterSet();
+  const next = nextVisibleStoryChapter();
+  return completed.has(chapter.id) || chapter.id === next?.id;
+}
+
+function storyChapterAvailable(chapter) {
+  return storyChapterVisible(chapter) && ((save.bestFloor || 0) >= chapter.unlockAt || chapter.unlockAt <= 0 || completedStoryChapterSet().has(chapter.id));
+}
+
 function renderStorySelect() {
   mode = "storySelect";
-  const cards = STORY_CHAPTERS.map(chapter => {
-    const locked = (save.bestFloor || 0) < chapter.unlockAt;
-    const done = (save.completedChapters || []).includes(chapter.id);
+  const visibleChapters = STORY_CHAPTERS.filter(storyChapterVisible);
+  const cards = visibleChapters.map(chapter => {
+    const done = completedStoryChapterSet().has(chapter.id);
+    const locked = !storyChapterAvailable(chapter);
     const art = ASSET_PATHS.images[chapter.art];
     return `
       <button class="storyChapterCard contractCard ${locked ? "locked" : ""} ${done ? "completed" : ""}" data-action="${locked ? "noop" : "startStoryChapter"}" data-id="${chapter.id}" style="--accent:${chapter.accent}; --storyBg:url('${art}')">
@@ -7031,7 +7313,7 @@ function renderStorySelect() {
       ${renderTopStrip("Tower Chapters", "openHub")}
       <div class="vsPanel storyPanel campaignPanel">
         <h2>Tower Chapters</h2>
-        <p class="campaignLead">Pick a climb from the village. Each clear floor brings back supplies. Each chapter moves you closer to Mira.</p>
+        <p class="campaignLead">Only the current chapter is shown. Clear it to open the next lead.</p>
         <div class="storyChapterGrid campaignChapterGrid">${cards}</div>
         <h3>Story Notes</h3>
         <div class="archiveGrid">${archives}</div>
@@ -7064,6 +7346,12 @@ function storyArchiveRows() {
 }
 
 function startStoryChapter(id) {
+  const chapter = storyChapterById(id);
+  if (!storyChapterAvailable(chapter)) {
+    playAssetSfx("ui_error_001", 0.24);
+    renderStorySelect();
+    return;
+  }
   stopMusic();
   playAssetSfx("music_intro", 0.55, "music");
   showStoryBriefing(id, 0);
@@ -8195,6 +8483,12 @@ function startTower(options = {}) {
   nextRouteType = "standard";
   lastRouteChoice = null;
   villagePendingRouteFloor = 0;
+  if (activeStoryMode) {
+    const hub = ensureHubSave();
+    hub.lastTownReturnFloor = 0;
+    hub.energy = clamp(Number(hub.energy) || 0, 0, villageMaxEnergy());
+    saveGame();
+  }
 
   runStats = {
     maxHpBonus: powerRank("maxHealth") * 10 + hubBonusMaxHp() + hubProjectMaxHpBonus(),
@@ -10433,8 +10727,6 @@ function endTower(won, killer = "") {
 
   stopMusic();
 
-  if (activeStoryMode) refillVillageEnergy(won ? "chapter clear" : "run failed");
-
   if (won) {
     save.bestFloor = Math.max(save.bestFloor, currentFloor);
     save.shards += 8 + (activeStoryMode ? 4 : 0);
@@ -10453,6 +10745,8 @@ function endTower(won, killer = "") {
     playAssetSfx("game_over_balanced", 0.24);
     playAssetSfx("voice_game_over", 0.18);
   }
+
+  if (activeStoryMode) restoreVillageAfterTowerReturn(won ? "chapter clear" : "run failed", true);
 
   const nextChapter = activeStoryMode
     ? STORY_CHAPTERS.find(chapter => !save.completedChapters.includes(chapter.id))
@@ -12406,6 +12700,21 @@ window.addEventListener("keydown", e => {
       if (!e.repeat) toggleVillageBuildMode();
       return;
     }
+    if (villageBuildMode && key === "r") {
+      e.preventDefault();
+      if (!e.repeat) toggleVillageLayoutOption("roadSnap");
+      return;
+    }
+    if (villageBuildMode && key === "g") {
+      e.preventDefault();
+      if (!e.repeat) toggleVillageLayoutOption("gridSnap");
+      return;
+    }
+    if ((key === " " || key === "spacebar") && !e.repeat) {
+      e.preventDefault();
+      doVillageDash();
+      return;
+    }
     if (handleVillageFishingInput(key)) {
       e.preventDefault();
       return;
@@ -12490,6 +12799,7 @@ canvas.addEventListener("mousedown", e => {
     mouse.screenX = p.screenX;
     mouse.screenY = p.screenY;
     if (villageMapOpen) return;
+    if (handleVillageHotbarClick(p.screenX, p.screenY, e.shiftKey)) return;
     if (handleVillageBuildMouseDown(p.x, p.y)) return;
     if (!villageBridgeCutscene) clickVillageActionAt(p.x, p.y);
     return;
@@ -12536,7 +12846,7 @@ overlay.addEventListener("click", e => {
     continueStoryBriefing: () => continueStoryBriefing(),
     continueStoryScene: () => continueStoryScene(),
     beginBossIntro: () => beginRoundCountdown(),
-    backMenu: () => renderMenu(),
+    backMenu: () => exitToMainMenu("button exit"),
     openUnlocks: () => renderUnlockList(),
     openCollection: () => renderCollection(),
     openPowerUps: () => renderPowerUps(),
