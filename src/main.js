@@ -26,6 +26,10 @@ const ASSET_PATHS = {
     player_human_yellow: "./assets/sprites/player_human_yellow.png",
     player_human_grey: "./assets/sprites/player_human_grey.png",
     player_human_pine: "./assets/sprites/player_human_pine.png",
+    player_blocky_worker: "./assets/sprites/player_blocky_worker.png",
+    player_blocky_guard: "./assets/sprites/player_blocky_guard.png",
+    player_blocky_rogue: "./assets/sprites/player_blocky_rogue.png",
+    player_blocky_mage: "./assets/sprites/player_blocky_mage.png",
     town_maren: "./assets/sprites/town_maren.png",
     town_rowan: "./assets/sprites/town_rowan.png",
     town_tavi: "./assets/sprites/town_tavi.png",
@@ -858,7 +862,7 @@ const HUB_VILLAGERS = [
   }
 ];
 
-const VILLAGE_LAYOUT_VERSION = 4;
+const VILLAGE_LAYOUT_VERSION = 5;
 
 const DEFAULT_HUB_SAVE = {
   supplies: 0,
@@ -881,6 +885,8 @@ const DEFAULT_HUB_SAVE = {
   mineCleared: {},
   mineHits: {},
   farmPlots: {},
+  tilledPlots: [],
+  equippedTownTool: "hand",
   seeds: 2,
   fish: 0,
   ore: 0,
@@ -2164,6 +2170,16 @@ const VILLAGE_FARM_PLOTS = [
   { id: "farm_8", x: 720, y: 750 }
 ];
 
+const VILLAGE_TOWN_TOOLS = [
+  { id: "hand", name: "Hand", glyph: "✋", hint: "interact" },
+  { id: "hoe", name: "Hoe", glyph: "⌜", icon: "tiny_tool_shovel", hint: "till grass" },
+  { id: "axe", name: "Axe", glyph: "🪓", icon: "tiny_axe", hint: "chop wood" },
+  { id: "pickaxe", name: "Pick", glyph: "⛏", icon: "tiny_tool_pickaxe", hint: "mine ore" },
+  { id: "rod", name: "Rod", glyph: "🎣", icon: "tiny_key", hint: "fish pond" }
+];
+const VILLAGE_HOTBAR_RESOURCES = ["supplies", "seeds", "ore", "fish", "crops"];
+
+
 const VILLAGE_VISITORS = {
   seed: { name: "Seed Seller", title: "seed cart", sprite: "town_nix", action: "buy seeds", text: "Seeds for supplies. No speech, no ceremony.", cost: { supplies: 2 }, reward: { seeds: 2 } },
   miner: { name: "Ore Buyer", title: "road trader", sprite: "town_rowan", action: "trade ore", text: "Ore for shards. Simple trade.", cost: { ore: 3 }, reward: { shards: 3 } },
@@ -2331,6 +2347,8 @@ function loadSave() {
         farmPlots: {
           ...(parsed.hub?.farmPlots || {})
         },
+        tilledPlots: Array.isArray(parsed.hub?.tilledPlots) ? parsed.hub.tilledPlots.slice(0, 64) : [],
+        equippedTownTool: parsed.hub?.equippedTownTool || "hand",
         hope: Number(parsed.hub?.hope ?? DEFAULT_HUB_SAVE.hope) || 0,
         retries: Number(parsed.hub?.retries ?? DEFAULT_HUB_SAVE.retries) || 0,
         townLog: Array.isArray(parsed.hub?.townLog) ? parsed.hub.townLog.slice(0, 32) : [],
@@ -2503,6 +2521,8 @@ function ensureHubSave() {
     farmPlots: {
       ...(save.hub?.farmPlots || {})
     },
+    tilledPlots: Array.isArray(save.hub?.tilledPlots) ? save.hub.tilledPlots.slice(0, 64) : [],
+    equippedTownTool: save.hub?.equippedTownTool || "hand",
     hope: Number(save.hub?.hope ?? DEFAULT_HUB_SAVE.hope) || 0,
     retries: Number(save.hub?.retries ?? DEFAULT_HUB_SAVE.retries) || 0,
     townLog: Array.isArray(save.hub?.townLog) ? save.hub.townLog.slice(0, 32) : [],
@@ -2719,7 +2739,7 @@ function villagePlaceableEntries() {
     }
   });
   for (const project of VILLAGE_PROJECTS) addPoint(`project_${project.id}`, project.name, project, 78);
-  for (const plot of VILLAGE_FARM_PLOTS) addPoint(`farm_${plot.id}`, "Farm Plot", plot, 28);
+  for (const plot of villageAllFarmPlots()) addPoint(`farm_${plot.id}`, plot.custom ? "Tilled Plot" : "Farm Plot", plot, 28);
   for (const mine of VILLAGE_MINE_NODES) addPoint(`mine_${mine.id}`, "Ore Node", mine, 34);
   for (const spot of VILLAGE_FISHING_SPOTS) addPoint(`fish_${spot.id}`, "Fishing Spot", spot, 44);
   for (const rubble of VILLAGE_RUBBLE) {
@@ -2978,14 +2998,14 @@ function hubProjectTotal() {
 function hubTotalHelp() {
   const hub = ensureHubSave();
   const villagerHelp = Object.values(hub.helped).reduce((sum, value) => sum + (Number(value) || 0), 0);
-  const farmHelp = Math.min(Number(hub.farmHarvests) || 0, VILLAGE_FARM_PLOTS.length);
+  const farmHelp = Math.min(Number(hub.farmHarvests) || 0, villageAllFarmPlots().length);
   return villagerHelp + hubRubbleClearedCount() + hubStumpClearedCount() + hubProjectTotal() + farmHelp;
 }
 
 function hubHopeMax() {
   const villagerMax = HUB_VILLAGERS.reduce((sum, villager) => sum + villager.max, 0);
   const projectMax = VILLAGE_PROJECTS.reduce((sum, project) => sum + project.max, 0);
-  return villagerMax + VILLAGE_RUBBLE.length + VILLAGE_STUMPS.length + projectMax + VILLAGE_FARM_PLOTS.length;
+  return villagerMax + VILLAGE_RUBBLE.length + VILLAGE_STUMPS.length + projectMax + villageAllFarmPlots().length;
 }
 
 function hubHopePercent() {
@@ -3124,9 +3144,94 @@ function saveVillageFarmPlot(id, data) {
   hub.farmPlots[id] = data;
 }
 
+function villageCustomFarmPlots() {
+  const hub = ensureHubSave();
+  return (Array.isArray(hub.tilledPlots) ? hub.tilledPlots : [])
+    .filter(plot => plot && Number.isFinite(Number(plot.x)) && Number.isFinite(Number(plot.y)))
+    .map((plot, i) => ({ id: plot.id || `tilled_${i}`, x: Number(plot.x), y: Number(plot.y), custom: true }));
+}
+
+function villageAllFarmPlots() {
+  return [...VILLAGE_FARM_PLOTS, ...villageCustomFarmPlots()];
+}
+
+function villageFarmPlotById(id) {
+  return villageAllFarmPlots().find(plot => plot.id === id);
+}
+
+function villageEquippedTool() {
+  const hub = ensureHubSave();
+  const id = hub.equippedTownTool || "hand";
+  return VILLAGE_TOWN_TOOLS.some(tool => tool.id === id) ? id : "hand";
+}
+
+function setVillageEquippedTool(id) {
+  if (!VILLAGE_TOWN_TOOLS.some(tool => tool.id === id)) return false;
+  const hub = ensureHubSave();
+  hub.equippedTownTool = id;
+  saveGame();
+  const tool = VILLAGE_TOWN_TOOLS.find(item => item.id === id);
+  setVillageMessage("Tool", `${tool.name} equipped. ${tool.hint}.`, 1.6);
+  return true;
+}
+
+function maxCustomFarmPlots() {
+  return 6 + Math.min(12, (ensureHubSave().homeRank || 0) * 2 + Math.floor(hubProjectRank("garden") / 3));
+}
+
+function villagePointInPond(x, y) {
+  const dx = (x - VILLAGE_POND.x) / VILLAGE_POND.rx;
+  const dy = (y - VILLAGE_POND.y) / VILLAGE_POND.ry;
+  return dx * dx + dy * dy <= 1.05;
+}
+
+function villagePointInRiver(x, y) {
+  return x >= VILLAGE_RIVER.x - 18 && x <= VILLAGE_RIVER.x + VILLAGE_RIVER.w + 18;
+}
+
+function villageCanTillAt(x, y) {
+  if (villagePointIsDark(x, y) && !villageBridgeFixed()) return { ok: false, reason: "Repair the bridge first." };
+  if (villagePointInPond(x, y) || villagePointInRiver(x, y)) return { ok: false, reason: "Cannot till water." };
+  if (villageObstacleRects().some(rect => villageCircleRectBlocked(x, y, 22, rect))) return { ok: false, reason: "Too close to a building." };
+  if (Math.abs(x - VILLAGE_TOWER_GATE.x) < 150 && y < 260) return { ok: false, reason: "Too close to the gate." };
+  if (villageAllFarmPlots().some(plot => Math.hypot(plot.x - x, plot.y - y) < 42)) return { ok: false, reason: "Too close to another plot." };
+  if (VILLAGE_STUMPS.some(stump => !villageStumpCleared(stump.id) && Math.hypot(stump.x - x, stump.y - y) < Math.max(52, stump.r + 24))) return { ok: false, reason: "Clear the wood first." };
+  if (VILLAGE_RUBBLE.some(rubble => !villageRubbleCleared(rubble.id) && Math.hypot(rubble.x - x, rubble.y - y) < Math.max(54, rubble.r + 24))) return { ok: false, reason: "Clear the debris first." };
+  return { ok: true };
+}
+
+function tillVillageGround(x, y) {
+  const hub = ensureHubSave();
+  const existing = Array.isArray(hub.tilledPlots) ? hub.tilledPlots : [];
+  if (existing.length >= maxCustomFarmPlots()) {
+    setVillageMessage("Hoe", `You can tend ${maxCustomFarmPlots()} extra plots. Upgrade the house or garden for more.`, 2.6);
+    playAssetSfx("ui_error_001", 0.16);
+    return false;
+  }
+  const snappedX = Math.round(x / 38) * 38;
+  const snappedY = Math.round(y / 38) * 38;
+  const check = villageCanTillAt(snappedX, snappedY);
+  if (!check.ok) {
+    setVillageMessage("Hoe", check.reason || "Pick a clear patch of grass.", 2.0);
+    playAssetSfx("ui_error_001", 0.12);
+    return false;
+  }
+  if (!spendVillageEnergy(1, "tilling soil")) return false;
+  const id = `tilled_${hub.towerDay}_${Date.now().toString(36).slice(-4)}_${existing.length}`;
+  hub.tilledPlots = [...existing, { id, x: snappedX, y: snappedY }].slice(-64);
+  hub.farmPlots[id] = { state: "empty" };
+  saveGame();
+  villageToolSwing = { t: 0.18, x: villagePlayer.x, y: villagePlayer.y, angle: Math.atan2(snappedY - villagePlayer.y, snappedX - villagePlayer.x) };
+  playAssetSfx("town_leaves", 0.24);
+  addParticles("dust", snappedX, snappedY, -Math.PI / 2, 14);
+  floatText.push({ x: snappedX - 24, y: snappedY - 34, text: "tilled", t: 1.0 });
+  setVillageMessage("Hoe", "New garden plot. Plant seeds here when ready.", 2.4);
+  return true;
+}
+
 function updateFarmGrowthAfterTower() {
   const hub = ensureHubSave();
-  for (const plot of VILLAGE_FARM_PLOTS) {
+  for (const plot of villageAllFarmPlots()) {
     const state = hub.farmPlots?.[plot.id];
     if (state?.state === "planted" && state.watered && hub.towerDay >= (state.readyDay || 999)) {
       state.state = "ready";
@@ -4379,7 +4484,7 @@ function findVillageInteractTarget() {
     if (distance <= Math.max(66, stump.r + 44)) consider({ type: "stump", id: stump.id, label: stump.longGoal ? "old growth stump" : "tree stump", action: villageStumpActionText(stump), distance });
   }
 
-  for (const plot of VILLAGE_FARM_PLOTS) {
+  for (const plot of villageAllFarmPlots()) {
     const distance = Math.hypot(villagePlayer.x - plot.x, villagePlayer.y - plot.y);
     if (distance <= 48) consider({ type: "farm", id: plot.id, label: "garden plot", action: villageFarmActionText(plot.id), distance });
   }
@@ -4786,7 +4891,7 @@ function villageFarmActionText(id) {
 }
 
 function workVillageFarmPlot(id) {
-  const plotDef = VILLAGE_FARM_PLOTS.find(item => item.id === id);
+  const plotDef = villageFarmPlotById(id);
   if (!plotDef) return;
   const hub = ensureHubSave();
   const plot = villageFarmPlot(id);
@@ -5056,7 +5161,7 @@ function villageTargetWorldPoint(target) {
     return item ? { x: item.x, y: item.y } : null;
   }
   if (target.type === "farm") {
-    const item = VILLAGE_FARM_PLOTS.find(plot => plot.id === target.id);
+    const item = villageFarmPlotById(target.id);
     return item ? { x: item.x, y: item.y } : null;
   }
   if (target.type === "mine") {
@@ -5099,6 +5204,21 @@ function villageTargetWorldPoint(target) {
 }
 
 function clickVillageActionAt(x, y) {
+  const equippedTool = villageEquippedTool();
+  if (equippedTool === "hoe") {
+    if (tillVillageGround(x, y)) return true;
+  }
+  if (equippedTool === "pickaxe") {
+    for (const mine of VILLAGE_MINE_NODES) {
+      const playerDistance = Math.hypot(villagePlayer.x - mine.x, villagePlayer.y - mine.y);
+      const clickDistance = Math.hypot(x - mine.x, y - mine.y);
+      if (playerDistance <= 78 && clickDistance <= 58) return mineVillageNode(mine.id);
+    }
+  }
+  if (equippedTool === "rod") {
+    const spot = VILLAGE_FISHING_SPOTS[0];
+    if (spot && Math.hypot(villagePlayer.x - spot.x, villagePlayer.y - spot.y) <= 96 && Math.hypot(x - spot.x, y - spot.y) <= 120) return fishVillagePond();
+  }
   for (const stump of VILLAGE_STUMPS) {
     if (villageStumpCleared(stump.id)) continue;
     const playerDistance = Math.hypot(villagePlayer.x - stump.x, villagePlayer.y - stump.y);
@@ -5525,6 +5645,46 @@ function drawVillageGround() {
   }
 }
 
+function drawVillageDarkCrypt(x, y, scale = 1, variant = "large") {
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.beginPath();
+  ctx.ellipse(x + 4, y + 46 * scale, 76 * scale, 22 * scale, 0, 0, Math.PI * 2);
+  ctx.fill();
+  const asset = variant === "small" ? "grave_crypt_small" : "grave_crypt_large";
+  if (!drawTownAsset(asset, x, y, 118 * scale, 0, 0.96)) {
+    ctx.fillStyle = "#5f626e";
+    ctx.fillRect(x - 58 * scale, y - 22 * scale, 116 * scale, 68 * scale);
+    ctx.fillStyle = "#454853";
+    ctx.beginPath();
+    ctx.moveTo(x - 68 * scale, y - 22 * scale);
+    ctx.lineTo(x, y - 62 * scale);
+    ctx.lineTo(x + 68 * scale, y - 22 * scale);
+    ctx.closePath();
+    ctx.fill();
+  }
+  drawTownAsset("grave_lantern", x - 64 * scale, y + 30 * scale, 28 * scale, 0, 0.80);
+  drawTownAsset("grave_lantern", x + 64 * scale, y + 30 * scale, 28 * scale, 0, 0.80);
+  ctx.restore();
+}
+
+function drawVillageDarkBuildings() {
+  ctx.save();
+  ctx.globalAlpha = villageBridgeFixed() ? 1 : 0.48;
+  drawVillageDarkCrypt(2580, 420, 1.05, "large");
+  drawVillageDarkCrypt(2840, 780, 0.86, "small");
+  drawTownAsset("grave_altar_stone", 2670, 620, 62, 0, 0.88);
+  drawTownAsset("grave_coffin", 2900, 1030, 58, -0.12, 0.78);
+  for (const [x, y] of [[2480, 560], [2520, 560], [2560, 560], [2800, 930], [2840, 930], [2880, 930]]) {
+    drawTownAsset("grave_fence", x, y, 34, 0, 0.72) || drawTownAsset("grave_iron_fence", x, y, 34, 0, 0.72);
+  }
+  for (const [x, y] of [[2470, 690], [2620, 820], [2740, 545], [2925, 850], [2840, 1160]]) {
+    drawTownAsset("grave_cross", x, y, 38, 0, 0.75) || drawTownAsset("grave_rocks_tall", x, y, 34, 0, 0.58);
+  }
+  for (const [x, y] of [[2540, 700], [2730, 700], [2910, 740]]) drawTownAsset("grave_lightpost", x, y, 46, 0, 0.82);
+  ctx.restore();
+}
+
 function drawVillageRiverAndBridge() {
   const river = VILLAGE_RIVER;
   ctx.save();
@@ -5547,28 +5707,28 @@ function drawVillageRiverAndBridge() {
   } else {
     drawTownAsset("platformer_bridge_logs", b.x - 56, b.y + 18, 68, -0.42, 0.85) || drawTownAsset("town_bridge", b.x - 56, b.y + 18, 64, -0.42, 0.85);
     drawTownAsset("platformer_bridge_logs", b.x + 56, b.y - 12, 64, 0.38, 0.75) || drawTownAsset("town_bridge", b.x + 56, b.y - 12, 58, 0.38, 0.75);
-    ctx.fillStyle = "rgba(255,92,122,0.78)";
-    ctx.font = "900 9px ui-monospace, monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(villageBridgeCanRepair() ? "REPAIR BRIDGE" : "BRIDGE LOCKED", b.x, b.y - 50);
-    ctx.fillStyle = "rgba(245,241,255,0.68)";
-    ctx.font = "800 7px ui-monospace, monospace";
-    ctx.fillText(villageBridgeCanRepair() ? villageBridgeCostText().toUpperCase() : villageRequirementText(VILLAGE_BRIDGE.req).toUpperCase(), b.x, b.y - 38);
+    if (villageBridgeNearPlayer().distance < 150) {
+      ctx.fillStyle = "rgba(3,5,12,0.58)";
+      ctx.beginPath();
+      ctx.roundRect(b.x - 92, b.y - 60, 184, 24, 5);
+      ctx.fill();
+      ctx.fillStyle = villageBridgeCanRepair() ? "#ffd35a" : "#ff6b7d";
+      ctx.font = "900 8px ui-monospace, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText((villageBridgeCanRepair() ? villageBridgeCostText() : villageRequirementText(VILLAGE_BRIDGE.req)).toUpperCase(), b.x, b.y - 44);
+    }
   }
   const gravestones = [
     [2460, 520], [2550, 560], [2760, 530], [2920, 700], [2500, 970], [2675, 1140], [2860, 1220]
   ];
   for (const [x, y] of gravestones) {
-    drawTownAsset("platformer_brick_grey", x, y, 26, 0, 0.42) || drawTownAsset("town_stone_dark", x, y, 26, 0, 0.5);
-    drawTownAsset("tiny_fence_h", x + 34, y + 24, 42, 0, 0.32);
+    drawTownAsset("grave_cross", x, y, 32, 0, 0.65) || drawTownAsset("platformer_brick_grey", x, y, 26, 0, 0.42);
   }
-  drawTownAsset("platformer_block_warning", 2520, 820, 40, 0, 0.70);
   drawTownAsset("platformer_bush", 2860, 990, 44, 0, 0.55) || drawTownAsset("town_bush", 2860, 990, 44, 0, 0.55);
   drawTownAsset("tiny_sign", 2528, 720, 38, 0, 0.82);
   drawTownAsset("town_lamp", 2720, 705, 34, 0, villageBridgeFixed() ? 0.85 : 0.30);
-  drawTownAsset("town_crate_big", 2795, 790, 34, 0.1, 0.55);
-  drawTownAsset("town_barrel_b", 2828, 805, 28, 0, 0.48);
   ctx.restore();
+  drawVillageDarkBuildings();
 }
 
 function drawVillagePond() {
@@ -5883,46 +6043,77 @@ function drawVillageCandle(x, y, power = 1) {
 function drawVillageTowerGate() {
   ctx.save();
   ctx.translate(VILLAGE_TOWER_GATE.x, VILLAGE_TOWER_GATE.y);
-  ctx.fillStyle = "rgba(0,0,0,0.36)";
+  ctx.fillStyle = "rgba(0,0,0,0.34)";
   ctx.beginPath();
-  ctx.ellipse(0, 62, 178, 34, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 62, 172, 34, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#1b2230";
-  ctx.fillRect(-146, -34, 292, 86);
-  ctx.strokeStyle = "#ffd35a";
-  ctx.lineWidth = 4;
-  ctx.strokeRect(-146, -34, 292, 86);
 
-  for (let i = -4; i <= 4; i++) drawTownAsset("town_stone_dark", i * 32, -2, 34, 0, 0.8);
-  for (let i = -4; i <= 4; i++) drawTownAsset("town_stone_b", i * 32, 34, 34, 0, 0.7);
   const omen = activeVillageOmen();
-  const pulse = 0.7 + Math.sin(nowSec() * 2.4) * 0.25;
-  const g = ctx.createRadialGradient(0, 20, 18, 0, 20, 132);
-  g.addColorStop(0, omen?.id === "red_lights" ? `rgba(255,92,122,${0.30 + pulse * 0.16})` : `rgba(124,199,255,${0.30 + pulse * 0.12})`);
-  g.addColorStop(0.68, "rgba(48,69,98,0.22)");
+  const glow = omen?.id === "red_lights" ? "255,92,122" : omen?.id === "quiet_tower" ? "124,199,255" : "255,211,90";
+  const pulse = 0.65 + Math.sin(nowSec() * 2.1) * 0.18;
+  const g = ctx.createRadialGradient(0, 34, 18, 0, 34, 130);
+  g.addColorStop(0, `rgba(${glow},${0.16 + pulse * 0.08})`);
+  g.addColorStop(0.65, "rgba(48,69,98,0.18)");
   g.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.ellipse(0, 22, 126, 50, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 34, 132, 54, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  drawTownAsset("town_arch", -78, 26, 62, 0, 0.95);
-  drawTownAsset("town_arch", 78, 26, 62, 0, 0.95);
-  ctx.fillStyle = "#f5f1ff";
-  ctx.textAlign = "center";
-  ctx.font = "900 24px ui-monospace, monospace";
-  ctx.fillText("TOWER GATE", 0, 8);
-  ctx.fillStyle = "rgba(217,222,234,0.66)";
-  ctx.font = "900 12px ui-monospace, monospace";
-  ctx.fillText("E: prep tray", 0, 42);
-  if (omen) {
-    ctx.fillStyle = omen.id === "red_lights" ? "#ff6b7d" : "#7cc7ff";
-    ctx.font = "900 10px ui-monospace, monospace";
-    ctx.fillText(omen.name.toUpperCase(), 0, 62);
+  const drawStoneWall = (x, y, w, h, color = "#5f6d76") => {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = "rgba(13,17,24,0.38)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, w, h);
+    ctx.globalAlpha = 0.42;
+    ctx.strokeStyle = "rgba(245,241,255,0.22)";
+    for (let yy = y + 18; yy < y + h; yy += 18) {
+      ctx.beginPath();
+      ctx.moveTo(x + 4, yy);
+      ctx.lineTo(x + w - 4, yy);
+      ctx.stroke();
+    }
+    for (let xx = x + 24; xx < x + w; xx += 32) {
+      ctx.beginPath();
+      ctx.moveTo(xx, y + 2);
+      ctx.lineTo(xx, y + h - 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  };
+
+  drawStoneWall(-154, -32, 308, 72, "#626f78");
+  drawStoneWall(-132, -58, 58, 98, "#6d7a83");
+  drawStoneWall(74, -58, 58, 98, "#6d7a83");
+  for (const x of [-132, -108, -84, 74, 98, 122, -36, -12, 12, 36]) {
+    ctx.fillStyle = "#87949c";
+    ctx.fillRect(x, x < -70 || x > 70 ? -72 : -46, 16, 14);
+    ctx.strokeStyle = "rgba(13,17,24,0.28)";
+    ctx.strokeRect(x, x < -70 || x > 70 ? -72 : -46, 16, 14);
+  }
+
+  const drawDoor = x => {
+    ctx.fillStyle = "#252833";
+    ctx.beginPath();
+    ctx.roundRect(x - 25, 2, 50, 62, 20);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(124,199,255,0.42)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.fillRect(x - 18, 22, 36, 42);
+  };
+  drawDoor(-72);
+  drawDoor(72);
+
+  for (const x of [-118, -86, 86, 118]) drawTownAsset("town_lamp", x, 36, 34, 0, 0.90);
+  if (omen?.id === "red_lights") {
+    ctx.fillStyle = "rgba(255,92,122,0.34)";
+    ctx.fillRect(-154, -34, 308, 74);
   }
   ctx.restore();
 }
-
 
 function drawCleanCottageBase(x, y, w, h, opts = {}) {
   const cx = x + w / 2;
@@ -6367,7 +6558,7 @@ function drawVillageActivitySites() {
 
 function drawVillageFarmPlots() {
   ctx.save();
-  for (const plot of VILLAGE_FARM_PLOTS) {
+  for (const plot of villageAllFarmPlots()) {
     const state = villageFarmPlot(plot.id);
     drawTownAsset("town_dirt_b", plot.x, plot.y, 42, 0, 0.94);
     ctx.strokeStyle = "rgba(64,42,20,0.35)";
@@ -6604,11 +6795,14 @@ function drawVillageToolSwing() {
   if (villageToolSwing.t <= 0) return;
   const p = villagePlayer;
   const t = villageToolSwing.t / 0.18;
+  const equipped = villageEquippedTool();
+  const tool = VILLAGE_TOWN_TOOLS.find(item => item.id === equipped) || VILLAGE_TOWN_TOOLS[2];
+  const icon = tool.icon || (equipped === "pickaxe" ? "tiny_tool_pickaxe" : equipped === "hoe" ? "tiny_tool_shovel" : "tiny_axe");
   ctx.save();
   ctx.translate(p.x, p.y);
   ctx.rotate(villageToolSwing.angle - 0.8 + (1 - t) * 1.4);
   ctx.globalAlpha = clamp(t * 1.4, 0, 1);
-  drawTownAsset("tiny_axe", 28, -8, 32, 0, 1) || (() => {
+  drawTownAsset(icon, 28, -8, 32, equipped === "axe" ? -0.4 : 0, 1) || (() => {
     ctx.strokeStyle = "rgba(255,211,90,0.85)";
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -6625,7 +6819,7 @@ function villageTaskMarkerTargets(task = activeBoardTask()) {
   if (task.type === "chop") return VILLAGE_STUMPS.filter(stump => !villageStumpCleared(stump.id) && !villageObjectLocked(stump) && (!task.dark || villagePointIsDark(stump.x, stump.y))).map(stump => ({ x: stump.x, y: stump.y, label: task.dark ? "DARK" : "BOARD" })).slice(0, 4);
   if (task.type === "mine") return VILLAGE_MINE_NODES.filter(mine => !villageMineClearedToday(mine.id) && (!task.dark || villagePointIsDark(mine.x, mine.y))).map(mine => ({ x: mine.x, y: mine.y, label: task.dark ? "DARK" : "BOARD" })).slice(0, 3);
   if (task.type === "fish") return VILLAGE_FISHING_SPOTS.map(spot => ({ x: spot.x, y: spot.y, label: "BOARD" }));
-  if (task.type === "farm") return VILLAGE_FARM_PLOTS.map(plot => ({ x: plot.x, y: plot.y, label: "BOARD" })).slice(0, 5);
+  if (task.type === "farm") return villageAllFarmPlots().map(plot => ({ x: plot.x, y: plot.y, label: "BOARD" })).slice(0, 5);
   if (task.type === "project") return VILLAGE_PROJECTS.filter(project => hubProjectRank(project.id) < project.max).map(project => ({ x: project.x, y: project.y, label: "BOARD" }));
   if (task.type === "hairball") return (villageMesses.length ? villageMesses : VILLAGE_MESS_SPOTS.slice(0, task.need || 2)).map(item => ({ x: item.x, y: item.y, label: "CLEAN" })).slice(0, 3);
   if (task.type === "villager" && task.villager) {
@@ -6655,10 +6849,17 @@ function drawVillageTaskMarkers() {
   ctx.restore();
 }
 
+function villageHotbarSlots() {
+  return [
+    ...VILLAGE_TOWN_TOOLS.map(tool => ({ kind: "tool", id: tool.id, label: tool.name, glyph: tool.glyph, icon: tool.icon })),
+    ...VILLAGE_HOTBAR_RESOURCES.map(resource => ({ kind: "resource", resource }))
+  ];
+}
+
 function villageInventoryHotbarLayout() {
-  const slot = 38;
+  const slot = 36;
   const gap = 4;
-  const count = 9;
+  const count = villageHotbarSlots().length;
   const w = count * slot + (count - 1) * gap;
   return { x: W / 2 - w / 2, y: H - 50, slot, gap, count, w, h: slot };
 }
@@ -6671,7 +6872,8 @@ function villageHotbarSlotAt(screenX, screenY) {
   const index = Math.floor(local / pitch);
   const offset = local - index * pitch;
   if (index < 0 || index >= layout.count || offset > layout.slot) return null;
-  return { index, resource: CHEST_RESOURCES[index] || null };
+  const slot = villageHotbarSlots()[index];
+  return slot ? { index, ...slot } : null;
 }
 
 function villageNearChestForTransfer() {
@@ -6682,6 +6884,10 @@ function handleVillageHotbarClick(screenX, screenY, wholeStack = false) {
   if (villageMapOpen || villageBuildMode || villageBridgeCutscene || villageFishingGame || villageHasVisibleOverlay()) return false;
   const slot = villageHotbarSlotAt(screenX, screenY);
   if (!slot) return false;
+  if (slot.kind === "tool") {
+    setVillageEquippedTool(slot.id);
+    return true;
+  }
   if (!slot.resource) return true;
   const amount = hubResource(slot.resource);
   if (amount <= 0) return true;
@@ -6694,10 +6900,19 @@ function handleVillageHotbarClick(screenX, screenY, wholeStack = false) {
   return true;
 }
 
+function drawToolIcon(slot, cx, cy) {
+  if (slot.icon && drawTownAsset(slot.icon, cx, cy, 22, slot.id === "axe" ? -0.45 : 0, 0.95)) return;
+  ctx.font = "900 17px ui-monospace, monospace";
+  ctx.fillStyle = "#f5f1ff";
+  ctx.fillText(slot.glyph || "?", cx, cy + 6);
+}
+
 function drawVillageInventoryHotbar() {
   if (villageMapOpen || villageBridgeCutscene || villageBuildMode || villageFishingGame) return;
   const layout = villageInventoryHotbarLayout();
   const nearChest = villageNearChestForTransfer();
+  const equipped = villageEquippedTool();
+  const slots = villageHotbarSlots();
   ctx.save();
   ctx.textAlign = "center";
   ctx.fillStyle = "rgba(3,5,12,0.46)";
@@ -6707,18 +6922,28 @@ function drawVillageInventoryHotbar() {
   for (let i = 0; i < layout.count; i++) {
     const x = layout.x + i * (layout.slot + layout.gap);
     const y = layout.y;
-    const resource = CHEST_RESOURCES[i];
-    const amount = resource ? hubResource(resource) : 0;
-    ctx.fillStyle = "rgba(15,21,36,0.82)";
+    const slot = slots[i];
+    const selected = slot?.kind === "tool" && slot.id === equipped;
+    ctx.fillStyle = selected ? "rgba(255,211,90,0.28)" : "rgba(15,21,36,0.82)";
     ctx.fillRect(x, y, layout.slot, layout.slot);
-    ctx.strokeStyle = amount > 0 ? "rgba(217,222,234,0.52)" : "rgba(217,222,234,0.18)";
+    ctx.strokeStyle = selected ? "rgba(255,211,90,0.92)" : "rgba(217,222,234,0.28)";
+    ctx.lineWidth = selected ? 2 : 1;
     ctx.strokeRect(x + 1, y + 1, layout.slot - 2, layout.slot - 2);
-    if (resource) {
-      const meta = CHEST_RESOURCE_META[resource];
+    if (!slot) continue;
+    const cx = x + layout.slot / 2;
+    const cy = y + layout.slot / 2;
+    if (slot.kind === "tool") {
+      drawToolIcon(slot, cx, cy);
+      ctx.font = "900 7px ui-monospace, monospace";
+      ctx.fillStyle = selected ? "#ffd35a" : "rgba(245,241,255,0.68)";
+      ctx.fillText(String(i + 1), x + 7, y + 10);
+    } else if (slot.resource) {
+      const meta = CHEST_RESOURCE_META[slot.resource];
+      const amount = hubResource(slot.resource);
       ctx.globalAlpha = amount > 0 ? 1 : 0.32;
       ctx.font = "900 18px ui-monospace, monospace";
       ctx.fillStyle = "#f5f1ff";
-      ctx.fillText(meta.glyph, x + layout.slot / 2, y + 24);
+      ctx.fillText(meta.glyph, cx, y + 23);
       if (amount > 0) {
         ctx.font = "900 10px ui-monospace, monospace";
         ctx.textAlign = "right";
@@ -6729,11 +6954,11 @@ function drawVillageInventoryHotbar() {
       ctx.globalAlpha = 1;
     }
   }
-  if (nearChest) {
-    ctx.fillStyle = "rgba(245,241,255,0.72)";
-    ctx.font = "900 8px ui-monospace, monospace";
-    ctx.fillText("CLICK ITEM TO STORE · SHIFT CLICK STACK", W / 2, layout.y - 14);
-  }
+  ctx.fillStyle = "rgba(245,241,255,0.70)";
+  ctx.font = "900 8px ui-monospace, monospace";
+  if (equipped === "hoe") ctx.fillText("HOE: CLICK CLEAR GRASS TO TILL", W / 2, layout.y - 14);
+  else if (nearChest) ctx.fillText("CLICK RESOURCE TO STORE · SHIFT CLICK STACK", W / 2, layout.y - 14);
+  else ctx.fillText(`${VILLAGE_TOWN_TOOLS.find(t => t.id === equipped)?.name || "Tool"} equipped`, W / 2, layout.y - 14);
   ctx.restore();
 }
 
@@ -12728,6 +12953,12 @@ window.addEventListener("keydown", e => {
     if (key === "p") {
       e.preventDefault();
       showVillagePauseOverlay();
+      return;
+    }
+    if (/^[1-5]$/.test(key) && !e.repeat) {
+      e.preventDefault();
+      const tool = VILLAGE_TOWN_TOOLS[Number(key) - 1];
+      if (tool) setVillageEquippedTool(tool.id);
       return;
     }
     if (key === "m") {
