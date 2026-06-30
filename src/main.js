@@ -787,7 +787,11 @@ const DEFAULT_HUB_SAVE = {
   nightFallPending: false,
   taskCounter: 0,
   lastGain: "",
-  lastHelp: ""
+  lastHelp: "",
+  bridgeFixed: false,
+  bridgeCutsceneSeen: false,
+  layout: {},
+  townSinksUsed: {}
 };
 
 
@@ -1899,6 +1903,11 @@ let villageHistoryOpen = false;
 let villageMesses = [];
 let villageNextMessAt = 0;
 let villageFishingGame = null;
+let villageMapOpen = false;
+let villageBuildMode = false;
+let villageMoveState = null;
+let villageDistrictLabel = { name: "Mira's Road", last: "", t: 0, maxT: 0 };
+let villageBridgeCutscene = null;
 const achievementToasts = [];
 
 const VILLAGE_TOWER_GATE = { x: 1100, y: 155 };
@@ -2119,7 +2128,10 @@ const VILLAGE_PREP_DEFS = {
   rowan_oil: { slot: "tool", name: "Rowan's Oil", text: "+20% damage next floor", apply: () => { runStats.damageMult *= 1.2; }, revert: () => { runStats.damageMult /= 1.2; } },
   kitchen_stew: { slot: "tool", name: "Kitchen Stew", text: "+1 smoke charge next floor", apply: () => { runStats.smokeBonus += 1; }, revert: () => { runStats.smokeBonus -= 1; } },
   tavi_map: { slot: "scout", name: "Tavi's Map", text: "+90 Pulse range next floor", apply: () => { runStats.pulseRange += 90; }, revert: () => { runStats.pulseRange -= 90; } },
-  shrine_candle: { slot: "shrine", name: "Mira's Ward", text: "+1 death retry on the next run", apply: () => { runStats.retries = (runStats.retries || 0) + 1; }, revert: () => { runStats.retries = Math.max(0, (runStats.retries || 0) - 1); } }
+  shrine_candle: { slot: "shrine", name: "Mira's Ward", text: "+1 death retry on the next run", apply: () => { runStats.retries = (runStats.retries || 0) + 1; }, revert: () => { runStats.retries = Math.max(0, (runStats.retries || 0) - 1); } },
+  shrine_endure: { slot: "shrine", name: "Vow of Endurance", text: "+20 max HP next run", apply: () => { runStats.maxHpBonus += 20; }, revert: () => { runStats.maxHpBonus -= 20; } },
+  shrine_smoke: { slot: "shrine", name: "Vow of Smoke", text: "+1 smoke next run", apply: () => { runStats.smokeBonus += 1; }, revert: () => { runStats.smokeBonus -= 1; } },
+  shrine_lantern: { slot: "shrine", name: "Grave Lantern", text: "+120 Pulse range next run", apply: () => { runStats.pulseRange += 120; }, revert: () => { runStats.pulseRange -= 120; } }
 };
 
 const VILLAGE_TOWER_OMENS = [
@@ -2409,6 +2421,14 @@ function ensureHubSave() {
       }
     },
     lastReturnCard: save.hub?.lastReturnCard || null,
+    bridgeFixed: Boolean(save.hub?.bridgeFixed),
+    bridgeCutsceneSeen: Boolean(save.hub?.bridgeCutsceneSeen),
+    layout: {
+      ...(save.hub?.layout || {})
+    },
+    townSinksUsed: {
+      ...(save.hub?.townSinksUsed || {})
+    },
     nightFallDay: Number(save.hub?.nightFallDay ?? -1),
     nightFallPending: Boolean(save.hub?.nightFallPending),
     taskCounter: Number(save.hub?.taskCounter) || 0
@@ -2495,6 +2515,205 @@ function villagePathPoint(path, speed = 0.05, seed = 0) {
 function villageTownfolkPoint(npc) {
   const path = VILLAGE_TOWNSFOLK_PATROLS[npc.id] || [{ x: npc.x, y: npc.y }];
   return villagePathPoint(path, 0.04 + (npc.name.length % 3) * 0.006, npc.x * 0.0007);
+}
+
+function shiftVillagePath(path, dx, dy) {
+  if (!Array.isArray(path)) return;
+  for (const point of path) {
+    point.x += dx;
+    point.y += dy;
+  }
+}
+
+function villagePlaceableEntries() {
+  const entries = [];
+  const addPoint = (id, label, object, radius = 34, locked = false) => entries.push({
+    id,
+    label,
+    x: object.x,
+    y: object.y,
+    r: radius,
+    locked,
+    set: (x, y) => { object.x = x; object.y = y; }
+  });
+  const addRect = (id, label, object, locked = false) => entries.push({
+    id,
+    label,
+    x: object.x + object.w / 2,
+    y: object.y + object.h / 2,
+    r: Math.max(object.w, object.h) * 0.34,
+    locked,
+    set: (x, y) => { object.x = x - object.w / 2; object.y = y - object.h / 2; }
+  });
+  addPoint("home", "House", VILLAGE_HOME, 74);
+  addPoint("chest", "Storage", VILLAGE_CHEST, 34);
+  addPoint("board", "Daily Board", VILLAGE_DAILY_BOARD, 42);
+  addPoint("shrine", "Shrine", VILLAGE_SHRINE, 62);
+  addPoint("tower", "Tower Gate", VILLAGE_TOWER_GATE, 76, true);
+  addPoint("pond", "Pond", VILLAGE_POND, 92, true);
+  addPoint("visitor", "Visitor Camp", VILLAGE_VISITOR_SPOT, 58);
+  for (const [key, building] of Object.entries(VILLAGE_SERVICE_BUILDINGS)) addRect(`service_${key}`, building.label, building);
+  for (const spot of VILLAGE_VILLAGER_SPOTS) {
+    addRect(`hut_${spot.id}`, `${hubVillagerById(spot.id)?.name || spot.id} Hut`, spot.hut);
+    entries.push({
+      id: `villager_${spot.id}`,
+      label: hubVillagerById(spot.id)?.name || spot.id,
+      x: spot.x,
+      y: spot.y,
+      r: 36,
+      set: (x, y) => { spot.x = x; spot.y = y; }
+    });
+  }
+  for (const npc of VILLAGE_TOWNSFOLK) entries.push({
+    id: `npc_${npc.id}`,
+    label: npc.name,
+    x: npc.x,
+    y: npc.y,
+    r: 36,
+    set: (x, y) => {
+      const dx = x - npc.x;
+      const dy = y - npc.y;
+      npc.x = x;
+      npc.y = y;
+      shiftVillagePath(VILLAGE_TOWNSFOLK_PATROLS[npc.id], dx, dy);
+    }
+  });
+  for (const project of VILLAGE_PROJECTS) addPoint(`project_${project.id}`, project.name, project, 78);
+  for (const plot of VILLAGE_FARM_PLOTS) addPoint(`farm_${plot.id}`, "Farm Plot", plot, 28);
+  for (const mine of VILLAGE_MINE_NODES) addPoint(`mine_${mine.id}`, "Ore Node", mine, 34);
+  for (const spot of VILLAGE_FISHING_SPOTS) addPoint(`fish_${spot.id}`, "Fishing Spot", spot, 44);
+  for (const rubble of VILLAGE_RUBBLE) {
+    if (villageRubbleCleared(rubble.id)) continue;
+    addPoint(`rubble_${rubble.id}`, rubble.label || "Rubble", rubble, Math.max(26, rubble.r || 24));
+  }
+  for (const stump of VILLAGE_STUMPS) {
+    if (villageStumpCleared(stump.id)) continue;
+    addPoint(`stump_${stump.id}`, stump.treeKey ? "Tree" : stump.longGoal ? "Old Growth" : "Stump", stump, Math.max(26, stump.r || 22));
+  }
+  return entries;
+}
+
+function applyVillageLayout() {
+  const hub = ensureHubSave();
+  const layout = hub.layout || {};
+  if (!layout || !Object.keys(layout).length) return;
+  for (const entry of villagePlaceableEntries()) {
+    const pos = layout[entry.id];
+    if (!pos || entry.locked) continue;
+    entry.set(clamp(Number(pos.x) || entry.x, 24, VILLAGE_WORLD.w - 24), clamp(Number(pos.y) || entry.y, 24, VILLAGE_WORLD.h - 24));
+  }
+}
+
+function saveVillageLayoutEntry(entry, x, y) {
+  if (!entry || entry.locked) return;
+  const hub = ensureHubSave();
+  hub.layout = hub.layout || {};
+  hub.layout[entry.id] = { x: Math.round(x), y: Math.round(y) };
+  saveGame();
+}
+
+function findVillagePlaceableAt(x, y) {
+  let best = null;
+  for (const entry of villagePlaceableEntries()) {
+    if (entry.locked) continue;
+    const d = Math.hypot(x - entry.x, y - entry.y);
+    if (d <= Math.max(28, entry.r || 34) && (!best || d < best.d)) best = { ...entry, d };
+  }
+  return best;
+}
+
+function toggleVillageBuildMode() {
+  if (mode !== "village" || villageHasVisibleOverlay()) return;
+  villageBuildMode = !villageBuildMode;
+  villageMapOpen = false;
+  villageMoveState = null;
+  setVillageMessage("Move Mode", villageBuildMode ? "Click a town object, drag it, click again to place." : "Town layout saved.", 3.2);
+}
+
+function handleVillageBuildMouseDown(x, y) {
+  if (!villageBuildMode) return false;
+  if (villageMoveState?.entry) {
+    saveVillageLayoutEntry(villageMoveState.entry, villageMoveState.entry.x, villageMoveState.entry.y);
+    setVillageMessage("Move Mode", `${villageMoveState.entry.label} placed.`, 1.8);
+    villageMoveState = null;
+    return true;
+  }
+  const entry = findVillagePlaceableAt(x, y);
+  if (!entry) {
+    setVillageMessage("Move Mode", "Click an object to move it. Press B to finish.", 2.2);
+    return true;
+  }
+  villageMoveState = { entry, dx: entry.x - x, dy: entry.y - y };
+  setVillageMessage("Move Mode", `Moving ${entry.label}. Click to place.`, 2.2);
+  return true;
+}
+
+function updateVillageBuildMove() {
+  if (!villageBuildMode || !villageMoveState?.entry) return;
+  const entry = villageMoveState.entry;
+  const x = clamp(mouse.x + villageMoveState.dx, 32, VILLAGE_WORLD.w - 32);
+  const y = clamp(mouse.y + villageMoveState.dy, 32, VILLAGE_WORLD.h - 32);
+  entry.x = x;
+  entry.y = y;
+  entry.set(x, y);
+}
+
+function villageObstacleRects() {
+  const rects = [
+    { x: 0, y: -80, w: VILLAGE_WORLD.w, h: 100 },
+    { x: -80, y: 0, w: 100, h: VILLAGE_WORLD.h },
+    { x: VILLAGE_WORLD.w - 20, y: 0, w: 100, h: VILLAGE_WORLD.h },
+    { x: 0, y: VILLAGE_WORLD.h - 20, w: VILLAGE_WORLD.w, h: 100 },
+    { x: VILLAGE_TOWER_GATE.x - 150, y: VILLAGE_TOWER_GATE.y - 62, w: 300, h: 104 },
+    { x: VILLAGE_SHRINE.x - 92, y: VILLAGE_SHRINE.y - 70, w: 184, h: 120 },
+    { x: VILLAGE_HOME.x - 84, y: VILLAGE_HOME.y - 52, w: 168, h: 92 },
+    { x: VILLAGE_POND.x - VILLAGE_POND.rx + 18, y: VILLAGE_POND.y - VILLAGE_POND.ry + 10, w: VILLAGE_POND.rx * 2 - 36, h: VILLAGE_POND.ry * 2 - 20 }
+  ];
+  for (const spot of VILLAGE_VILLAGER_SPOTS) rects.push({ x: spot.hut.x + 12, y: spot.hut.y + 64, w: spot.hut.w - 24, h: Math.max(54, spot.hut.h - 86) });
+  for (const building of Object.values(VILLAGE_SERVICE_BUILDINGS)) rects.push({ x: building.x + 18, y: building.y + 42, w: building.w - 36, h: Math.max(52, building.h - 58) });
+  return rects;
+}
+
+function villagePointIsDark(x, y) {
+  return x >= VILLAGE_DARK_DISTRICT.x;
+}
+
+function currentVillageDistrict(x = villagePlayer.x, y = villagePlayer.y) {
+  if (villagePointIsDark(x, y) && villageBridgeFixed()) return "Grave Road";
+  if (y < 300) return "Tower Gate";
+  if (Math.hypot(x - VILLAGE_POND.x, y - VILLAGE_POND.y) < 260) return "Pond Path";
+  const garden = hubProjectById("garden");
+  if (garden && Math.hypot(x - garden.x, y - garden.y) < 260) return "Garden Row";
+  if (Math.hypot(x - VILLAGE_HOME.x, y - VILLAGE_HOME.y) < 220) return "Home Yard";
+  if (y > 1080) return "Old Road";
+  return "Mira's Road";
+}
+
+function updateVillageDistrictLabel(dt) {
+  const district = currentVillageDistrict();
+  if (district !== villageDistrictLabel.last) {
+    villageDistrictLabel = { name: district, last: district, t: 4.8, maxT: 4.8 };
+  } else {
+    villageDistrictLabel.t = Math.max(0, villageDistrictLabel.t - dt);
+  }
+}
+
+function toggleVillageMap() {
+  if (mode !== "village" || villageHasVisibleOverlay()) return;
+  villageMapOpen = !villageMapOpen;
+  if (villageMapOpen) villageBuildMode = false;
+  setVillageMessage("Map", villageMapOpen ? "Map open. Press M or Esc to close." : "Map closed.", 1.8);
+}
+
+function startVillageBridgeCutscene() {
+  villageBridgeCutscene = { t: 4.2, maxT: 4.2 };
+  villageDistrictLabel = { name: "Grave Road", last: "Grave Road", t: 5.5, maxT: 5.5 };
+}
+
+function updateVillageBridgeCutscene(dt) {
+  if (!villageBridgeCutscene) return;
+  villageBridgeCutscene.t = Math.max(0, villageBridgeCutscene.t - dt);
+  if (villageBridgeCutscene.t <= 0) villageBridgeCutscene = null;
 }
 
 function villageMessSpotSafe(x, y) {
@@ -2776,6 +2995,11 @@ function villageTaskPool(floor = 1) {
   if (!villageBridgeFixed() && villageRequirementMet(VILLAGE_BRIDGE.req)) {
     pool.push({ id: `bridge_repair_${hub.towerDay}`, type: "bridge", title: "Repair bridge", giver: "Pella", text: `Spend ${villageBridgeCostText()}.`, need: 1, prep: "tavi_map", rewardSupplies: 0, rewardShards: 0 });
   }
+  if (villageBridgeFixed()) {
+    pool.push({ id: `grave_wood_${hub.towerDay}`, type: "chop", dark: true, icon: "🌘", title: "Grave wood", giver: "Vesper", text: "Chop 1 Grave Road tree.", need: 1, prep: "shrine_smoke", rewardSupplies: 0, rewardShards: 0 });
+    pool.push({ id: `grave_stone_${hub.towerDay}`, type: "mine", dark: true, icon: "🪦", title: "Grave stone", giver: "Moss", text: "Break 1 dark ore node.", need: 1, prep: "shrine_lantern", rewardSupplies: 0, rewardShards: 0 });
+    pool.push({ id: `grave_clear_${hub.towerDay}`, type: "rubble", dark: true, icon: "🕯️", title: "Clear graves", giver: "Vesper", text: "Clear 1 dark obstacle.", need: 1, prep: "shrine_endure", rewardSupplies: 0, rewardShards: 0 });
+  }
   return pool.filter(task => {
     if (task.type === "chop" && !VILLAGE_STUMPS.some(stump => !villageStumpCleared(stump.id) && !villageObjectLocked(stump))) return false;
     if (task.type === "rubble" && !VILLAGE_RUBBLE.some(rubble => !villageRubbleCleared(rubble.id) && !villageObjectLocked(rubble))) return false;
@@ -2823,6 +3047,7 @@ function villageTaskIcon(task) {
   if (task.type === "hairball") return "🐾";
   if (task.type === "project") return "🔨";
   if (task.type === "bridge") return "🌉";
+  if (task.dark) return "🌘";
   if (task.resource === "supplies") return "📦";
   if (task.prep === "maren_meal") return "🍲";
   if (task.prep === "rowan_oil") return "🛢️";
@@ -2900,10 +3125,11 @@ function selectVillageTask(id) {
   setVillageMessage(task.giver || "Board", `${villageTaskIcon(task)} ${task.text}`, 3.4);
 }
 
-function advanceVillageTask(type, amount = 1) {
+function advanceVillageTask(type, amount = 1, context = {}) {
   const hub = ensureHubSave();
   const task = activeBoardTask();
   if (!task || task.done || task.type !== type) return false;
+  if (task.dark && !context.dark) return false;
   task.progress = Math.min(task.need || 1, (Number(task.progress) || 0) + amount);
   const boardTask = (hub.boardTasks || []).find(item => item.id === task.id);
   if (boardTask) boardTask.progress = task.progress;
@@ -3132,6 +3358,69 @@ function ensureVillageBoardTasks(force = false) {
   return nextHub.boardTasks || [];
 }
 
+function villageResourceSinkDefs() {
+  const hub = ensureHubSave();
+  return [
+    { id: "restock", icon: "📋", title: "Restock board", cost: { supplies: 2 }, desc: "New daily jobs.", blocked: false },
+    { id: "tools", icon: "🛠️", title: "Sharpen tools", cost: { supplies: 2, ore: 1 }, desc: "Tool prep.", blocked: Boolean(hub.prep?.tool) },
+    { id: "meal", icon: "🍲", title: "Feed camp", cost: { supplies: 2, fish: 1 }, desc: "Meal prep.", blocked: Boolean(hub.prep?.meal) },
+    { id: "lamps", icon: "🕯️", title: "Light lamps", cost: { supplies: 2, hope: 1 }, desc: "Shrine prep. Clears hairballs.", blocked: Boolean(hub.prep?.shrine) }
+  ];
+}
+
+function villageCostText(cost = {}) {
+  return Object.entries(cost).filter(([, value]) => value > 0).map(([key, value]) => `${value} ${key}`).join(", ");
+}
+
+function canPayVillageCost(cost = {}) {
+  return Object.entries(cost).every(([key, value]) => hubResource(key) >= value);
+}
+
+function payVillageCost(cost = {}) {
+  if (!canPayVillageCost(cost)) return false;
+  for (const [key, value] of Object.entries(cost)) addHubResource(key, -value);
+  return true;
+}
+
+function renderVillageResourceSinkButtons() {
+  return villageResourceSinkDefs().map(sink => {
+    const canPay = canPayVillageCost(sink.cost);
+    const disabled = sink.blocked || !canPay;
+    return `
+      <button class="dailyTaskCard ${disabled ? "completed" : ""}" data-action="useVillageSink" data-sink-id="${sink.id}" ${disabled ? "disabled" : ""}>
+        <span class="routeTag">${villageCostText(sink.cost)}</span>
+        <b><span style="font-size:21px; margin-right:8px; vertical-align:-2px;">${sink.icon}</span>${sink.title}</b>
+        <p>${sink.desc}</p>
+        <small>${sink.blocked ? "Slot already filled" : canPay ? "Spend resources" : "Need resources"}</small>
+      </button>
+    `;
+  }).join("");
+}
+
+function useVillageSink(id) {
+  const sink = villageResourceSinkDefs().find(item => item.id === id);
+  if (!sink || sink.blocked) return;
+  if (!payVillageCost(sink.cost)) {
+    setVillageMessage("Upkeep", `Need ${villageCostText(sink.cost)}.`, 2.6);
+    renderVillageDailyBoard();
+    return;
+  }
+  if (id === "restock") {
+    assignVillageBoardAfterFloor(Math.max(1, currentFloor || ensureHubSave().towerDay || 1));
+    setVillageMessage("Board", "New jobs posted.", 2.4);
+  } else if (id === "tools") {
+    grantVillagePrep("rowan_oil", "Upkeep");
+  } else if (id === "meal") {
+    grantVillagePrep("maren_meal", "Upkeep");
+  } else if (id === "lamps") {
+    villageMesses = [];
+    grantVillagePrep("shrine_candle", "Upkeep");
+  }
+  ensureHubSave().lastGain = `Upkeep: ${sink.title}.`;
+  saveGame();
+  renderVillageDailyBoard();
+}
+
 function renderVillageDailyBoard() {
   const hub = ensureHubSave();
   const tasks = ensureVillageBoardTasks();
@@ -3162,6 +3451,8 @@ function renderVillageDailyBoard() {
           <div><b>${omen?.name || "No omen"}</b><span>${omen?.text || "No clear tower omen right now."}</span></div>
         </div>
         <div class="routeGrid dailyTaskGrid">${cards}</div>
+        <h3 style="margin:18px 0 8px;">Town upkeep</h3>
+        <div class="routeGrid dailyTaskGrid">${renderVillageResourceSinkButtons()}</div>
         <div class="vsDetailBar">
           <div class="powerIcon big">!</div>
           <div>
@@ -3400,10 +3691,9 @@ function cleanVillageMess(id) {
   if (!spendVillageEnergy(1, "cleaning hairball")) return;
   const mess = villageMesses[index];
   villageMesses.splice(index, 1);
-  addVillageHope(1, "You kept the camp clean");
-  playAssetSfx("reward", 0.26);
-  addParticles("reward", mess.x, mess.y - 8, -Math.PI / 2, 10);
-  floatText.push({ x: mess.x - 24, y: mess.y - 26, text: "+1 hope", t: 0.9 });
+  playAssetSfx("reward", 0.22);
+  addParticles("reward", mess.x, mess.y - 8, -Math.PI / 2, 6);
+  floatText.push({ x: mess.x - 24, y: mess.y - 26, text: "clean", t: 0.9 });
   const task = activeBoardTask();
   const trackingHairballs = task?.type === "hairball" && !task.done;
   const completed = advanceVillageTask("hairball", 1);
@@ -3414,7 +3704,7 @@ function cleanVillageMess(id) {
       setVillageMessage("Daily board", `Hairball cleanup ${progress}.`, 2.4);
       ensureHairballsForBoardTask(current);
     } else {
-      setVillageMessage("Village", "You spent 1 energy cleaning a hairball. Gross, but the village noticed.", 2.6);
+      setVillageMessage("Village", "Hairball cleaned. Board jobs are where the Hope is.", 2.6);
     }
   }
   checkVillageAchievements("hairball");
@@ -3423,16 +3713,19 @@ function cleanVillageMess(id) {
 function renderVillageShrine() {
   const hub = ensureHubSave();
   const offers = [
-    { id: "retry", title: "Buy Mira's Ward", cost: 3, desc: "Bank +1 retry token for boss deaths. Max 2 stored.", blocked: hub.retries >= 2 },
-    { id: "energy", title: "Catch your breath", cost: 2, desc: "Restore 2 town energy right now.", blocked: villageEnergy() >= villageMaxEnergy() },
-    { id: "ward", title: "Light the shrine", cost: 2, desc: "Fill the shrine prep slot for the next run if it is empty.", blocked: Boolean(hub.prep?.shrine) }
+    { id: "retry", title: "Mira's Ward", cost: 3, desc: "Bank +1 boss retry. Max 2.", blocked: hub.retries >= 2 },
+    { id: "energy", title: "Catch Breath", cost: 2, desc: "Restore 2 town energy now.", blocked: villageEnergy() >= villageMaxEnergy() },
+    { id: "ward", title: "Light Shrine", cost: 2, desc: "+1 retry next run.", blocked: Boolean(hub.prep?.shrine) },
+    { id: "endure", title: "Vow: Endure", cost: 3, desc: "+20 HP next run.", blocked: Boolean(hub.prep?.shrine) },
+    { id: "smoke", title: "Vow: Smoke", cost: 4, desc: "+1 smoke next run.", blocked: Boolean(hub.prep?.shrine) },
+    { id: "lantern", title: "Grave Lantern", cost: 4, desc: "+120 pulse next run.", blocked: Boolean(hub.prep?.shrine) }
   ];
   openOverlay(`
     <div class="vsScreen framedScreen routeChoiceScreen shrineScreen">
       ${renderTopStrip("Mira Shrine", "backVillage")}
       <div class="vsPanel levelPanel routePanel">
-        <h2>Spend Hope</h2>
-        <p class="panelLead">Hope is your personal resource. Use it here for things that help you, not just the town.</p>
+        <h2>Shrine Vows</h2>
+        <p class="panelLead">Spend Hope for one shrine slot. One vow can be carried into the next run.</p>
         <div class="dailyBoardMeta">
           <div><b>Hope</b><span>${hubHope()} in hand</span></div>
           <div><b>Restored</b><span>${villageRestoredCount()}/${hubHopeMax()} village progress</span></div>
@@ -3497,7 +3790,23 @@ function buyShrineOffer(id) {
       return;
     }
     grantVillagePrep("shrine_candle", "Mira Shrine");
-    setVillageMessage("Mira shrine", "The shrine slot is now filled with Mira's Ward.", 2.8);
+    setVillageMessage("Mira shrine", "Mira's Ward is ready.", 2.8);
+    renderVillageShrine();
+    return;
+  }
+  const vowPrep = id === "endure" ? "shrine_endure" : id === "smoke" ? "shrine_smoke" : id === "lantern" ? "shrine_lantern" : "";
+  const vowCost = id === "endure" ? 3 : id === "smoke" ? 4 : id === "lantern" ? 4 : 0;
+  if (vowPrep) {
+    if (hub.prep?.shrine) {
+      setVillageMessage("Mira shrine", "Your shrine slot is already filled.", 2.4);
+      return;
+    }
+    if (!spendVillageHope(vowCost, "Made a shrine vow")) {
+      setVillageMessage("Mira shrine", `Need ${vowCost} hope.`, 2.4);
+      return;
+    }
+    grantVillagePrep(vowPrep, "Mira Shrine");
+    setVillageMessage("Mira shrine", `${VILLAGE_PREP_DEFS[vowPrep].name} is ready.`, 2.8);
     renderVillageShrine();
   }
 }
@@ -3700,7 +4009,7 @@ function villageBlocked(x, y, r) {
     const onBridgeLane = y > VILLAGE_BRIDGE.y - VILLAGE_BRIDGE.h * 0.62 && y < VILLAGE_BRIDGE.y + VILLAGE_BRIDGE.h * 0.62;
     if (!onBridgeLane || !villageBridgeFixed()) return true;
   }
-  for (const rect of VILLAGE_OBSTACLES) {
+  for (const rect of villageObstacleRects()) {
     if (villageCircleRectBlocked(x, y, r, rect)) return true;
   }
   for (const rubble of VILLAGE_RUBBLE) {
@@ -3786,7 +4095,10 @@ function repairVillageBridge() {
   if (!spendVillageEnergy(1, "repairing the bridge")) return;
   for (const [key, value] of Object.entries(VILLAGE_BRIDGE.cost)) hub[key] = (Number(hub[key]) || 0) - value;
   hub.bridgeFixed = true;
+  const firstRepair = !hub.bridgeCutsceneSeen;
+  hub.bridgeCutsceneSeen = true;
   saveGame();
+  if (firstRepair) startVillageBridgeCutscene();
   playAssetSfx("town_building_work", 0.35);
   playAssetSfx("bonus_chime", 0.35);
   unlockAchievement("bridge_repaired", "Other Side Open", "Repaired the bridge into the dark road.");
@@ -3922,7 +4234,7 @@ function clearVillageRubble(id) {
   floatText.push({ x: rubble.x - 48, y: rubble.y - rubble.r - 12, text: rewardText, t: 2.0 });
   if (rubble.req) unlockAchievement("first_long_blocker", "That Was In The Way", "Removed a milestone locked town blocker.");
   setVillageMessage("Village", `Cleared ${rubble.label}. ${hub.lastGain}`);
-  advanceVillageTask("rubble");
+  advanceVillageTask("rubble", 1, { dark: villagePointIsDark(rubble.x, rubble.y) });
 }
 
 
@@ -4000,7 +4312,7 @@ function mineVillageNode(id) {
   addParticles("reward", mine.x, mine.y - 8, -Math.PI / 2, 12);
   floatText.push({ x: mine.x - 48, y: mine.y - 42, text: `${oreFound} ore${mine.shards ? " +shard" : ""}${bonusText}`, t: 2.8 });
   setVillageMessage("Mining", `Ore broke loose: ${oreFound} ore${mine.shards ? " and shard" : ""}${bonusText}.`, 3.2);
-  advanceVillageTask("mine");
+  advanceVillageTask("mine", 1, { dark: villagePointIsDark(mine.x, mine.y) });
 }
 
 function villageFishActionText() {
@@ -4396,7 +4708,7 @@ function collectVillageStumpDrops() {
     addParticles("reward", stump.x, stump.y - 10, -Math.PI / 2, 22);
     floatText.push({ x: stump.x - 54, y: stump.y - stump.r - 28, text: `+${stump.supplies || 1} supply${seedBonus ? " +seed" : ""}${stump.shards ? ` +${stump.shards} shard` : ""}${stump.longGoal ? " +hope" : ""}`, t: 2.0 });
     setVillageMessage("Wood", hub.lastGain, 2.6);
-    advanceVillageTask("chop");
+    advanceVillageTask("chop", 1, { dark: villagePointIsDark(stump.x, stump.y) });
   }
   if (collected) {
     saveGame();
@@ -4728,13 +5040,18 @@ function interactVillage() {
 }
 
 function updateVillage(dt) {
+  applyVillageLayout();
+  updateVillageBuildMove();
+  updateVillageDistrictLabel(dt);
+  updateVillageBridgeCutscene(dt);
   const p = villagePlayer;
   let dx = 0;
   let dy = 0;
-  if (keys.has("w") || keys.has("arrowup")) dy -= 1;
-  if (keys.has("s") || keys.has("arrowdown")) dy += 1;
-  if (keys.has("a") || keys.has("arrowleft")) dx -= 1;
-  if (keys.has("d") || keys.has("arrowright")) dx += 1;
+  const movementLocked = villageMapOpen || Boolean(villageBridgeCutscene);
+  if (!movementLocked && (keys.has("w") || keys.has("arrowup"))) dy -= 1;
+  if (!movementLocked && (keys.has("s") || keys.has("arrowdown"))) dy += 1;
+  if (!movementLocked && (keys.has("a") || keys.has("arrowleft"))) dx -= 1;
+  if (!movementLocked && (keys.has("d") || keys.has("arrowright"))) dx += 1;
   if (dx || dy) {
     const l = Math.hypot(dx, dy) || 1;
     dx /= l;
@@ -4756,6 +5073,11 @@ function updateVillage(dt) {
   villageMessage.t = Math.max(0, villageMessage.t - dt);
   updateVillageFishingGame(dt);
   const hub = ensureHubSave();
+  if (hub.bridgeFixed && !hub.bridgeCutsceneSeen) {
+    hub.bridgeCutsceneSeen = true;
+    saveGame();
+    startVillageBridgeCutscene();
+  }
   if (hub.nightFallPending) {
     hub.nightFallPending = false;
     saveGame();
@@ -4767,8 +5089,9 @@ function updateVillage(dt) {
   maybeSpawnVillageMess();
   collectVillageStumpDrops();
   villageInteractTarget = findVillageInteractTarget();
-  camera.x = clamp(p.x - W / 2, 0, Math.max(0, VILLAGE_WORLD.w - W));
-  camera.y = clamp(p.y - H / 2, 0, Math.max(0, VILLAGE_WORLD.h - H));
+  const camTarget = villageBridgeCutscene ? VILLAGE_BRIDGE : p;
+  camera.x = clamp(camTarget.x - W / 2, 0, Math.max(0, VILLAGE_WORLD.w - W));
+  camera.y = clamp(camTarget.y - H / 2, 0, Math.max(0, VILLAGE_WORLD.h - H));
 }
 
 function drawVillage() {
@@ -4806,6 +5129,10 @@ function drawVillage() {
 
   ctx.restore();
   drawVillageScreenUi();
+  drawVillageDistrictLabel();
+  drawVillageBuildModeUi();
+  drawVillageMapOverlay();
+  drawVillageBridgeCutscene();
   drawVillageFishingGame();
   drawAchievementToasts();
   drawScreenFlash();
@@ -6001,9 +6328,9 @@ function drawVillageToolSwing() {
 
 function villageTaskMarkerTargets(task = activeBoardTask()) {
   if (!task || task.done) return [];
-  if (task.type === "rubble") return VILLAGE_RUBBLE.filter(rubble => !villageRubbleCleared(rubble.id) && !villageObjectLocked(rubble)).map(rubble => ({ x: rubble.x, y: rubble.y, label: "BOARD" })).slice(0, 4);
-  if (task.type === "chop") return VILLAGE_STUMPS.filter(stump => !villageStumpCleared(stump.id) && !villageObjectLocked(stump)).map(stump => ({ x: stump.x, y: stump.y, label: "BOARD" })).slice(0, 4);
-  if (task.type === "mine") return VILLAGE_MINE_NODES.filter(mine => !villageMineClearedToday(mine.id)).map(mine => ({ x: mine.x, y: mine.y, label: "BOARD" })).slice(0, 3);
+  if (task.type === "rubble") return VILLAGE_RUBBLE.filter(rubble => !villageRubbleCleared(rubble.id) && !villageObjectLocked(rubble) && (!task.dark || villagePointIsDark(rubble.x, rubble.y))).map(rubble => ({ x: rubble.x, y: rubble.y, label: task.dark ? "DARK" : "BOARD" })).slice(0, 4);
+  if (task.type === "chop") return VILLAGE_STUMPS.filter(stump => !villageStumpCleared(stump.id) && !villageObjectLocked(stump) && (!task.dark || villagePointIsDark(stump.x, stump.y))).map(stump => ({ x: stump.x, y: stump.y, label: task.dark ? "DARK" : "BOARD" })).slice(0, 4);
+  if (task.type === "mine") return VILLAGE_MINE_NODES.filter(mine => !villageMineClearedToday(mine.id) && (!task.dark || villagePointIsDark(mine.x, mine.y))).map(mine => ({ x: mine.x, y: mine.y, label: task.dark ? "DARK" : "BOARD" })).slice(0, 3);
   if (task.type === "fish") return VILLAGE_FISHING_SPOTS.map(spot => ({ x: spot.x, y: spot.y, label: "BOARD" }));
   if (task.type === "farm") return VILLAGE_FARM_PLOTS.map(plot => ({ x: plot.x, y: plot.y, label: "BOARD" })).slice(0, 5);
   if (task.type === "project") return VILLAGE_PROJECTS.filter(project => hubProjectRank(project.id) < project.max).map(project => ({ x: project.x, y: project.y, label: "BOARD" }));
@@ -6016,6 +6343,7 @@ function villageTaskMarkerTargets(task = activeBoardTask()) {
 }
 
 function drawVillageTaskMarkers() {
+  if (villageBuildMode || villageMapOpen || villageBridgeCutscene) return;
   const targets = villageTaskMarkerTargets();
   if (!targets.length) return;
   ctx.save();
@@ -6186,6 +6514,164 @@ function drawVillageScreenUi() {
     msgLines.forEach((line, i) => ctx.fillText(line, 38, boxY + 34 + i * 14));
     ctx.restore();
   }
+  ctx.restore();
+}
+
+function drawVillageDistrictLabel() {
+  if (villageDistrictLabel.t <= 0 || villageMapOpen || villageBuildMode || villageBridgeCutscene) return;
+  const a = clamp(villageDistrictLabel.t / Math.max(1, villageDistrictLabel.maxT || 4.8), 0, 1);
+  const hub = ensureHubSave();
+  const returnAge = hub.lastReturnCard?.ts ? Math.max(0, (Date.now() - hub.lastReturnCard.ts) / 1000) : 99;
+  ctx.save();
+  ctx.globalAlpha = Math.min(0.72, a * 0.78);
+  const label = villageDistrictLabel.name.toUpperCase();
+  ctx.font = "900 10px ui-monospace, monospace";
+  const w = Math.min(190, Math.max(112, ctx.measureText(label).width + 34));
+  const x = 24;
+  const y = returnAge < 8 ? 194 : 126;
+  ctx.fillStyle = "rgba(3,5,12,0.32)";
+  ctx.fillRect(x, y, w, 22);
+  ctx.strokeStyle = villageDistrictLabel.name === "Grave Road" ? "rgba(199,125,255,0.32)" : "rgba(255,211,90,0.22)";
+  ctx.strokeRect(x, y, w, 22);
+  ctx.fillStyle = villageDistrictLabel.name === "Grave Road" ? "#c77dff" : "#ffd35a";
+  ctx.textAlign = "left";
+  ctx.fillText(label, x + 12, y + 15);
+  ctx.restore();
+}
+
+function drawVillageBuildModeUi() {
+  if (!villageBuildMode) return;
+  ctx.save();
+  const panelW = 430;
+  const panelX = W / 2 - panelW / 2;
+  const panelY = 112;
+  ctx.fillStyle = "rgba(3,5,12,0.54)";
+  ctx.fillRect(panelX, panelY, panelW, 30);
+  ctx.strokeStyle = "rgba(255,211,90,0.40)";
+  ctx.strokeRect(panelX, panelY, panelW, 30);
+  ctx.fillStyle = "#ffd35a";
+  ctx.font = "900 10px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(villageMoveState?.entry ? `MOVING ${villageMoveState.entry.label.toUpperCase()} · CLICK TO PLACE` : "MOVE MODE · CLICK OBJECT · CLICK PLACE · B DONE", W / 2, panelY + 20);
+  ctx.translate(-camera.x, -camera.y);
+  ctx.textAlign = "center";
+  for (const entry of villagePlaceableEntries()) {
+    if (entry.locked) continue;
+    const near = Math.hypot(mouse.x - entry.x, mouse.y - entry.y) < Math.max(34, entry.r || 34);
+    ctx.strokeStyle = near || villageMoveState?.entry?.id === entry.id ? "rgba(255,211,90,0.72)" : "rgba(255,255,255,0.20)";
+    ctx.lineWidth = near ? 2 : 1;
+    ctx.beginPath();
+    ctx.arc(entry.x, entry.y, Math.max(18, Math.min(54, entry.r || 28)), 0, Math.PI * 2);
+    ctx.stroke();
+    if (near || villageMoveState?.entry?.id === entry.id) {
+      ctx.fillStyle = "rgba(3,5,12,0.56)";
+      ctx.fillRect(entry.x - 50, entry.y - Math.max(32, entry.r || 28) - 22, 100, 16);
+      ctx.fillStyle = "#f5f1ff";
+      ctx.font = "900 8px ui-monospace, monospace";
+      ctx.fillText(entry.label.toUpperCase().slice(0, 18), entry.x, entry.y - Math.max(32, entry.r || 28) - 10);
+    }
+  }
+  ctx.restore();
+}
+
+function drawMapDot(mx, my, icon, label, color = "#ffd35a") {
+  ctx.fillStyle = color;
+  ctx.font = "900 14px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(icon, mx, my + 4);
+  if (label) {
+    ctx.font = "800 7px ui-monospace, monospace";
+    ctx.fillStyle = "rgba(245,241,255,0.78)";
+    ctx.fillText(label.toUpperCase().slice(0, 12), mx, my + 16);
+  }
+}
+
+function drawVillageMapOverlay() {
+  if (!villageMapOpen) return;
+  const mapW = Math.min(720, W - 80);
+  const mapH = Math.min(430, H - 90);
+  const x0 = W / 2 - mapW / 2;
+  const y0 = H / 2 - mapH / 2;
+  const sx = mapW / VILLAGE_WORLD.w;
+  const sy = mapH / VILLAGE_WORLD.h;
+  const mx = x => x0 + x * sx;
+  const my = y => y0 + y * sy;
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.58)";
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(3,5,12,0.82)";
+  ctx.fillRect(x0 - 14, y0 - 42, mapW + 28, mapH + 70);
+  ctx.strokeStyle = "rgba(255,211,90,0.55)";
+  ctx.strokeRect(x0 - 14, y0 - 42, mapW + 28, mapH + 70);
+  ctx.fillStyle = "#ffd35a";
+  ctx.font = "900 18px ui-monospace, monospace";
+  ctx.textAlign = "left";
+  ctx.fillText("Town Map", x0, y0 - 16);
+  ctx.fillStyle = "rgba(245,241,255,0.66)";
+  ctx.font = "800 10px ui-monospace, monospace";
+  ctx.fillText("M or Esc closes · B enters move mode", x0 + 124, y0 - 17);
+  ctx.fillStyle = "rgba(77,142,63,0.78)";
+  ctx.fillRect(x0, y0, mapW, mapH);
+  ctx.fillStyle = "rgba(7,35,58,0.72)";
+  ctx.fillRect(mx(VILLAGE_RIVER.x), y0, VILLAGE_RIVER.w * sx, mapH);
+  ctx.fillStyle = villageBridgeFixed() ? "rgba(53,24,63,0.48)" : "rgba(0,0,0,0.26)";
+  ctx.fillRect(mx(VILLAGE_DARK_DISTRICT.x), y0, VILLAGE_DARK_DISTRICT.w * sx, mapH);
+  ctx.fillStyle = villageBridgeFixed() ? "rgba(199,125,255,0.60)" : "rgba(255,92,122,0.58)";
+  ctx.fillRect(mx(VILLAGE_BRIDGE.x - VILLAGE_BRIDGE.w / 2), my(VILLAGE_BRIDGE.y - VILLAGE_BRIDGE.h / 2), VILLAGE_BRIDGE.w * sx, Math.max(5, VILLAGE_BRIDGE.h * sy));
+  ctx.strokeStyle = "rgba(255,255,255,0.12)";
+  for (let x = x0; x <= x0 + mapW; x += mapW / 6) { ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + mapH); ctx.stroke(); }
+  for (let y = y0; y <= y0 + mapH; y += mapH / 4) { ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + mapW, y); ctx.stroke(); }
+  drawMapDot(mx(VILLAGE_TOWER_GATE.x), my(VILLAGE_TOWER_GATE.y), "▲", "Tower", "#ff6b6b");
+  drawMapDot(mx(VILLAGE_HOME.x), my(VILLAGE_HOME.y), "⌂", "House", "#c77dff");
+  drawMapDot(mx(VILLAGE_CHEST.x), my(VILLAGE_CHEST.y), "▣", "Chest", "#ffd35a");
+  drawMapDot(mx(VILLAGE_DAILY_BOARD.x), my(VILLAGE_DAILY_BOARD.y), "!", "Board", "#7dffb2");
+  drawMapDot(mx(VILLAGE_SHRINE.x), my(VILLAGE_SHRINE.y), "✦", "Shrine", "#7cc7ff");
+  const garden = hubProjectById("garden");
+  if (garden) drawMapDot(mx(garden.x), my(garden.y), "✿", "Garden", "#7dffb2");
+  const taskTargets = villageTaskMarkerTargets(activeBoardTask()).slice(0, 5);
+  for (const target of taskTargets) drawMapDot(mx(target.x), my(target.y), "●", "Job", "#ffffff");
+  drawMapDot(mx(villagePlayer.x), my(villagePlayer.y), "◆", "You", "#ffffff");
+  ctx.fillStyle = villageBridgeFixed() ? "#c77dff" : "#ff6b6b";
+  ctx.font = "900 10px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(villageBridgeFixed() ? "GRAVE ROAD OPEN" : "BROKEN BRIDGE", mx(VILLAGE_BRIDGE.x), my(VILLAGE_BRIDGE.y) - 12);
+  if (!villageBridgeFixed()) {
+    ctx.fillStyle = "rgba(245,241,255,0.68)";
+    ctx.fillText("UNKNOWN DISTRICT", mx(VILLAGE_DARK_DISTRICT.x + VILLAGE_DARK_DISTRICT.w / 2), y0 + 30);
+  } else {
+    ctx.fillStyle = "rgba(199,125,255,0.84)";
+    ctx.fillText("GRAVE ROAD", mx(VILLAGE_DARK_DISTRICT.x + VILLAGE_DARK_DISTRICT.w / 2), y0 + 30);
+  }
+  ctx.restore();
+}
+
+function drawVillageBridgeCutscene() {
+  if (!villageBridgeCutscene) return;
+  const age = villageBridgeCutscene.maxT - villageBridgeCutscene.t;
+  const a = clamp(Math.min(age / 0.6, villageBridgeCutscene.t / 0.8), 0, 1);
+  ctx.save();
+  ctx.globalAlpha = 0.62 * a;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = a;
+  const w = 430;
+  const h = 104;
+  const x = W / 2 - w / 2;
+  const y = H / 2 - h / 2;
+  ctx.fillStyle = "rgba(3,5,12,0.78)";
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = "rgba(255,211,90,0.62)";
+  ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = "#ffd35a";
+  ctx.font = "900 20px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("The bridge holds.", W / 2, y + 38);
+  ctx.fillStyle = "rgba(245,241,255,0.78)";
+  ctx.font = "800 12px ui-monospace, monospace";
+  ctx.fillText("Grave Road is open. New board jobs can appear.", W / 2, y + 66);
+  ctx.fillStyle = "rgba(199,125,255,0.88)";
+  ctx.font = "900 10px ui-monospace, monospace";
+  ctx.fillText("DARK DISTRICT UNLOCKED", W / 2, y + 88);
   ctx.restore();
 }
 
@@ -11776,21 +12262,34 @@ function canvasPos(event) {
 window.addEventListener("keydown", e => {
   resumeAudio();
   const key = e.key.toLowerCase();
-  if (key === "p" || key === "escape") {
-    e.preventDefault();
-    if (mode === "village") showVillagePauseOverlay();
-    else if (mode === "villagePaused") resumeVillage();
-    else if (mode === "running") requestFightPause();
-    else if (mode === "paused") resumeFight();
-    else if (mode === "pauseRequest") showPauseOverlay(false);
-    return;
-  }
   if (mode === "village") {
+    if (key === "escape") {
+      e.preventDefault();
+      if (villageMapOpen) { villageMapOpen = false; return; }
+      if (villageBuildMode) { villageBuildMode = false; villageMoveState = null; setVillageMessage("Move Mode", "Town layout saved.", 2.0); return; }
+      showVillagePauseOverlay();
+      return;
+    }
+    if (key === "p") {
+      e.preventDefault();
+      showVillagePauseOverlay();
+      return;
+    }
+    if (key === "m") {
+      e.preventDefault();
+      if (!e.repeat) toggleVillageMap();
+      return;
+    }
+    if (key === "b") {
+      e.preventDefault();
+      if (!e.repeat) toggleVillageBuildMode();
+      return;
+    }
     if (handleVillageFishingInput(key)) {
       e.preventDefault();
       return;
     }
-    if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"].includes(key)) keys.add(key);
+    if (!villageMapOpen && !villageBridgeCutscene && ["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"].includes(key)) keys.add(key);
     if (key === "enter") {
       e.preventDefault();
       if (!e.repeat) toggleVillageHistory();
@@ -11800,6 +12299,14 @@ window.addEventListener("keydown", e => {
       e.preventDefault();
       if (!e.repeat) interactVillage();
     }
+    return;
+  }
+  if (key === "p" || key === "escape") {
+    e.preventDefault();
+    if (mode === "villagePaused") resumeVillage();
+    else if (mode === "running") requestFightPause();
+    else if (mode === "paused") resumeFight();
+    else if (mode === "pauseRequest") showPauseOverlay(false);
     return;
   }
   if (key === " " || key === "spacebar") {
@@ -11856,6 +12363,14 @@ canvas.addEventListener("mousedown", e => {
   resumeAudio();
   if (e.button === 0 && mode === "village") {
     mouse.down = false;
+    const p = canvasPos(e);
+    mouse.x = p.x;
+    mouse.y = p.y;
+    mouse.screenX = p.screenX;
+    mouse.screenY = p.screenY;
+    if (villageMapOpen) return;
+    if (handleVillageBuildMouseDown(p.x, p.y)) return;
+    if (!villageBridgeCutscene) clickVillageActionAt(p.x, p.y);
     return;
   }
   if (e.button === 0 && mode === "running" && !gameOver) {
@@ -11893,6 +12408,7 @@ overlay.addEventListener("click", e => {
     sleepHouse: () => sleepVillageHouse(),
     storeChest: () => moveChestResource(button.dataset.resource || "", "store"),
     takeChest: () => moveChestResource(button.dataset.resource || "", "take"),
+    useVillageSink: () => useVillageSink(button.dataset.sinkId || ""),
     openStory: () => renderStorySelect(),
     helpVillager: () => helpVillager(button.dataset.id),
     startStoryChapter: () => startStoryChapter(button.dataset.id),
