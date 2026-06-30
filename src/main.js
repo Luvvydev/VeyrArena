@@ -858,7 +858,7 @@ const HUB_VILLAGERS = [
   }
 ];
 
-const VILLAGE_LAYOUT_VERSION = 3;
+const VILLAGE_LAYOUT_VERSION = 4;
 
 const DEFAULT_HUB_SAVE = {
   supplies: 0,
@@ -5595,7 +5595,48 @@ function drawVillagePond() {
   ctx.beginPath();
   ctx.ellipse(px - 34, py - 18, 38, 6, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  drawTownAsset("tiny_sign", px + VILLAGE_POND.rx + 32, py + 26, 28, 0, 0.82);
+  drawVillageFishingDock();
+}
+
+function drawVillageFishingDock() {
+  const spot = VILLAGE_FISHING_SPOTS[0];
+  if (!spot) return;
+  const y = spot.y + 5;
+  const startX = VILLAGE_POND.x + VILLAGE_POND.rx - 96;
+  const endX = VILLAGE_POND.x + VILLAGE_POND.rx + 18;
+  const plankW = 17;
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.beginPath();
+  ctx.ellipse((startX + endX) / 2 + 6, y + 20, 70, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(78,49,28,0.70)";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(startX - 4, y - 18);
+  ctx.lineTo(endX + 4, y - 18);
+  ctx.moveTo(startX - 4, y + 18);
+  ctx.lineTo(endX + 4, y + 18);
+  ctx.stroke();
+
+  for (let i = 0; i < 7; i++) {
+    const x = startX + i * 17;
+    ctx.fillStyle = i % 2 ? "#b7814c" : "#c58b54";
+    ctx.fillRect(x, y - 19, plankW, 38);
+    ctx.strokeStyle = "rgba(80,48,28,0.42)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y - 18.5, plankW - 1, 37);
+  }
+
+  ctx.fillStyle = "#7b5334";
+  for (const x of [startX - 6, startX + 46, endX + 2]) {
+    ctx.fillRect(x - 4, y - 24, 8, 13);
+    ctx.fillRect(x - 4, y + 11, 8, 17);
+  }
+  ctx.fillStyle = "rgba(236,202,139,0.24)";
+  ctx.fillRect(startX + 8, y - 12, endX - startX - 16, 3);
+  ctx.restore();
 }
 
 function drawVillagePaths() {
@@ -5920,6 +5961,10 @@ function drawCleanCottageBase(x, y, w, h, opts = {}) {
   ctx.restore();
 }
 
+function villageCottageWindowY(y, h) {
+  return y + Math.max(66, Math.min(h - 46, h * 0.65));
+}
+
 function drawVillageNamePlate(cx, y, text, color = "#ffd35a") {
   ctx.save();
   ctx.fillStyle = "rgba(3,5,12,0.46)";
@@ -5966,8 +6011,9 @@ function drawVillageCottage(h, color, role, rank, max) {
   } else {
     drawCleanCottageBase(h.x, h.y, h.w, h.h, { wallColor, roofColor, trim: hexToRgba(color, 0.48), chimney: roleKey.includes("home") || roleKey.includes("smith") });
     drawTownAsset(roleKey.includes("smith") ? "town_door_b" : "town_door_a", cx, h.y + h.h - 24, 40, 0, 0.98);
-    if (buildStage >= 2) drawTownAsset("town_window_a", h.x + 54, h.y + 80, 28, 0, 0.95);
-    if (buildStage >= 3) drawTownAsset("town_window_b", h.x + h.w - 54, h.y + 80, 28, 0, 0.95);
+    const winY = villageCottageWindowY(h.y, h.h);
+    if (buildStage >= 2) drawTownAsset("town_window_a", h.x + 58, winY, 28, 0, 0.95);
+    if (buildStage >= 3) drawTownAsset("town_window_b", h.x + h.w - 58, winY, 28, 0, 0.95);
     if (roleKey.includes("smith")) drawTownAsset("tiny_tool_pickaxe", h.x + h.w - 38, h.y + 62, 24, -0.55, 0.95);
     if (roleKey.includes("lookout")) drawTownAsset("tiny_target", h.x + h.w - 38, h.y + 62, 24, 0, 0.95);
   }
@@ -5983,26 +6029,8 @@ function drawVillageCottage(h, color, role, rank, max) {
 }
 
 function drawVillageSupplies() {
-  const hub = ensureHubSave();
-  const count = clamp(hub.supplies, 0, 18);
-  const x = 1294;
-  const y = 870;
-  ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
-  ctx.beginPath();
-  ctx.ellipse(x + 12, y + 70, 112, 24, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  drawVillageSmallBuilding(x - 88, y - 40, 190, 126, "#ffd35a", "SUPPLY SHED", "Storage", "town_crate_big");
-  for (let i = 0; i < Math.max(4, count); i++) {
-    const px = x - 62 + (i % 6) * 25;
-    const py = y + 62 - Math.floor(i / 6) * 22;
-    const key = i % 3 === 0 ? "town_crate_big" : i % 3 === 1 ? "town_barrel_a" : "town_crate_small";
-    drawTownAsset(key, px, py, 28, 0, i < count ? 1 : 0.24);
-  }
-  ctx.restore();
+  // The separate storage shed was removed. Supplies now live in the HUD, hotbar, and chest.
 }
-
 function drawVillageRubble() {
   for (const rubble of VILLAGE_RUBBLE) {
     if (villageRubbleCleared(rubble.id)) continue;
@@ -6183,20 +6211,22 @@ function drawVillageSmallBuilding(x, y, w, h, color, top, bottom, iconKey) {
   const type = String(bottom || "").toLowerCase();
   const roofColor = type.includes("collection") ? "#6d4f86" : type.includes("power") ? "#5a7188" : type.includes("menu") ? "#8a633d" : "#8f6138";
   const wallColor = type.includes("collection") ? "#c7b9d2" : type.includes("power") ? "#bcc8cf" : type.includes("menu") ? "#d2bb88" : "#c9b27f";
+  const winY = villageCottageWindowY(y, h);
+  const wallIconY = y + h - 52;
   ctx.save();
   drawCleanCottageBase(x, y, w, h, { wallColor, roofColor, trim: hexToRgba(color, 0.48), chimney: type.includes("power") });
   drawTownAsset(type.includes("menu") ? "town_door_a" : "town_door_b", cx, y + h - 24, 40, 0, 0.98);
-  drawTownAsset("town_window_a", x + 48, y + 76, 28, 0, 0.92);
-  drawTownAsset("town_window_b", x + w - 48, y + 76, 28, 0, 0.92);
-  drawTownAsset(iconKey, cx, y + 62, 30, 0, 0.9);
+  drawTownAsset("town_window_a", x + 52, winY, 28, 0, 0.92);
+  drawTownAsset("town_window_b", x + w - 52, winY, 28, 0, 0.92);
+  drawTownAsset(iconKey, cx, wallIconY, 24, 0, 0.88);
   if (type.includes("collection")) {
-    drawTownAsset("tiny_sword", cx - 30, y + 62, 20, -0.7, 0.95);
-    drawTownAsset("tiny_chest", cx + 30, y + 62, 22, 0, 0.95);
+    drawTownAsset("tiny_sword", cx - 34, wallIconY + 1, 18, -0.7, 0.9);
+    drawTownAsset("tiny_chest", cx + 34, wallIconY + 2, 20, 0, 0.9);
   } else if (type.includes("power")) {
-    drawTownAsset("tiny_target", cx - 30, y + 62, 22, 0, 0.95);
-    drawTownAsset("tiny_axe", cx + 30, y + 62, 22, -0.5, 0.95);
+    drawTownAsset("tiny_target", cx - 34, wallIconY + 1, 20, 0, 0.9);
+    drawTownAsset("tiny_axe", cx + 34, wallIconY + 1, 20, -0.5, 0.9);
   } else if (type.includes("menu")) {
-    drawTownAsset("tiny_sign", cx, y + 62, 26, 0, 0.95);
+    drawTownAsset("tiny_sign", cx, wallIconY, 24, 0, 0.9);
   }
   drawVillageNamePlate(cx, y + h + 4, bottom, color);
   ctx.restore();
@@ -6276,8 +6306,9 @@ function drawVillageKitchen(project, rank) {
   const cx = project.x;
   drawCleanCottageBase(cx - 88, project.y - 72, 176, 116, { wallColor: "#ccb67f", roofColor: "#9b5e34", trim: hexToRgba(project.color, 0.44), chimney: true });
   drawTownAsset("town_door_b", cx, project.y + 18, 40, 0, 0.95);
-  drawTownAsset("town_window_a", cx - 52, project.y - 18, 26, 0, 0.9);
-  drawTownAsset("town_window_b", cx + 52, project.y - 18, 26, 0, 0.9);
+  const winY = villageCottageWindowY(project.y - 72, 116);
+  drawTownAsset("town_window_a", cx - 52, winY, 26, 0, 0.9);
+  drawTownAsset("town_window_b", cx + 52, winY, 26, 0, 0.9);
   ctx.fillStyle = `rgba(255,116,66,${0.10 + Math.min(rank, 6) * 0.045})`;
   ctx.beginPath();
   ctx.arc(cx, project.y + 62, 20 + Math.min(rank, 5) * 2, 0, Math.PI * 2);
@@ -6399,14 +6430,19 @@ function drawVillageFishingSpot() {
   const near = Math.hypot(villagePlayer.x - spot.x, villagePlayer.y - spot.y) < 96;
   ctx.save();
   if (near) {
-    ctx.strokeStyle = "rgba(255,211,90,0.28)";
+    ctx.strokeStyle = "rgba(255,211,90,0.22)";
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(spot.x, spot.y, 34, 0, Math.PI * 2);
+    ctx.arc(spot.x + 4, spot.y + 6, 18, 0, Math.PI * 2);
     ctx.stroke();
   }
   ctx.fillStyle = "rgba(255,255,255,0.20)";
   ctx.beginPath();
-  ctx.ellipse(spot.x - 20 + Math.sin(nowSec() * 1.7) * 12, spot.y - 4, 12, 4, 0, 0, Math.PI * 2);
+  ctx.ellipse(spot.x - 28 + Math.sin(nowSec() * 1.7) * 10, spot.y - 12, 12, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,211,90,0.82)";
+  ctx.beginPath();
+  ctx.arc(spot.x - 6, spot.y + Math.sin(nowSec() * 2.2) * 2, 3, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
