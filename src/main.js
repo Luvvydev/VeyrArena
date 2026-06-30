@@ -202,6 +202,7 @@ const ASSET_PATHS = {
     music_run: "./assets/sfx/music_run.mp3",
     music_boss: "./assets/sfx/music_boss.mp3",
     music_intro: "./assets/sfx/music_intro.mp3",
+    music_town: "./assets/sfx/music_intro.mp3",
     defeat_outro: "./assets/sfx/defeat_outro.mp3",
     cache_upgrade: "./assets/sfx/cache_upgrade.mp3",
     town_chop: "./assets/sfx/town_chop.mp3",
@@ -393,6 +394,85 @@ function startMusic(key) {
     musicKey = "";
   }
 }
+
+function startVillageMusic() {
+  // Use the soft music cue, not the sharp village ambience loops.
+  startMusic("music_town");
+}
+
+function isOverlayVisible() {
+  return overlay && overlay.style.display && overlay.style.display !== "none";
+}
+
+function saveTowerProgress(reason = "progress") {
+  if (!currentFloor || currentFloor < 1) return;
+  if (["menu", "village", "villagePaused"].includes(mode)) return;
+  save.bestFloor = Math.max(Number(save.bestFloor) || 0, Number(currentFloor) || 1);
+  save.lastTowerProgress = { floor: currentFloor, mode, reason, ts: Date.now() };
+  saveGame();
+}
+
+function updateCursorMode() {
+  const villageLike = mode === "village" || mode === "villagePaused" || villageMapOpen || villageBuildMode || (isOverlayVisible() && !["running", "countdown", "killReplay"].includes(mode));
+  const cursor = villageBuildMode ? (villageMoveState ? "grabbing" : "grab") : villageLike ? "auto" : "none";
+  try {
+    canvas.style.cursor = cursor;
+    document.body.style.cursor = villageLike ? "auto" : "";
+    if (document.querySelector("main")) document.querySelector("main").style.cursor = villageLike ? "auto" : "";
+  } catch {}
+}
+
+function closeVillageMenuOverlay() {
+  if (!isOverlayVisible()) return false;
+  if (mode !== "village") return false;
+  if (villageHistoryOpen) {
+    closeVillageHistory();
+    return true;
+  }
+  closeOverlay();
+  setVillageMessage("Village", "Closed.", 1.2);
+  return true;
+}
+
+function handleOverlayEscape() {
+  if (!isOverlayVisible()) return false;
+  const screen = document.body.dataset.screen || "";
+  if (screen === "optionsMenu" && optionsBackAction === "backVillagePause") {
+    showVillagePauseOverlay();
+    return true;
+  }
+  if (mode === "village") return closeVillageMenuOverlay();
+  if (mode === "villagePaused") {
+    resumeVillage();
+    return true;
+  }
+  if (mode === "paused" || mode === "pauseRequest") {
+    resumeFight();
+    return true;
+  }
+  if (mode === "routeChoice" || mode === "floorClear") {
+    saveTowerProgress("menu exit");
+    if (activeStoryMode && villagePendingRouteFloor > 0) returnToVillageFromOverlay();
+    else renderMenu();
+    return true;
+  }
+  if (mode === "gameOver") {
+    saveTowerProgress("result exit");
+    if (activeStoryMode) returnToVillageFromOverlay();
+    else renderMenu();
+    return true;
+  }
+  if (mode === "storyBriefing" || mode === "storyScene") {
+    renderMenu();
+    return true;
+  }
+  if (screen && screen !== "game") {
+    renderMenu();
+    return true;
+  }
+  return false;
+}
+
 
 function stageAssetKey(kind) {
   const id = activeStage?.id || "graybox";
@@ -2836,7 +2916,7 @@ function refillVillageEnergy(source = "after tower") {
   assignVillageBoardAfterFloor(Math.max(1, currentFloor || hub.towerDay));
   hub.lastGain = `Day ${hub.towerDay}: energy restored. ${omen.name}: ${omen.rewardText}`;
   villageEnergyFlash = 1;
-  playAssetSfx("town_village_day", 0.12);
+  playAssetSfx("town_leaves", 0.12) || playAssetSfx("town_building_work", 0.08);
   saveGame();
   return { omen, event };
 }
@@ -3519,7 +3599,7 @@ function startVillageHub() {
   worldH = VILLAGE_WORLD.h;
   closeVillageHistory();
   closeOverlay();
-  startMusic("music_menu");
+  startVillageMusic();
   ensureHubSave();
   player.hp = player.maxHp;
   mouse.down = false;
@@ -3543,11 +3623,12 @@ function enterVillageBetweenStoryFloors(nextFloor, info = {}) {
   worldH = VILLAGE_WORLD.h;
   closeVillageHistory();
   closeOverlay();
-  startMusic("music_menu");
+  startVillageMusic();
   ensureHubSave();
   mouse.down = false;
   villageInteractTarget = null;
   const hub = ensureHubSave();
+  hub.lastTownReturnFloor = currentFloor;
   ensureVillageBoardTasks();
   const task = activeBoardTask();
   const omen = activeVillageOmen();
@@ -3575,6 +3656,12 @@ function enterVillageBetweenStoryFloors(nextFloor, info = {}) {
 
 function returnToVillageFromOverlay() {
   if (activeStoryMode && villagePendingRouteFloor > 0 && runStats) {
+    const hub = ensureHubSave();
+    if ((mode === "routeChoice" || mode === "floorClear") && hub.lastTownReturnFloor !== currentFloor) {
+      refillVillageEnergy(`floor ${Math.max(1, villagePendingRouteFloor - 1)}`);
+      hub.lastTownReturnFloor = currentFloor;
+      saveGame();
+    }
     mode = "village";
     running = false;
     gameOver = false;
@@ -3583,7 +3670,7 @@ function returnToVillageFromOverlay() {
     worldH = VILLAGE_WORLD.h;
     closeVillageHistory();
     closeOverlay();
-    startMusic("music_menu");
+    startVillageMusic();
     ensureHubSave();
     mouse.down = false;
     villageInteractTarget = null;
@@ -3894,7 +3981,7 @@ function chestSlotHtml(resource, amount, location) {
   const meta = CHEST_RESOURCE_META[resource];
   if (!meta || amount <= 0) return `<button class="inventorySlot empty" disabled></button>`;
   const action = location === "bag" ? "storeChest" : "takeChest";
-  const title = location === "bag" ? "Click to store 1" : "Click to take 1";
+  const title = location === "bag" ? "Click to store 1. Shift-click stores the stack." : "Click to take 1. Shift-click takes the stack.";
   return `
     <button class="inventorySlot filled ${resource}" data-action="${action}" data-resource="${resource}" title="${title}">
       <span class="slotIcon ${resource}">${meta.glyph}</span>
@@ -3918,7 +4005,7 @@ function renderVillageChest() {
       ${renderTopStrip("Storage Chest", "backVillage")}
       <div class="vsPanel levelPanel routePanel inventoryPanel">
         <h2>Inventory and Chest</h2>
-        <p class="panelLead">Click a filled bag slot to store 1. Click a filled chest slot to take 1.</p>
+        <p class="panelLead">Click moves 1. Shift-click moves the whole stack.</p>
         <div class="minecraftInventoryFrame">
           <section>
             <h3>Bag</h3>
@@ -3930,13 +4017,13 @@ function renderVillageChest() {
             <div class="inventorySlotGrid chestSlots">${chestItems}${emptyChestSlots(13)}</div>
           </section>
         </div>
-        <div class="inventoryHintBar">Your real counts update instantly. This is still stack based, not a huge RPG inventory.</div>
+        <div class="inventoryHintBar">Click: move 1. Shift-click: move all, like stash movement.</div>
       </div>
     </div>
   `, "chestMenu");
 }
 
-function moveChestResource(resource, direction) {
+function moveChestResource(resource, direction, wholeStack = false) {
   if (!CHEST_RESOURCES.includes(resource)) return;
   const hub = ensureHubSave();
   hub.chest = { ...structuredClone(DEFAULT_HUB_SAVE).chest, ...(hub.chest || {}) };
@@ -3945,14 +4032,18 @@ function moveChestResource(resource, direction) {
 
   if (direction === "store") {
     if (bagAmount <= 0) return;
-    if (resource === "supplies") hub.supplies = bagAmount - 1;
-    else hub[resource] = bagAmount - 1;
-    hub.chest[resource] = chestAmount + 1;
+    const moved = wholeStack ? bagAmount : 1;
+    if (resource === "supplies") hub.supplies = bagAmount - moved;
+    else hub[resource] = bagAmount - moved;
+    hub.chest[resource] = chestAmount + moved;
+    setVillageMessage("Chest", wholeStack ? `Stored all ${resource}.` : `Stored 1 ${resource}.`, 1.6);
   } else {
     if (chestAmount <= 0) return;
-    hub.chest[resource] = chestAmount - 1;
-    if (resource === "supplies") hub.supplies = bagAmount + 1;
-    else hub[resource] = bagAmount + 1;
+    const moved = wholeStack ? chestAmount : 1;
+    hub.chest[resource] = chestAmount - moved;
+    if (resource === "supplies") hub.supplies = bagAmount + moved;
+    else hub[resource] = bagAmount + moved;
+    setVillageMessage("Chest", wholeStack ? `Took all ${resource}.` : `Took 1 ${resource}.`, 1.6);
   }
 
   saveGame();
@@ -5082,7 +5173,7 @@ function updateVillage(dt) {
     hub.nightFallPending = false;
     saveGame();
     setVillageMessage("Night falls", "The tower lights wake. Check tonight's prep at the gate and climb before the day goes cold.", 5.0);
-    playAssetSfx("town_village_night", 0.16);
+    playAssetSfx("ui_confirm_001", 0.08);
   }
   villagePulse = Math.max(0, villagePulse - dt * 1.8);
   villageEnergyFlash = Math.max(0, villageEnergyFlash - dt * 2.8);
@@ -6757,12 +6848,12 @@ function showEndRunConfirm() {
     <div class="pauseCard">
       <div class="pauseTag">END RUN</div>
       <h2>Leave this run?</h2>
-      <p>This sends you back to the main menu. Current floor progress from this run is lost.</p>
+      <p>This sends you back to the main menu. Floors reached stay saved.</p>
       <div class="pauseActions">
         <button class="vsButton green pauseResume" data-action="resumeFight">KEEP PLAYING</button>
         <button class="vsButton red pauseEnd" data-action="abandonRun">END RUN</button>
       </div>
-      <small>Use this when you want to quit the current fight. Escape only pauses.</small>
+      <small>Esc resumes here. Main menu keeps reached floor progress.</small>
     </div>
   `;
 }
@@ -6779,9 +6870,10 @@ function showVillagePauseOverlay() {
       <p>The village is frozen. Resume, open the main menu, or quit from the main menu.</p>
       <div class="pauseActions">
         <button class="vsButton green pauseResume" data-action="resumeVillage">RESUME</button>
+        <button class="vsButton blue" data-action="openVillageOptions">SETTINGS</button>
         <button class="vsButton blue" data-action="backMenu">MAIN MENU</button>
       </div>
-      <small>Esc pauses in town now. It no longer throws you to the main menu.</small>
+      <small>Settings work live. Change sound, then Back returns here.</small>
     </div>
   `;
 }
@@ -6858,11 +6950,13 @@ function abandonRun() {
   pauseRequestedAt = 0;
   pauseAcceptedAt = 0;
   stopMusic();
-  addLog("Run ended from pause menu.");
+  saveTowerProgress("run ended");
+  addLog("Run ended from pause menu. Progress saved.");
   renderMenu();
 }
 
 function renderMenu() {
+  saveTowerProgress("main menu");
   mode = "menu";
   running = false;
   gameOver = false;
@@ -7186,8 +7280,13 @@ function renderUnlockList() {
 }
 
 
-function renderOptions() {
-  mode = "options";
+let optionsBackAction = "backMenu";
+let optionsLivePauseMode = "options";
+
+function renderOptions(backAction = "backMenu", livePauseMode = "options") {
+  optionsBackAction = backAction || "backMenu";
+  optionsLivePauseMode = livePauseMode || "options";
+  mode = optionsLivePauseMode;
   const slider = (key, label) => {
     const value = Math.round((save.settings?.[key] ?? DEFAULT_SAVE.settings[key]) * 100);
     return `
@@ -7201,12 +7300,12 @@ function renderOptions() {
 
   openOverlay(`
     <div class="vsScreen framedScreen optionsScreen">
-      ${renderTopStrip("Options", "backMenu")}
+      ${renderTopStrip("Settings", optionsBackAction)}
       <div class="vsPanel optionsPanel">
         <h2>Audio</h2>
         <div class="volumeGrid">
           ${slider("master", "Master")}
-          ${slider("sfx", "Weapons / impacts")}
+          ${slider("sfx", "Combat / UI")}
           ${slider("footsteps", "Footsteps")}
           ${slider("voice", "Voice")}
           ${slider("music", "Music")}
@@ -7625,7 +7724,7 @@ function playSfx(kind, intensity = 1, variant = "") {
     playTone(140 + intensity * 55, 0.045, "sawtooth", 0.032, -70);
   }
   if (kind === "hit") {
-    if (playAssetSfx("fps_enemy_hurt", 0.36) || playAssetSfx("impact", 0.42)) return;
+    if (playAssetSfx("fps_enemy_hurt", 0.36) || playAssetSfx("impact", 0.18)) return;
     playTone(280 + intensity * 40, 0.035, "square", 0.028, -120);
   }
   if (kind === "wall") {
@@ -7883,7 +7982,7 @@ function tryRicochet(origin, hitPoint, incomingAngle, weapon) {
   });
 
   addParticles("spark", hitPoint.x, hitPoint.y, reflected, 9);
-  playAssetSfx("impact", 0.16);
+  playAssetSfx("impact", 0.08);
 
   if (hitTarget) {
     damageBot(hitTarget, rand(weapon.damage[0], weapon.damage[1]) * 0.55 * runStats.damageMult, reflected, weapon, finalPoint);
@@ -10196,8 +10295,20 @@ function chooseReward(index) {
   const floorInfo = pendingFloorReward || {};
   pendingFloorReward = null;
   if (activeStoryMode && currentFloor < 8) {
-    enterVillageBetweenStoryFloors(currentFloor + 1, floorInfo);
-    return;
+    villagePendingRouteFloor = currentFloor + 1;
+    if (floorInfo.suppliesFound || floorInfo.reward) {
+      const hub = ensureHubSave();
+      hub.lastReturnCard = {
+        floor: currentFloor,
+        suppliesFound: floorInfo.suppliesFound || 0,
+        shardsFound: floorInfo.reward || 0,
+        request: activeBoardTask()?.title || "Board work",
+        status: activeVillageDailyEvent()?.name || "quiet",
+        omen: activeVillageOmen()?.name || "none",
+        ts: Date.now()
+      };
+      saveGame();
+    }
   }
   showRouteChoices(currentFloor + 1);
 }
@@ -10226,6 +10337,7 @@ function chooseUpgrade(index) {
 }
 
 function showRouteChoices(nextFloor) {
+  if (activeStoryMode) villagePendingRouteFloor = nextFloor;
   if (nextFloor > 8) {
     endTower(true);
     return;
@@ -10233,6 +10345,7 @@ function showRouteChoices(nextFloor) {
 
   mode = "routeChoice";
   const routes = buildRouteChoices(nextFloor);
+  const townChoice = activeStoryMode ? `<button class="vsButton blue" data-action="backVillage">TOWN</button>` : "";
   const cards = routes.map(route => `
     <button class="routeCard ${route.kind}" data-action="chooseRoute" data-route="${route.kind}">
       <span class="routeTag">${route.tag}</span>
@@ -10252,10 +10365,11 @@ function showRouteChoices(nextFloor) {
         <div class="vsDetailBar">
           <div class="powerIcon big">?</div>
           <div>
-            <b>Floor choice</b>
-            <p>Read the reward, danger, and floor type before moving on.</p>
+            <b>Continue or restock</b>
+            <p>Pick a route to keep climbing, or go to town and come back to this floor.</p>
           </div>
         </div>
+        <div class="menuActions">${townChoice}</div>
       </div>
     </div>
   `, "routeMenu");
@@ -10333,6 +10447,8 @@ function endTower(won, killer = "") {
     playAssetSfx("voice_you_win", 0.36);
     playAssetSfx("bonus_chime", 0.36);
   } else {
+    save.bestFloor = Math.max(Number(save.bestFloor) || 0, Number(currentFloor) || 1);
+    saveGame();
     playAssetSfx("defeat_outro", 0.42);
     playAssetSfx("game_over_balanced", 0.24);
     playAssetSfx("voice_game_over", 0.18);
@@ -10345,8 +10461,8 @@ function endTower(won, killer = "") {
     ? `Chapter cleared. The village has proof Mira is alive. Next clue: ${nextChapter.name}.`
     : "Chapter cleared. Mira's door is open, and the village is waiting.";
   const topBackAction = activeStoryMode ? "backVillage" : "backMenu";
-  const primaryAction = won && activeStoryMode ? "backVillage" : "startTower";
-  const primaryText = won && activeStoryMode ? "RETURN TO VILLAGE" : "START NEW TOWER";
+  const primaryAction = won && activeStoryMode ? "backVillage" : "retryTower";
+  const primaryText = won && activeStoryMode ? "RETURN TO VILLAGE" : "RETRY TOWER";
   const secondaryAction = activeStoryMode ? "backVillage" : "backMenu";
   const secondaryText = activeStoryMode ? "VILLAGE" : "MAIN MENU";
   const jackpot = won && activeStoryMode ? `<div class="slotHeader">CHAPTER COMPLETE</div><div class="chapterCliffhanger">${nextChapter ? `Someone in the village says ${nextChapter.handler} found the next lead.` : "Mira is close enough to hear footsteps outside her door."}</div>` : "";
@@ -12199,6 +12315,7 @@ function loop(t) {
 
   updatePauseRequest();
   syncPauseButton();
+  updateCursorMode();
 
   if (mode === "village") {
     updateVillage(rawDt);
@@ -12262,6 +12379,10 @@ function canvasPos(event) {
 window.addEventListener("keydown", e => {
   resumeAudio();
   const key = e.key.toLowerCase();
+  if (key === "escape" && handleOverlayEscape()) {
+    e.preventDefault();
+    return;
+  }
   if (mode === "village") {
     if (key === "escape") {
       e.preventDefault();
@@ -12406,8 +12527,8 @@ overlay.addEventListener("click", e => {
     buyShrineOffer: () => buyShrineOffer(button.dataset.offerId || ""),
     upgradeHouse: () => upgradeVillageHouse(),
     sleepHouse: () => sleepVillageHouse(),
-    storeChest: () => moveChestResource(button.dataset.resource || "", "store"),
-    takeChest: () => moveChestResource(button.dataset.resource || "", "take"),
+    storeChest: () => moveChestResource(button.dataset.resource || "", "store", e.shiftKey),
+    takeChest: () => moveChestResource(button.dataset.resource || "", "take", e.shiftKey),
     useVillageSink: () => useVillageSink(button.dataset.sinkId || ""),
     openStory: () => renderStorySelect(),
     helpVillager: () => helpVillager(button.dataset.id),
@@ -12421,13 +12542,15 @@ overlay.addEventListener("click", e => {
     openPowerUps: () => renderPowerUps(),
     openUnlockList: () => renderUnlockList(),
     openOptions: () => renderOptions(),
+    openVillageOptions: () => renderOptions("backVillagePause", "villagePaused"),
+    backVillagePause: () => showVillagePauseOverlay(),
     toggleDebugMenu: () => {
       showDebug = !showDebug;
-      renderOptions();
+      renderOptions(optionsBackAction, optionsLivePauseMode);
     },
     toggleMuteUnfocused: () => {
       setMuteUnfocused(!muteWhenUnfocusedEnabled());
-      renderOptions();
+      renderOptions(optionsBackAction, optionsLivePauseMode);
     },
     quitApp: () => {
       if (window.veyrDesktop?.quitApp) {
@@ -12448,7 +12571,8 @@ overlay.addEventListener("click", e => {
     resumeFight: () => resumeFight(),
     resumeVillage: () => resumeVillage(),
     confirmEndRun: () => showEndRunConfirm(),
-    abandonRun: () => abandonRun()
+    abandonRun: () => abandonRun(),
+    retryTower: () => startTower(activeStoryMode ? { story: true, chapterId: activeStoryChapterId } : {})
   };
 
   if (actions[action]) actions[action]();
