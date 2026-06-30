@@ -20,6 +20,14 @@ const ASSET_PATHS = {
     player_platform_pink: "./assets/sprites/platformer_pink_front.png",
     player_platform_purple: "./assets/sprites/platformer_purple_front.png",
     player_platform_beige: "./assets/sprites/platformer_beige_front.png",
+    town_maren: "./assets/sprites/town_maren.png",
+    town_rowan: "./assets/sprites/town_rowan.png",
+    town_tavi: "./assets/sprites/town_tavi.png",
+    town_pella: "./assets/sprites/town_pella.png",
+    town_nix: "./assets/sprites/town_nix.png",
+    town_orin: "./assets/sprites/town_orin.png",
+    town_vesper: "./assets/sprites/town_vesper.png",
+    town_moss: "./assets/sprites/town_moss.png",
     enemy_bee: "./assets/sprites/platformer_enemy_bee.png",
     enemy_frog: "./assets/sprites/platformer_enemy_frog.png",
     enemy_mouse: "./assets/sprites/platformer_enemy_mouse.png",
@@ -807,7 +815,7 @@ const HUB_VILLAGERS = [
     id: "maren",
     name: "Maren",
     role: "Healer",
-    sprite: "rpg_soldier",
+    sprite: "town_maren",
     max: 5,
     help: "Maren treats the people waking up sick after Mira was taken.",
     need: "blankets, medicine, clean water",
@@ -817,7 +825,7 @@ const HUB_VILLAGERS = [
     id: "rowan",
     name: "Rowan",
     role: "Smith",
-    sprite: "player_vanguard",
+    sprite: "town_rowan",
     max: 5,
     help: "Rowan repairs weapons and keeps your gear from falling apart.",
     need: "tools, springs, old steel",
@@ -827,13 +835,15 @@ const HUB_VILLAGERS = [
     id: "tavi",
     name: "Tavi",
     role: "Lookout",
-    sprite: "player_phantom",
+    sprite: "town_tavi",
     max: 5,
     help: "Tavi watches the tower lights and marks safer doors before each climb.",
     need: "maps, batteries, radio parts",
     bonus: "+12 pulse range per help rank"
   }
 ];
+
+const VILLAGE_LAYOUT_VERSION = 3;
 
 const DEFAULT_HUB_SAVE = {
   supplies: 0,
@@ -887,6 +897,7 @@ const DEFAULT_HUB_SAVE = {
   bridgeFixed: false,
   bridgeCutsceneSeen: false,
   layout: {},
+  layoutVersion: VILLAGE_LAYOUT_VERSION,
   layoutOptions: { gridSnap: false, roadSnap: false },
   townSinksUsed: {}
 };
@@ -2010,49 +2021,49 @@ let villageDistrictLabel = { name: "Mira's Road", last: "", t: 0, maxT: 0 };
 let villageBridgeCutscene = null;
 const achievementToasts = [];
 
-const VILLAGE_TOWER_GATE = { x: 1100, y: 155 };
-const VILLAGE_SHRINE = { x: 1100, y: 440 };
-const VILLAGE_WELL = { x: 912, y: 420 };
-const VILLAGE_POND = { x: 330, y: 300, rx: 156, ry: 88 };
-const VILLAGE_HOME = { x: 1320, y: 430, w: 180, h: 120 };
-const VILLAGE_CHEST = { x: 1248, y: 282 };
+const VILLAGE_TOWER_GATE = { x: 1100, y: 165 };
+const VILLAGE_SHRINE = { x: 1100, y: 460 };
+const VILLAGE_WELL = { x: 900, y: 520 };
+const VILLAGE_POND = { x: 480, y: 520, rx: 152, ry: 86 };
+const VILLAGE_HOME = { x: 1360, y: 650, w: 188, h: 124 };
+const VILLAGE_CHEST = { x: 1260, y: 515 };
 const VILLAGE_RIVER = { x: 2260, y: 0, w: 128, h: VILLAGE_WORLD.h };
-const VILLAGE_BRIDGE = { x: 2324, y: 720, w: 210, h: 104, cost: { supplies: 24, ore: 8, hope: 6 }, req: { homeRank: 3, bestFloor: 5, text: "House rank 3 and floor 5" } };
+const VILLAGE_BRIDGE = { x: 2324, y: 760, w: 210, h: 104, cost: { supplies: 24, ore: 8, hope: 6 }, req: { homeRank: 3, bestFloor: 5, text: "House rank 3 and floor 5" } };
 const VILLAGE_DARK_DISTRICT = { x: 2400, y: 0, w: VILLAGE_WORLD.w - 2400, h: VILLAGE_WORLD.h };
-const VILLAGE_VISITOR_SPOT = { x: 1395, y: 282 };
-const VILLAGE_DAILY_BOARD = { x: 846, y: 288, r: 58 };
+const VILLAGE_VISITOR_SPOT = { x: 1450, y: 515 };
+const VILLAGE_DAILY_BOARD = { x: 815, y: 460, r: 46 };
 
 const VILLAGE_MESS_SPOTS = [
-  { x: 650, y: 360 }, { x: 930, y: 350 }, { x: 1290, y: 360 }, { x: 1540, y: 420 },
-  { x: 475, y: 475 }, { x: 820, y: 520 }, { x: 1180, y: 615 }, { x: 1515, y: 650 },
-  { x: 425, y: 770 }, { x: 760, y: 810 }, { x: 1160, y: 810 }, { x: 1635, y: 840 },
-  { x: 610, y: 1040 }, { x: 980, y: 1120 }, { x: 1360, y: 1100 }, { x: 1765, y: 1040 }
+  { x: 720, y: 500 }, { x: 980, y: 560 }, { x: 1280, y: 540 }, { x: 1540, y: 560 },
+  { x: 420, y: 910 }, { x: 690, y: 860 }, { x: 1060, y: 820 }, { x: 1500, y: 850 },
+  { x: 540, y: 1160 }, { x: 860, y: 1210 }, { x: 1230, y: 1140 }, { x: 1670, y: 1080 },
+  { x: 1880, y: 660 }, { x: 2030, y: 980 }, { x: 2520, y: 690 }, { x: 2820, y: 1030 }
 ];
 
 const VILLAGER_PATROLS = {
-  maren: [{ x: 360, y: 720 }, { x: 465, y: 630 }, { x: 618, y: 540 }, { x: 450, y: 805 }, { x: 360, y: 720 }],
-  rowan: [{ x: 950, y: 930 }, { x: 1120, y: 850 }, { x: 1280, y: 880 }, { x: 1010, y: 1080 }, { x: 820, y: 930 }, { x: 950, y: 930 }],
-  tavi: [{ x: 1720, y: 720 }, { x: 1540, y: 610 }, { x: 1440, y: 370 }, { x: 1900, y: 600 }, { x: 1720, y: 720 }]
+  maren: [{ x: 420, y: 760 }, { x: 520, y: 720 }, { x: 620, y: 820 }, { x: 455, y: 910 }, { x: 420, y: 760 }],
+  rowan: [{ x: 810, y: 1000 }, { x: 920, y: 940 }, { x: 1090, y: 990 }, { x: 940, y: 1130 }, { x: 810, y: 1000 }],
+  tavi: [{ x: 1620, y: 775 }, { x: 1500, y: 720 }, { x: 1640, y: 610 }, { x: 1790, y: 750 }, { x: 1620, y: 775 }]
 };
 
 const VILLAGE_VILLAGER_SPOTS = [
-  { id: "maren", x: 360, y: 720, hut: { x: 220, y: 548, w: 230, h: 152 }, color: "#7dffb2" },
-  { id: "rowan", x: 950, y: 930, hut: { x: 820, y: 756, w: 250, h: 164 }, color: "#ffd35a" },
-  { id: "tavi", x: 1720, y: 720, hut: { x: 1585, y: 548, w: 230, h: 152 }, color: "#7cc7ff" }
+  { id: "maren", x: 420, y: 760, hut: { x: 285, y: 610, w: 218, h: 146 }, color: "#7dffb2" },
+  { id: "rowan", x: 810, y: 1000, hut: { x: 720, y: 840, w: 234, h: 156 }, color: "#ffd35a" },
+  { id: "tavi", x: 1620, y: 775, hut: { x: 1515, y: 610, w: 218, h: 146 }, color: "#7cc7ff" }
 ];
 
 const VILLAGE_TOWNSFOLK = [
-  { id: "pella", name: "Pella", title: "Builder", x: 1500, y: 520, sprite: "player_alt", icon: "tiny_axe", action: "help Pella", need: { supplies: 3 }, prep: "kitchen_stew", rewardHope: 2, text: "Pella can shore up the road before the next climb." },
-  { id: "nix", name: "Nix", title: "Forager", x: 620, y: 610, sprite: "player_marine", icon: "tiny_flower", action: "help Nix", need: { crops: 1, seeds: 1 }, prep: "garden_tonic", rewardHope: 1, text: "Nix turns spare food into a small field tonic." },
-  { id: "orin", name: "Orin", title: "Cartographer", x: 1640, y: 440, sprite: "player_phantom", icon: "tiny_target", action: "help Orin", need: { ore: 1 }, prep: "tavi_map", rewardHope: 1, text: "Orin marks a safer stair path for tonight." },
-  { id: "vesper", name: "Vesper", title: "Gate Keeper", x: 2590, y: 510, sprite: "enemy_vampire", icon: "tiny_key", action: "help Vesper", need: { ore: 2 }, prep: "shrine_candle", rewardHope: 2, needsBridge: true, text: "Vesper trades grave wards for ore." },
-  { id: "moss", name: "Moss", title: "Marsh Cook", x: 2760, y: 920, sprite: "rpg_orc", icon: "tiny_flower", action: "help Moss", need: { fish: 2 }, prep: "garden_tonic", rewardHope: 2, needsBridge: true, text: "Moss cooks tonics across the bridge." }
+  { id: "pella", name: "Pella", title: "Builder", x: 1510, y: 650, sprite: "town_pella", icon: "tiny_axe", action: "help Pella", need: { supplies: 3 }, prep: "kitchen_stew", rewardHope: 2, text: "Pella can shore up the road before the next climb." },
+  { id: "nix", name: "Nix", title: "Forager", x: 620, y: 640, sprite: "town_nix", icon: "tiny_flower", action: "help Nix", need: { crops: 1, seeds: 1 }, prep: "garden_tonic", rewardHope: 1, text: "Nix turns spare food into a small field tonic." },
+  { id: "orin", name: "Orin", title: "Cartographer", x: 900, y: 515, sprite: "town_orin", icon: "tiny_target", action: "help Orin", need: { ore: 1 }, prep: "tavi_map", rewardHope: 1, text: "Orin marks a safer stair path for tonight." },
+  { id: "vesper", name: "Vesper", title: "Gate Keeper", x: 2590, y: 510, sprite: "town_vesper", icon: "tiny_key", action: "help Vesper", need: { ore: 2 }, prep: "shrine_candle", rewardHope: 2, needsBridge: true, text: "Vesper trades grave wards for ore." },
+  { id: "moss", name: "Moss", title: "Marsh Cook", x: 2760, y: 920, sprite: "town_moss", icon: "tiny_flower", action: "help Moss", need: { fish: 2 }, prep: "garden_tonic", rewardHope: 2, needsBridge: true, text: "Moss cooks tonics across the bridge." }
 ];
 
 const VILLAGE_TOWNSFOLK_PATROLS = {
-  pella: [{ x: 1500, y: 520 }, { x: 1580, y: 470 }, { x: 1685, y: 560 }, { x: 1515, y: 650 }, { x: 1420, y: 565 }, { x: 1500, y: 520 }],
-  nix: [{ x: 620, y: 610 }, { x: 520, y: 550 }, { x: 440, y: 690 }, { x: 590, y: 820 }, { x: 745, y: 650 }, { x: 620, y: 610 }],
-  orin: [{ x: 1640, y: 440 }, { x: 1740, y: 475 }, { x: 1840, y: 610 }, { x: 1690, y: 760 }, { x: 1510, y: 610 }, { x: 1640, y: 440 }],
+  pella: [{ x: 1510, y: 650 }, { x: 1395, y: 620 }, { x: 1320, y: 720 }, { x: 1490, y: 790 }, { x: 1580, y: 700 }, { x: 1510, y: 650 }],
+  nix: [{ x: 620, y: 640 }, { x: 560, y: 575 }, { x: 690, y: 610 }, { x: 720, y: 760 }, { x: 575, y: 740 }, { x: 620, y: 640 }],
+  orin: [{ x: 900, y: 515 }, { x: 980, y: 470 }, { x: 1050, y: 540 }, { x: 970, y: 650 }, { x: 870, y: 600 }, { x: 900, y: 515 }],
   vesper: [{ x: 2590, y: 510 }, { x: 2690, y: 480 }, { x: 2860, y: 650 }, { x: 2700, y: 760 }, { x: 2520, y: 640 }, { x: 2590, y: 510 }],
   moss: [{ x: 2760, y: 920 }, { x: 2890, y: 860 }, { x: 2940, y: 1040 }, { x: 2655, y: 1110 }, { x: 2520, y: 960 }, { x: 2760, y: 920 }]
 };
@@ -2118,35 +2129,35 @@ const VILLAGE_MINE_NODES = [
 ];
 
 const VILLAGE_FISHING_SPOTS = [
-  { id: "pond", x: 464, y: 320, r: 36, name: "pond" }
+  { id: "pond", x: 610, y: 520, r: 36, name: "pond" }
 ];
 
 const VILLAGE_FARM_PLOTS = [
-  { id: "farm_1", x: 548, y: 520 },
-  { id: "farm_2", x: 598, y: 520 },
-  { id: "farm_3", x: 648, y: 520 },
-  { id: "farm_4", x: 698, y: 520 },
-  { id: "farm_5", x: 548, y: 570 },
-  { id: "farm_6", x: 598, y: 570 },
-  { id: "farm_7", x: 648, y: 570 },
-  { id: "farm_8", x: 698, y: 570 }
+  { id: "farm_1", x: 570, y: 700 },
+  { id: "farm_2", x: 620, y: 700 },
+  { id: "farm_3", x: 670, y: 700 },
+  { id: "farm_4", x: 720, y: 700 },
+  { id: "farm_5", x: 570, y: 750 },
+  { id: "farm_6", x: 620, y: 750 },
+  { id: "farm_7", x: 670, y: 750 },
+  { id: "farm_8", x: 720, y: 750 }
 ];
 
 const VILLAGE_VISITORS = {
-  seed: { name: "Seed Seller", title: "seed cart", sprite: "player_alt", action: "buy seeds", text: "Seeds for supplies. No speech, no ceremony.", cost: { supplies: 2 }, reward: { seeds: 2 } },
-  miner: { name: "Ore Buyer", title: "road trader", sprite: "player_vanguard", action: "trade ore", text: "Ore for shards. Simple trade.", cost: { ore: 3 }, reward: { shards: 3 } },
-  fisher: { name: "Fish Cook", title: "camp cook", sprite: "player_marine", action: "trade fish", text: "Fish becomes travel food.", cost: { fish: 2 }, reward: { supplies: 2 } },
-  gift: { name: "Lost Pilgrim", title: "visitor", sprite: "player_phantom", action: "accept gift", text: "A quiet gift left by the road.", cost: {}, reward: { supplies: 1, seeds: 1 } },
-  relic: { name: "Relic Picker", title: "junk hunter", sprite: "player_vanguard", action: "swap supplies", text: "Supplies for one clean relic shard.", cost: { supplies: 3 }, reward: { shards: 2 } },
-  medic: { name: "Road Medic", title: "field tent", sprite: "player_alt", action: "trade crops", text: "Crops for field supplies.", cost: { crops: 2 }, reward: { supplies: 2 } }
+  seed: { name: "Seed Seller", title: "seed cart", sprite: "town_nix", action: "buy seeds", text: "Seeds for supplies. No speech, no ceremony.", cost: { supplies: 2 }, reward: { seeds: 2 } },
+  miner: { name: "Ore Buyer", title: "road trader", sprite: "town_rowan", action: "trade ore", text: "Ore for shards. Simple trade.", cost: { ore: 3 }, reward: { shards: 3 } },
+  fisher: { name: "Fish Cook", title: "camp cook", sprite: "town_moss", action: "trade fish", text: "Fish becomes travel food.", cost: { fish: 2 }, reward: { supplies: 2 } },
+  gift: { name: "Lost Pilgrim", title: "visitor", sprite: "town_tavi", action: "accept gift", text: "A quiet gift left by the road.", cost: {}, reward: { supplies: 1, seeds: 1 } },
+  relic: { name: "Relic Picker", title: "junk hunter", sprite: "town_pella", action: "swap supplies", text: "Supplies for one clean relic shard.", cost: { supplies: 3 }, reward: { shards: 2 } },
+  medic: { name: "Road Medic", title: "field tent", sprite: "town_maren", action: "trade crops", text: "Crops for field supplies.", cost: { crops: 2 }, reward: { supplies: 2 } }
 };
 
 const VILLAGE_PROJECTS = [
   {
     id: "garden",
     name: "Garden",
-    x: 640,
-    y: 555,
+    x: 645,
+    y: 720,
     color: "#7dffb2",
     max: 99,
     action: "repair garden",
@@ -2157,8 +2168,8 @@ const VILLAGE_PROJECTS = [
   {
     id: "kitchen",
     name: "Kitchen",
-    x: 1280,
-    y: 890,
+    x: 1185,
+    y: 910,
     color: "#ffd35a",
     max: 99,
     action: "repair kitchen",
@@ -2169,8 +2180,8 @@ const VILLAGE_PROJECTS = [
   {
     id: "watchpost",
     name: "Watch Post",
-    x: 1840,
-    y: 560,
+    x: 1715,
+    y: 545,
     color: "#7cc7ff",
     max: 99,
     action: "raise watch post",
@@ -2181,9 +2192,9 @@ const VILLAGE_PROJECTS = [
 ];
 
 const VILLAGE_SERVICE_BUILDINGS = {
-  collection: { x: 1510, y: 965, w: 190, h: 128, label: "Gear House", action: "open collection", color: "#c77dff" },
-  power: { x: 650, y: 1020, w: 190, h: 128, label: "Training Hall", action: "open power ups", color: "#7cc7ff" },
-  road: { x: 1030, y: 1280, w: 160, h: 108, label: "Road House", action: "main menu", color: "#ffd35a" }
+  collection: { x: 1450, y: 965, w: 188, h: 126, label: "Gear House", action: "open collection", color: "#c77dff" },
+  power: { x: 620, y: 1040, w: 188, h: 126, label: "Training Hall", action: "open power ups", color: "#7cc7ff" },
+  road: { x: 1020, y: 1240, w: 166, h: 108, label: "Road House", action: "main menu", color: "#ffd35a" }
 };
 
 const VILLAGE_OBSTACLES = [
@@ -2212,13 +2223,11 @@ const VILLAGE_DECOR = Array.from({ length: 245 }, (_, i) => ({
 }));
 
 const VILLAGE_TREE_LINES = [
-  [74, 120, "town_tree_green"], [132, 96, "town_tree_green"], [292, 120, "town_tree_blue"],
-  [1600, 92, "town_tree_gold"], [1735, 110, "town_tree_green"], [2030, 158, "town_tree_blue"],
-  [88, 1180, "town_tree_green"], [170, 1330, "town_tree_gold"], [312, 1420, "town_tree_green"],
-  [1920, 1250, "town_tree_blue"], [2040, 1120, "town_tree_green"], [2140, 890, "town_tree_gold"],
-  [120, 740, "town_tree_blue"], [2048, 720, "town_tree_green"], [80, 520, "town_tree_green"], [2100, 420, "town_tree_green"],
-  [520, 1240, "town_tree_blue"], [1580, 1320, "town_tree_green"],
-  [2440, 260, "town_tree_blue"], [2620, 320, "town_tree_gold"], [2860, 420, "town_tree_blue"],
+  [80, 130, "town_tree_green"], [165, 110, "town_tree_green"], [245, 128, "town_tree_blue"],
+  [620, 112, "town_tree_gold"], [1780, 120, "town_tree_green"], [1960, 150, "town_tree_blue"],
+  [86, 1240, "town_tree_green"], [190, 1360, "town_tree_gold"], [310, 1450, "town_tree_green"],
+  [1880, 1260, "town_tree_blue"], [2050, 1135, "town_tree_green"], [2140, 920, "town_tree_gold"],
+  [2450, 260, "town_tree_blue"], [2620, 320, "town_tree_gold"], [2860, 420, "town_tree_blue"],
   [2510, 1180, "town_tree_green"], [2920, 1320, "town_tree_gold"]
 ];
 
@@ -2526,6 +2535,7 @@ function ensureHubSave() {
     layout: {
       ...(save.hub?.layout || {})
     },
+    layoutVersion: Number(save.hub?.layoutVersion) || 0,
     layoutOptions: {
       ...structuredClone(DEFAULT_HUB_SAVE).layoutOptions,
       ...(save.hub?.layoutOptions || {})
@@ -2537,6 +2547,11 @@ function ensureHubSave() {
     nightFallPending: Boolean(save.hub?.nightFallPending),
     taskCounter: Number(save.hub?.taskCounter) || 0
   };
+  if (save.hub.layoutVersion !== VILLAGE_LAYOUT_VERSION) {
+    save.hub.layout = {};
+    save.hub.layoutOptions = structuredClone(DEFAULT_HUB_SAVE).layoutOptions;
+    save.hub.layoutVersion = VILLAGE_LAYOUT_VERSION;
+  }
   if (previousHubRef) {
     const normalizedHub = save.hub;
     save.hub = previousHubRef;
@@ -5550,17 +5565,16 @@ function drawVillagePond() {
     }
   }
   ctx.restore();
-  ctx.strokeStyle = "rgba(156,97,58,0.72)";
+  ctx.strokeStyle = "rgba(98,72,48,0.62)";
   ctx.lineWidth = 5;
   ctx.beginPath();
   ctx.ellipse(px, py, VILLAGE_POND.rx, VILLAGE_POND.ry, -0.08, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.22)";
+  ctx.fillStyle = "rgba(255,255,255,0.20)";
   ctx.beginPath();
   ctx.ellipse(px - 34, py - 18, 38, 6, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  drawTownAsset("town_bridge", px + 116, py + 20, 34, 0.1, 0.9);
-  drawTownAsset("town_bridge", px + 148, py + 18, 34, 0.1, 0.9);
+  drawTownAsset("tiny_sign", px + VILLAGE_POND.rx + 32, py + 26, 28, 0, 0.82);
 }
 
 function drawVillagePaths() {
@@ -5640,32 +5654,18 @@ function drawVillageExtraAreas() {
   ctx.save();
   const marketX = VILLAGE_VISITOR_SPOT.x;
   const marketY = VILLAGE_VISITOR_SPOT.y + 16;
-  ctx.fillStyle = "rgba(0,0,0,0.22)";
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
   ctx.beginPath();
-  ctx.ellipse(marketX, marketY + 18, 138, 28, 0, 0, Math.PI * 2);
+  ctx.ellipse(marketX, marketY + 18, 112, 24, 0, 0, Math.PI * 2);
   ctx.fill();
-  drawTownAsset("town_crate_big", marketX - 86, marketY + 14, 34, 0, 0.9);
-  drawTownAsset("town_crate_small", marketX - 54, marketY + 18, 28, 0, 0.85);
-  drawTownAsset("town_barrel_a", marketX + 74, marketY + 20, 30, 0, 0.85);
-  drawTownAsset("tiny_chest", marketX + 104, marketY + 12, 32, 0, 0.96);
-  drawTownAsset("tiny_sign", marketX, marketY - 24, 42, 0, 0.92);
+  drawTownAsset("town_crate_big", marketX - 58, marketY + 12, 30, 0, 0.82);
+  drawTownAsset("town_barrel_a", marketX + 54, marketY + 14, 26, 0, 0.82);
+  drawTownAsset("tiny_sign", marketX, marketY - 18, 34, 0, 0.85);
 
-  const forgeX = VILLAGE_SERVICE_BUILDINGS.power.x + 250;
-  const forgeY = VILLAGE_SERVICE_BUILDINGS.power.y + 44;
-  ctx.fillStyle = "rgba(0,0,0,0.24)";
-  ctx.beginPath();
-  ctx.ellipse(forgeX, forgeY + 34, 120, 26, 0, 0, Math.PI * 2);
-  ctx.fill();
-  drawTownAsset("town_barrel_b", forgeX - 72, forgeY + 22, 30, 0, 0.85);
-  drawTownAsset("town_crate_big", forgeX - 34, forgeY + 26, 34, 0, 0.85);
-  drawTownAsset("tiny_tool_pickaxe", forgeX + 26, forgeY + 6, 34, -0.65, 0.95);
-  drawTownAsset("tiny_axe", forgeX + 64, forgeY + 10, 30, 0.35, 0.95);
-
-  const groveX = 420;
-  const groveY = 520;
-  drawTownAsset("town_lamp", groveX - 48, groveY, 34, 0, 0.9);
-  drawTownAsset("town_barrel_c", groveX + 44, groveY + 28, 28, 0, 0.85);
-  drawTownAsset("tiny_flower", groveX, groveY + 34, 22, 0, 0.9);
+  const groveX = VILLAGE_WELL.x;
+  const groveY = VILLAGE_WELL.y + 92;
+  drawTownAsset("town_lamp", groveX - 52, groveY, 30, 0, 0.72);
+  drawTownAsset("tiny_flower", groveX + 38, groveY + 18, 20, 0, 0.78);
   ctx.restore();
 }
 
@@ -5706,15 +5706,9 @@ function drawVillageHomeAndChest() {
 
 function drawVillageFences() {
   ctx.save();
-  const fenceRuns = [
-    [150, 324, 7, "h"], [1110, 324, 8, "h"], [236, 646, 5, "h"], [1160, 646, 7, "h"],
-    [160, 930, 6, "h"], [1290, 928, 8, "h"], [155, 676, 4, "v"], [1508, 675, 4, "v"],
-    [210, 772, 4, "h"], [1345, 732, 5, "h"]
-  ];
-  for (const [x, y, count, dir] of fenceRuns) {
-    for (let i = 0; i < count; i++) {
-      drawTownAsset(dir === "h" ? "town_fence_h" : "town_fence_v", x + (dir === "h" ? i * 30 : 0), y + (dir === "v" ? i * 30 : 0), 34, 0, 0.95);
-    }
+  // Small path fences only, deliberately away from water and building footprints.
+  for (const [x, y, count] of [[930, 570, 5], [1240, 760, 5], [1500, 840, 4]]) {
+    for (let i = 0; i < count; i++) drawTownAsset("town_fence_h", x + i * 30, y, 32, 0, 0.56);
   }
   ctx.restore();
 }
@@ -5761,58 +5755,51 @@ function drawVillageShrine() {
   const restored = villageRestoredCount();
   const max = hubHopeMax();
   const pct = clamp(restored / Math.max(1, max), 0, 1);
-  const pulse = 1 + villagePulse * 0.4;
-
+  const near = Math.hypot(villagePlayer.x - VILLAGE_SHRINE.x, villagePlayer.y - VILLAGE_SHRINE.y) < 150;
   ctx.save();
   ctx.translate(VILLAGE_SHRINE.x, VILLAGE_SHRINE.y);
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.fillStyle = "rgba(0,0,0,0.24)";
   ctx.beginPath();
-  ctx.ellipse(0, 54, 136, 34, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 44, 104, 26, 0, 0, Math.PI * 2);
   ctx.fill();
-
   ctx.fillStyle = "rgba(91,88,82,0.88)";
   ctx.beginPath();
-  ctx.arc(0, 0, 96, 0, Math.PI * 2);
+  ctx.arc(0, 0, 72, 0, Math.PI * 2);
   ctx.fill();
-  for (let i = 0; i < 12; i++) {
-    const a = i * Math.PI / 6;
-    drawTownAsset("town_stone_a", Math.cos(a) * 86, Math.sin(a) * 86, 28, a, 0.75);
+  for (let i = 0; i < 10; i++) {
+    const a = i * Math.PI / 5;
+    drawTownAsset("town_stone_a", Math.cos(a) * 64, Math.sin(a) * 64, 24, a, 0.70);
   }
-
-  const glow = ctx.createRadialGradient(0, -12, 5, 0, -12, 126 + villagePulse * 34);
-  glow.addColorStop(0, `rgba(124,199,255,${0.14 + pct * 0.24})`);
-  glow.addColorStop(1, "rgba(124,199,255,0)");
-  ctx.fillStyle = glow;
+  if (near || villagePulse > 0.05) {
+    const glow = ctx.createRadialGradient(0, -10, 5, 0, -10, 90 + villagePulse * 18);
+    glow.addColorStop(0, `rgba(124,199,255,${0.10 + pct * 0.16})`);
+    glow.addColorStop(1, "rgba(124,199,255,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, -10, 90, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.strokeStyle = "rgba(255,211,90,0.74)";
+  ctx.lineWidth = 4;
   ctx.beginPath();
-  ctx.arc(0, -12, 126, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = "rgba(255,211,90,0.88)";
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.arc(0, 0, 102 * pulse, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
+  ctx.arc(0, 0, 78 + villagePulse * 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
   ctx.stroke();
-
   ctx.fillStyle = "#0b111c";
-  ctx.fillRect(-28, -44, 56, 92);
-  ctx.strokeStyle = "rgba(124,199,255,0.58)";
-  ctx.strokeRect(-28, -44, 56, 92);
-  drawTownAsset("town_arch", 0, 8, 74, 0, 0.75);
-  drawVillageCandle(-52, 44, pct);
-  drawVillageCandle(52, 44, pct);
-  drawVillageCandle(-74, 22, pct * 0.7);
-  drawVillageCandle(74, 22, pct * 0.7);
-
+  ctx.fillRect(-24, -38, 48, 78);
+  ctx.strokeStyle = "rgba(124,199,255,0.44)";
+  ctx.strokeRect(-24, -38, 48, 78);
+  drawTownAsset("town_arch", 0, 4, 62, 0, 0.72);
+  drawVillageCandle(-42, 34, pct);
+  drawVillageCandle(42, 34, pct);
   ctx.fillStyle = "#d9deea";
   ctx.textAlign = "center";
-  ctx.font = "900 12px ui-monospace, monospace";
-  ctx.fillText("MIRA", 0, 72);
-  ctx.fillStyle = "rgba(217,222,234,0.64)";
-  ctx.font = "700 10px ui-monospace, monospace";
-  ctx.fillText(`${restored}/${max} RESTORED`, 0, 88);
-  ctx.fillStyle = "#ffd35a";
-  ctx.font = "700 9px ui-monospace, monospace";
-  ctx.fillText(`HOPE ${hubHope()}  RETRY ${ensureHubSave().retries || 0}`, 0, 101);
+  ctx.font = "900 11px ui-monospace, monospace";
+  ctx.fillText("MIRA", 0, 62);
+  if (near) {
+    ctx.fillStyle = "rgba(217,222,234,0.64)";
+    ctx.font = "700 9px ui-monospace, monospace";
+    ctx.fillText(`${restored}/${max} RESTORED`, 0, 77);
+  }
   ctx.restore();
 }
 
@@ -5874,6 +5861,59 @@ function drawVillageTowerGate() {
   ctx.restore();
 }
 
+
+function drawCleanCottageBase(x, y, w, h, opts = {}) {
+  const cx = x + w / 2;
+  const wallTop = y + (opts.wallTop ?? 38);
+  const wallH = h - (wallTop - y) - 6;
+  const roofTop = y + (opts.roofTop ?? 4);
+  const roofY = y + (opts.roofY ?? 50);
+  const wallColor = opts.wallColor || "#c9b27f";
+  const roofColor = opts.roofColor || "#9d6735";
+  const trim = opts.trim || "rgba(255,211,90,0.34)";
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.24)";
+  ctx.beginPath();
+  ctx.ellipse(cx + 8, y + h + 8, w * 0.50, 16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = wallColor;
+  ctx.fillRect(x + 18, wallTop, w - 36, wallH);
+  ctx.strokeStyle = trim;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(x + 18, wallTop, w - 36, wallH);
+  ctx.fillStyle = roofColor;
+  ctx.beginPath();
+  ctx.moveTo(x + 8, roofY);
+  ctx.lineTo(cx, roofTop);
+  ctx.lineTo(x + w - 8, roofY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "rgba(72,42,24,0.28)";
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,221,133,0.20)";
+  ctx.fillRect(x + 30, roofY - 5, w - 60, 4);
+  if (opts.chimney) {
+    ctx.fillStyle = "#8b6554";
+    ctx.fillRect(x + w - 58, roofTop + 18, 14, 34);
+  }
+  ctx.restore();
+}
+
+function drawVillageNamePlate(cx, y, text, color = "#ffd35a") {
+  ctx.save();
+  ctx.fillStyle = "rgba(3,5,12,0.46)";
+  ctx.beginPath();
+  ctx.roundRect(cx - 56, y, 112, 21, 5);
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba(color, 0.42);
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.font = "900 10px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(String(text || "").toUpperCase(), cx, y + 15);
+  ctx.restore();
+}
+
 function drawVillageHuts() {
   for (const spot of VILLAGE_VILLAGER_SPOTS) {
     const rank = hubVillagerRank(spot.id);
@@ -5885,59 +5925,37 @@ function drawVillageHuts() {
 function drawVillageCottage(h, color, role, rank, max) {
   const cx = h.x + h.w / 2;
   const buildStage = clamp(rank, 0, 5);
+  const roleKey = String(role || "").toLowerCase();
+  const roofColor = roleKey.includes("smith") ? "#7d5638" : roleKey.includes("lookout") ? "#5f7084" : roleKey.includes("home") ? "#9b6739" : "#8f6138";
+  const wallColor = roleKey.includes("smith") ? "#b9aa86" : roleKey.includes("lookout") ? "#c4baa0" : roleKey.includes("home") ? "#d0b883" : "#c9b27f";
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.3)";
-  ctx.beginPath();
-  ctx.ellipse(cx + 8, h.y + h.h + 10, h.w * 0.54, 18, 0, 0, Math.PI * 2);
-  ctx.fill();
-
   if (buildStage <= 0) {
-    ctx.fillStyle = "rgba(101,71,44,0.7)";
-    ctx.fillRect(h.x + 26, h.y + 98, h.w - 52, 12);
-    ctx.fillStyle = "#caa96c";
-    ctx.fillRect(cx - 28, h.y + 86, 56, 18);
-    ctx.strokeStyle = hexToRgba(color, 0.55);
-    ctx.strokeRect(cx - 28, h.y + 86, 56, 18);
-    drawTownAsset(role === "Smith" ? "tiny_tool_pickaxe" : role === "Lookout" ? "tiny_target" : "tiny_chest", cx + 42, h.y + 82, 26, 0, 0.95);
-    drawTownAsset("town_crate_small", cx - 46, h.y + 102, 24, 0, 0.85);
-    drawTownAsset("town_stump", cx - 74, h.y + 104, 26, 0, 0.7);
-    ctx.fillStyle = "#f5f1ff";
-    ctx.font = "900 11px ui-monospace, monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("CAMP MAT", cx, h.y + 82);
-  } else {
-    const wallTop = buildStage <= 2 ? h.y + 70 : h.y + 42;
-    const wallInset = buildStage <= 2 ? 32 : 18;
-    ctx.fillStyle = "#c9b27f";
-    ctx.fillRect(h.x + wallInset, wallTop, h.w - wallInset * 2, h.h - (wallTop - h.y) - 2);
-    ctx.strokeStyle = hexToRgba(color, 0.58);
-    ctx.lineWidth = 3;
-    ctx.strokeRect(h.x + wallInset, wallTop, h.w - wallInset * 2, h.h - (wallTop - h.y) - 2);
-    ctx.fillStyle = "#9d6735";
+    ctx.fillStyle = "rgba(0,0,0,0.23)";
     ctx.beginPath();
-    ctx.moveTo(h.x + 4, h.y + 52);
-    ctx.lineTo(cx, buildStage <= 2 ? h.y + 8 : h.y - 12);
-    ctx.lineTo(h.x + h.w - 4, h.y + 52);
-    ctx.closePath();
+    ctx.ellipse(cx + 4, h.y + h.h + 2, h.w * 0.36, 12, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "rgba(255,211,90,0.48)";
-    ctx.stroke();
-    const roofPieces = buildStage <= 2 ? 3 : 5;
-    for (let i = 0; i < roofPieces; i++) {
-      const offset = i - Math.floor(roofPieces / 2);
-      drawTownAsset("town_roof_a", cx + offset * 28, h.y + 40 - Math.abs(offset) * 8, 34, 0, 0.85);
-    }
-    if (buildStage >= 2) drawTownAsset("town_door_a", cx, h.y + h.h - 22, 42, 0, 0.98);
-    if (buildStage >= 3) drawTownAsset("town_window_a", h.x + 46, h.y + 74, 30, 0, 0.95);
-    if (buildStage >= 4) drawTownAsset("town_window_b", h.x + h.w - 46, h.y + 74, 30, 0, 0.95);
+    ctx.fillStyle = "rgba(128,90,50,0.72)";
+    ctx.fillRect(cx - 42, h.y + h.h - 40, 84, 16);
+    drawTownAsset(roleKey.includes("smith") ? "tiny_tool_pickaxe" : roleKey.includes("lookout") ? "tiny_target" : "tiny_chest", cx + 48, h.y + h.h - 46, 24, 0, 0.95);
+    drawTownAsset("town_crate_small", cx - 42, h.y + h.h - 34, 24, 0, 0.85);
+    ctx.fillStyle = "#f5f1ff";
+    ctx.font = "900 10px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("CAMP", cx, h.y + h.h - 48);
+  } else {
+    drawCleanCottageBase(h.x, h.y, h.w, h.h, { wallColor, roofColor, trim: hexToRgba(color, 0.48), chimney: roleKey.includes("home") || roleKey.includes("smith") });
+    drawTownAsset(roleKey.includes("smith") ? "town_door_b" : "town_door_a", cx, h.y + h.h - 24, 40, 0, 0.98);
+    if (buildStage >= 2) drawTownAsset("town_window_a", h.x + 54, h.y + 80, 28, 0, 0.95);
+    if (buildStage >= 3) drawTownAsset("town_window_b", h.x + h.w - 54, h.y + 80, 28, 0, 0.95);
+    if (roleKey.includes("smith")) drawTownAsset("tiny_tool_pickaxe", h.x + h.w - 38, h.y + 62, 24, -0.55, 0.95);
+    if (roleKey.includes("lookout")) drawTownAsset("tiny_target", h.x + h.w - 38, h.y + 62, 24, 0, 0.95);
   }
-
-  ctx.fillStyle = "rgba(3,5,12,0.46)";
+  ctx.fillStyle = "rgba(3,5,12,0.42)";
   ctx.beginPath();
   ctx.roundRect(cx - 34, h.y + h.h - 20, 68, 13, 4);
   ctx.fill();
   for (let i = 0; i < max; i++) {
-    ctx.fillStyle = i < rank ? color : "rgba(255,255,255,0.2)";
+    ctx.fillStyle = i < rank ? color : "rgba(255,255,255,0.18)";
     ctx.fillRect(cx - 26 + i * 11, h.y + h.h - 16, 8, 6);
   }
   ctx.restore();
@@ -5989,13 +6007,16 @@ function drawVillageRubble() {
       drawTownAsset("town_stone_dark", rubble.x - rubble.r * 0.16, rubble.y + 12, rubble.r * 0.9, 0.2, 0.6);
     }
     const locked = villageObjectLocked(rubble);
-    ctx.strokeStyle = locked ? "rgba(255,92,122,0.55)" : "rgba(255,211,90,0.45)";
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.arc(rubble.x, rubble.y, rubble.r + 7, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    if (locked) {
+    const near = Math.hypot(villagePlayer.x - rubble.x, villagePlayer.y - rubble.y) < Math.max(92, rubble.r + 58);
+    if (locked || near) {
+      ctx.strokeStyle = locked ? "rgba(255,92,122,0.46)" : "rgba(255,211,90,0.24)";
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.arc(rubble.x, rubble.y, rubble.r + 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    if (locked && near) {
       ctx.fillStyle = "rgba(3,5,12,0.72)";
       ctx.fillRect(rubble.x - 56, rubble.y - rubble.r - 32, 112, 18);
       ctx.fillStyle = "#ff6b6b";
@@ -6047,19 +6068,22 @@ function drawVillageStumps() {
       ctx.fillRect(stump.x - barW / 2, stump.y + stump.r + 3, barW * clamp(hits / stump.hp, 0, 1), 5);
     }
     if (villageObjectLocked(stump)) {
-      ctx.strokeStyle = "rgba(255,92,122,0.58)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(stump.x, stump.y, stump.r + 8, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "rgba(3,5,12,0.72)";
-      ctx.fillRect(stump.x - 58, stump.y - stump.r - 31, 116, 18);
-      ctx.fillStyle = "#ff6b6b";
-      ctx.font = "900 8px ui-monospace, monospace";
-      ctx.textAlign = "center";
-      ctx.fillText(villageRequirementText(stump.req).toUpperCase(), stump.x, stump.y - stump.r - 18);
+      const near = Math.hypot(villagePlayer.x - stump.x, villagePlayer.y - stump.y) < Math.max(100, stump.r + 60);
+      if (near) {
+        ctx.strokeStyle = "rgba(255,92,122,0.50)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(stump.x, stump.y, stump.r + 7, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(3,5,12,0.72)";
+        ctx.fillRect(stump.x - 58, stump.y - stump.r - 31, 116, 18);
+        ctx.fillStyle = "#ff6b6b";
+        ctx.font = "900 8px ui-monospace, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(villageRequirementText(stump.req).toUpperCase(), stump.x, stump.y - stump.r - 18);
+      }
     }
-    drawTownAsset("tiny_axe", stump.x + stump.r * 0.85, stump.y - stump.r * 0.75, 24, -0.7, 0.92);
+    if (Math.hypot(villagePlayer.x - stump.x, villagePlayer.y - stump.y) < Math.max(96, stump.r + 56) || hits > 0) drawTownAsset("tiny_axe", stump.x + stump.r * 0.85, stump.y - stump.r * 0.75, 22, -0.7, 0.85);
     ctx.restore();
   }
 }
@@ -6100,33 +6124,27 @@ function drawVillageDailyBoard() {
   const hub = ensureHubSave();
   const x = VILLAGE_DAILY_BOARD.x;
   const y = VILLAGE_DAILY_BOARD.y;
-  const task = activeBoardTask();
   const done = (hub.boardTasks || []).filter(item => item.done).length;
+  const near = Math.hypot(villagePlayer.x - x, villagePlayer.y - y) < 110;
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.32)";
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath();
-  ctx.ellipse(x + 2, y + 24, 54, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(x + 2, y + 24, 48, 12, 0, 0, Math.PI * 2);
   ctx.fill();
-  drawTownAsset("tiny_sign", x, y, 70, 0, 1);
-  ctx.fillStyle = "rgba(3,5,12,0.68)";
+  drawTownAsset("tiny_sign", x, y, 64, 0, 1);
+  ctx.fillStyle = "rgba(3,5,12,0.64)";
   ctx.beginPath();
-  ctx.roundRect(x - 58, y + 28, 116, 34, 5);
+  ctx.roundRect(x - 56, y + 27, 112, 32, 5);
   ctx.fill();
-  ctx.strokeStyle = "rgba(255,211,90,0.72)";
+  ctx.strokeStyle = near ? "rgba(125,255,178,0.72)" : "rgba(255,211,90,0.36)";
   ctx.stroke();
   ctx.fillStyle = "#ffd35a";
-  ctx.font = "900 10px ui-monospace, monospace";
-  ctx.textAlign = "center";
-  ctx.fillText("DAILY BOARD", x, y + 43);
-  ctx.fillStyle = "rgba(245,241,255,0.86)";
   ctx.font = "900 9px ui-monospace, monospace";
-  ctx.fillText(`${done}/${Math.max(1, hub.boardTasks?.length || 3)} DONE`, x, y + 57);
-  if (task) {
-    ctx.strokeStyle = "rgba(125,255,178,0.72)";
-    ctx.beginPath();
-    ctx.arc(x, y + 4, 44 + Math.sin(nowSec() * 3) * 3, 0, Math.PI * 2);
-    ctx.stroke();
-  }
+  ctx.textAlign = "center";
+  ctx.fillText("DAILY BOARD", x, y + 42);
+  ctx.fillStyle = "rgba(245,241,255,0.86)";
+  ctx.font = "900 8px ui-monospace, monospace";
+  ctx.fillText(`${done}/${Math.max(1, hub.boardTasks?.length || 3)} DONE`, x, y + 55);
   ctx.restore();
 }
 
@@ -6141,50 +6159,25 @@ function drawVillageServiceBuildings() {
 
 function drawVillageSmallBuilding(x, y, w, h, color, top, bottom, iconKey) {
   const cx = x + w / 2;
+  const type = String(bottom || "").toLowerCase();
+  const roofColor = type.includes("collection") ? "#6d4f86" : type.includes("power") ? "#5a7188" : type.includes("menu") ? "#8a633d" : "#8f6138";
+  const wallColor = type.includes("collection") ? "#c7b9d2" : type.includes("power") ? "#bcc8cf" : type.includes("menu") ? "#d2bb88" : "#c9b27f";
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
-  ctx.beginPath();
-  ctx.ellipse(cx + 8, y + h + 8, w * 0.48, 17, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#c9b27f";
-  ctx.fillRect(x + 18, y + 38, w - 36, h - 42);
-  ctx.strokeStyle = hexToRgba(color, 0.5);
-  ctx.lineWidth = 3;
-  ctx.strokeRect(x + 18, y + 38, w - 36, h - 42);
-  ctx.fillStyle = "#9d6735";
-  ctx.beginPath();
-  ctx.moveTo(x + 5, y + 48);
-  ctx.lineTo(cx, y - 16);
-  ctx.lineTo(x + w - 5, y + 48);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,211,90,0.45)";
-  ctx.stroke();
-  for (let i = -2; i <= 2; i++) drawTownAsset("town_roof_b", cx + i * 27, y + 34 - Math.abs(i) * 8, 34, 0, 0.86);
-  drawTownAsset("town_door_b", cx, y + h - 22, 42, 0, 0.98);
-  drawTownAsset("town_window_a", x + 46, y + 70, 28, 0, 0.95);
-  drawTownAsset("town_window_b", x + w - 46, y + 70, 28, 0, 0.95);
-  drawTownAsset(iconKey, cx, y + 56, 34, 0, 0.9);
-  if (bottom === "Collection") {
-    drawTownAsset("tiny_sword", cx - 28, y + 57, 22, -0.7, 0.95);
-    drawTownAsset("tiny_chest", cx + 28, y + 57, 24, 0, 0.95);
-  } else if (bottom === "Power Up") {
-    drawTownAsset("tiny_target", cx - 28, y + 57, 23, 0, 0.95);
-    drawTownAsset("tiny_axe", cx + 28, y + 57, 23, -0.5, 0.95);
-  } else if (bottom === "Main Menu") {
-    drawTownAsset("tiny_sign", cx, y + 56, 28, 0, 0.95);
+  drawCleanCottageBase(x, y, w, h, { wallColor, roofColor, trim: hexToRgba(color, 0.48), chimney: type.includes("power") });
+  drawTownAsset(type.includes("menu") ? "town_door_a" : "town_door_b", cx, y + h - 24, 40, 0, 0.98);
+  drawTownAsset("town_window_a", x + 48, y + 76, 28, 0, 0.92);
+  drawTownAsset("town_window_b", x + w - 48, y + 76, 28, 0, 0.92);
+  drawTownAsset(iconKey, cx, y + 62, 30, 0, 0.9);
+  if (type.includes("collection")) {
+    drawTownAsset("tiny_sword", cx - 30, y + 62, 20, -0.7, 0.95);
+    drawTownAsset("tiny_chest", cx + 30, y + 62, 22, 0, 0.95);
+  } else if (type.includes("power")) {
+    drawTownAsset("tiny_target", cx - 30, y + 62, 22, 0, 0.95);
+    drawTownAsset("tiny_axe", cx + 30, y + 62, 22, -0.5, 0.95);
+  } else if (type.includes("menu")) {
+    drawTownAsset("tiny_sign", cx, y + 62, 26, 0, 0.95);
   }
-
-  ctx.fillStyle = "rgba(3,5,12,0.52)";
-  ctx.beginPath();
-  ctx.roundRect(cx - 58, y + h + 3, 116, 21, 4);
-  ctx.fill();
-  ctx.strokeStyle = hexToRgba(color, 0.46);
-  ctx.stroke();
-  ctx.fillStyle = color;
-  ctx.font = "900 10px ui-monospace, monospace";
-  ctx.textAlign = "center";
-  ctx.fillText(bottom.toUpperCase(), cx, y + h + 17);
+  drawVillageNamePlate(cx, y + h + 4, bottom, color);
   ctx.restore();
 }
 
@@ -6260,47 +6253,24 @@ function drawVillageGarden(project, rank) {
 function drawVillageKitchen(project, rank) {
   ctx.save();
   const cx = project.x;
-  const glow = 0.13 + rank * 0.09;
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  drawCleanCottageBase(cx - 88, project.y - 72, 176, 116, { wallColor: "#ccb67f", roofColor: "#9b5e34", trim: hexToRgba(project.color, 0.44), chimney: true });
+  drawTownAsset("town_door_b", cx, project.y + 18, 40, 0, 0.95);
+  drawTownAsset("town_window_a", cx - 52, project.y - 18, 26, 0, 0.9);
+  drawTownAsset("town_window_b", cx + 52, project.y - 18, 26, 0, 0.9);
+  ctx.fillStyle = `rgba(255,116,66,${0.10 + Math.min(rank, 6) * 0.045})`;
   ctx.beginPath();
-  ctx.ellipse(cx, project.y + 42, 124, 34, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#bda77b";
-  ctx.fillRect(cx - 82, project.y - 32, 164, 88);
-  ctx.strokeStyle = hexToRgba(project.color, 0.45 + rank * 0.08);
-  ctx.lineWidth = 3;
-  ctx.strokeRect(cx - 82, project.y - 32, 164, 88);
-  ctx.fillStyle = "#9d6735";
-  ctx.beginPath();
-  ctx.moveTo(cx - 104, project.y - 28);
-  ctx.lineTo(cx, project.y - 82);
-  ctx.lineTo(cx + 104, project.y - 28);
-  ctx.closePath();
-  ctx.fill();
-  for (let i = -2; i <= 2; i++) drawTownAsset("town_roof_b", cx + i * 29, project.y - 28 - Math.abs(i) * 8, 34, 0, 0.9);
-  drawTownAsset("town_door_b", cx, project.y + 34, 42, 0, 0.95);
-  drawTownAsset("town_window_a", cx - 50, project.y + 3, 28, 0, 0.9);
-  drawTownAsset("town_window_b", cx + 50, project.y + 3, 28, 0, 0.9);
-
-  for (let i = -2; i <= 2; i++) drawTownAsset("town_stone_b", cx + i * 22, project.y + 78, 26, 0, 0.92);
-  ctx.fillStyle = `rgba(255,116,66,${glow})`;
-  ctx.beginPath();
-  ctx.arc(cx, project.y + 68, 24 + rank * 4, 0, Math.PI * 2);
+  ctx.arc(cx, project.y + 62, 20 + Math.min(rank, 5) * 2, 0, Math.PI * 2);
   ctx.fill();
   if (rank > 0) {
     ctx.fillStyle = "#ffb35a";
     ctx.beginPath();
-    ctx.moveTo(cx, project.y + 38 - Math.sin(nowSec() * 5) * 3);
-    ctx.quadraticCurveTo(cx - 14, project.y + 59, cx, project.y + 80);
-    ctx.quadraticCurveTo(cx + 14, project.y + 59, cx, project.y + 38 - Math.sin(nowSec() * 5) * 3);
+    ctx.moveTo(cx, project.y + 39 - Math.sin(nowSec() * 5) * 3);
+    ctx.quadraticCurveTo(cx - 12, project.y + 58, cx, project.y + 78);
+    ctx.quadraticCurveTo(cx + 12, project.y + 58, cx, project.y + 39 - Math.sin(nowSec() * 5) * 3);
     ctx.fill();
   }
-  drawTownAsset("town_crate_small", cx - 112, project.y + 58, 28, 0, 0.86);
-  drawTownAsset("town_barrel_a", cx + 112, project.y + 58, 28, 0, 0.86);
-  drawTownAsset("tiny_barrel", cx + 94, project.y + 18, 28, 0, 0.95);
-  drawTownAsset("tiny_log", cx - 92, project.y + 18, 28, 0.1, 0.9);
-  if (rank > 1) drawTownAsset("tiny_coin", cx, project.y + 5, 24, 0, 0.9);
+  drawTownAsset("town_crate_small", cx - 112, project.y + 54, 26, 0, 0.76);
+  drawTownAsset("town_barrel_a", cx + 112, project.y + 54, 26, 0, 0.76);
   drawVillageProjectLabel(project, rank);
   ctx.restore();
 }
@@ -6308,36 +6278,30 @@ function drawVillageKitchen(project, rank) {
 function drawVillageWatchPost(project, rank) {
   ctx.save();
   const cx = project.x;
-  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  ctx.fillStyle = "rgba(0,0,0,0.23)";
   ctx.beginPath();
-  ctx.ellipse(cx, project.y + 48, 118, 30, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, project.y + 48, 100, 24, 0, 0, Math.PI * 2);
   ctx.fill();
-
   for (let i = -1; i <= 1; i++) {
-    const x = cx + i * 38;
+    const px = cx + i * 42;
     ctx.fillStyle = "#7d5638";
-    ctx.fillRect(x - 5, project.y - 34, 10, 96);
-    drawTownAsset("town_fence_v2", x, project.y + 28, 38, 0, 0.82);
+    ctx.fillRect(px - 5, project.y - 20, 10, 76);
   }
   ctx.fillStyle = "#b78b55";
-  ctx.fillRect(cx - 74, project.y - 46, 148, 36);
-  ctx.strokeStyle = hexToRgba(project.color, 0.42 + rank * 0.1);
+  ctx.fillRect(cx - 72, project.y - 46, 144, 34);
+  ctx.strokeStyle = hexToRgba(project.color, 0.42 + Math.min(rank, 5) * 0.06);
   ctx.lineWidth = 3;
-  ctx.strokeRect(cx - 74, project.y - 46, 148, 36);
-  ctx.fillStyle = "#9d6735";
+  ctx.strokeRect(cx - 72, project.y - 46, 144, 34);
+  ctx.fillStyle = "#6a5945";
   ctx.beginPath();
-  ctx.moveTo(cx - 88, project.y - 48);
-  ctx.lineTo(cx, project.y - 96);
-  ctx.lineTo(cx + 88, project.y - 48);
+  ctx.moveTo(cx - 84, project.y - 46);
+  ctx.lineTo(cx, project.y - 94);
+  ctx.lineTo(cx + 84, project.y - 46);
   ctx.closePath();
   ctx.fill();
-  drawTownAsset("town_roof_peak", cx, project.y - 54, 62, 0, 0.92);
-  drawTownAsset("town_crate_big", cx, project.y + 48, 34, 0, 0.9);
-  for (let i = 0; i < rank; i++) {
-    drawTownAsset("town_lamp", cx - 58 + i * 38, project.y - 18 - (i % 2) * 10, 34, 0, 0.96);
-  }
-  drawTownAsset("tiny_target", cx + 92, project.y - 20, 30, 0, 0.95);
-  drawTownAsset("tiny_tool_pickaxe", cx - 94, project.y + 26, 26, 0.5, 0.9);
+  drawTownAsset("town_roof_peak", cx, project.y - 52, 56, 0, 0.78);
+  for (let i = 0; i < Math.min(rank, 4); i++) drawTownAsset("town_lamp", cx - 54 + i * 36, project.y - 14 - (i % 2) * 8, 30, 0, 0.9);
+  drawTownAsset("tiny_target", cx + 86, project.y - 18, 28, 0, 0.9);
   drawVillageProjectLabel(project, rank);
   ctx.restore();
 }
@@ -6375,13 +6339,17 @@ function drawVillageFarmPlots() {
 }
 
 function drawVillageMineNodes() {
-  const day = ensureHubSave().towerDay;
+  const hub = ensureHubSave();
+  const day = hub.towerDay;
+  const boardTargets = villageTaskMarkerTargets().filter(t => t.label === "BOARD" || t.label === "DARK");
   for (const mine of VILLAGE_MINE_NODES) {
-    const spent = ensureHubSave().mineCleared?.[mine.id] === day;
+    const spent = hub.mineCleared?.[mine.id] === day;
+    const near = Math.hypot(villagePlayer.x - mine.x, villagePlayer.y - mine.y) < 100;
+    const marked = boardTargets.some(t => Math.hypot(t.x - mine.x, t.y - mine.y) < 8);
     ctx.save();
-    ctx.globalAlpha = spent ? 0.42 : 1;
+    ctx.globalAlpha = spent ? 0.38 : 1;
     drawTownAsset("town_stone_dark", mine.x, mine.y, 42, 0, 0.95);
-    drawTownAsset("tiny_tool_pickaxe", mine.x + 22, mine.y - 14, 24, -0.55, 0.9);
+    if (near || marked) drawTownAsset("tiny_tool_pickaxe", mine.x + 22, mine.y - 14, 22, -0.55, 0.85);
     const hits = villageMineHitCount(mine.id);
     if (hits > 0 && !spent) {
       ctx.strokeStyle = "rgba(255,211,90,0.72)";
@@ -6393,10 +6361,11 @@ function drawVillageMineNodes() {
       ctx.lineTo(mine.x - 7, mine.y + 10);
       ctx.stroke();
     }
-    if (!spent) {
-      ctx.strokeStyle = villageObjectLocked(mine) ? "rgba(255,92,122,0.55)" : "rgba(255,211,90,0.42)";
+    if (!spent && (near || villageObjectLocked(mine))) {
+      ctx.strokeStyle = villageObjectLocked(mine) ? "rgba(255,92,122,0.50)" : "rgba(255,211,90,0.28)";
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(mine.x, mine.y, 30 + Math.sin(nowSec() * 2 + mine.x) * 2, 0, Math.PI * 2);
+      ctx.arc(mine.x, mine.y, 28, 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.restore();
@@ -6406,13 +6375,15 @@ function drawVillageMineNodes() {
 function drawVillageFishingSpot() {
   const spot = VILLAGE_FISHING_SPOTS[0];
   if (!spot) return;
+  const near = Math.hypot(villagePlayer.x - spot.x, villagePlayer.y - spot.y) < 96;
   ctx.save();
-  ctx.strokeStyle = "rgba(255,211,90,0.42)";
-  ctx.beginPath();
-  ctx.arc(spot.x, spot.y, 36 + Math.sin(nowSec() * 2.1) * 2, 0, Math.PI * 2);
-  ctx.stroke();
-  drawTownAsset("tiny_sign", spot.x + 44, spot.y + 18, 22, 0, 0.8);
-  ctx.fillStyle = "rgba(255,255,255,0.22)";
+  if (near) {
+    ctx.strokeStyle = "rgba(255,211,90,0.28)";
+    ctx.beginPath();
+    ctx.arc(spot.x, spot.y, 34, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "rgba(255,255,255,0.20)";
   ctx.beginPath();
   ctx.ellipse(spot.x - 20 + Math.sin(nowSec() * 1.7) * 12, spot.y - 4, 12, 4, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -6768,9 +6739,13 @@ function drawVillageScreenUi() {
   ctx.fillText("tower refills town day", 280, 101);
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle = "rgba(3,5,12,0.58)";
+  const suppliesHover = mouse.screenX >= W - 220 && mouse.screenX <= W - 16 && mouse.screenY >= 16 && mouse.screenY <= 100;
+  const suppliesA = suppliesHover ? 1 : 0.18;
+  ctx.save();
+  ctx.globalAlpha = suppliesA;
+  ctx.fillStyle = suppliesHover ? "rgba(3,5,12,0.54)" : "rgba(3,5,12,0.12)";
   ctx.fillRect(W - 220, 16, 204, 84);
-  ctx.strokeStyle = "rgba(255,211,90,0.55)";
+  ctx.strokeStyle = suppliesHover ? "rgba(255,211,90,0.50)" : "rgba(255,211,90,0.10)";
   ctx.strokeRect(W - 220, 16, 204, 84);
   ctx.fillStyle = "#ffd35a";
   ctx.font = "900 11px ui-monospace, monospace";
@@ -6779,11 +6754,15 @@ function drawVillageScreenUi() {
   ctx.font = "900 30px ui-monospace, monospace";
   ctx.textAlign = "right";
   ctx.fillText(String(hub.supplies), W - 32, 57);
+  if (suppliesHover) {
+    ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(217,222,234,0.82)";
+    ctx.font = "900 9px ui-monospace, monospace";
+    ctx.fillText(`Hope ${hubHope()}  Retry ${hub.retries || 0}`, W - 210, 72);
+    ctx.fillText(`Seeds ${hub.seeds}  Ore ${hub.ore}  Fish ${hub.fish}  Crops ${hub.crops}`, W - 210, 86);
+  }
+  ctx.restore();
   ctx.textAlign = "left";
-  ctx.fillStyle = "rgba(217,222,234,0.78)";
-  ctx.font = "900 9px ui-monospace, monospace";
-  ctx.fillText(`Hope ${hubHope()}  Retry ${hub.retries || 0}`, W - 210, 72);
-  ctx.fillText(`Seeds ${hub.seeds}  Ore ${hub.ore}  Fish ${hub.fish}  Crops ${hub.crops}`, W - 210, 86);
 
   const task = activeBoardTask();
   const omen = activeVillageOmen();
