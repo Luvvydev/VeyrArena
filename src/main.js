@@ -1908,7 +1908,7 @@ const VILLAGE_POND = { x: 330, y: 300, rx: 156, ry: 88 };
 const VILLAGE_HOME = { x: 1320, y: 430, w: 180, h: 120 };
 const VILLAGE_CHEST = { x: 1248, y: 282 };
 const VILLAGE_RIVER = { x: 2260, y: 0, w: 128, h: VILLAGE_WORLD.h };
-const VILLAGE_BRIDGE = { x: 2324, y: 720, w: 210, h: 104, cost: { supplies: 12, ore: 4 }, req: { homeRank: 2, bestFloor: 4, text: "House rank 2 and floor 4" } };
+const VILLAGE_BRIDGE = { x: 2324, y: 720, w: 210, h: 104, cost: { supplies: 24, ore: 8, hope: 6 }, req: { homeRank: 3, bestFloor: 5, text: "House rank 3 and floor 5" } };
 const VILLAGE_DARK_DISTRICT = { x: 2400, y: 0, w: VILLAGE_WORLD.w - 2400, h: VILLAGE_WORLD.h };
 const VILLAGE_VISITOR_SPOT = { x: 1395, y: 282 };
 const VILLAGE_DAILY_BOARD = { x: 846, y: 288, r: 58 };
@@ -2024,12 +2024,12 @@ const VILLAGE_FARM_PLOTS = [
 ];
 
 const VILLAGE_VISITORS = {
-  seed: { name: "Seed Seller", title: "traveling shop", sprite: "player_alt", action: "buy seed pouch", text: "A stranger brought seeds from another village.", cost: { supplies: 2 }, reward: { seeds: 3, shards: 1 } },
-  miner: { name: "Ore Buyer", title: "road trader", sprite: "player_vanguard", action: "trade ore", text: "A trader wants clean ore for repair work.", cost: { ore: 2 }, reward: { shards: 5, supplies: 1 } },
-  fisher: { name: "Fish Cook", title: "camp cook", sprite: "player_marine", action: "trade fish", text: "A cook is buying fish for the road crew.", cost: { fish: 2 }, reward: { supplies: 4, shards: 1 } },
-  gift: { name: "Lost Pilgrim", title: "visitor", sprite: "player_phantom", action: "accept gift", text: "A pilgrim came to thank the village for keeping the road lit.", cost: {}, reward: { supplies: 2, seeds: 1, shards: 1 } },
-  relic: { name: "Relic Picker", title: "junk hunter", sprite: "player_vanguard", action: "swap supplies", text: "A junk hunter wants supplies and pays in shards.", cost: { supplies: 3 }, reward: { shards: 4, ore: 1 } },
-  medic: { name: "Road Medic", title: "field tent", sprite: "player_alt", action: "trade crops", text: "A medic is packing food for the road.", cost: { crops: 2 }, reward: { fish: 1, supplies: 2, shards: 1 } }
+  seed: { name: "Seed Seller", title: "seed cart", sprite: "player_alt", action: "buy seeds", text: "Seeds for supplies. No speech, no ceremony.", cost: { supplies: 2 }, reward: { seeds: 2 } },
+  miner: { name: "Ore Buyer", title: "road trader", sprite: "player_vanguard", action: "trade ore", text: "Ore for shards. Simple trade.", cost: { ore: 3 }, reward: { shards: 3 } },
+  fisher: { name: "Fish Cook", title: "camp cook", sprite: "player_marine", action: "trade fish", text: "Fish becomes travel food.", cost: { fish: 2 }, reward: { supplies: 2 } },
+  gift: { name: "Lost Pilgrim", title: "visitor", sprite: "player_phantom", action: "accept gift", text: "A quiet gift left by the road.", cost: {}, reward: { supplies: 1, seeds: 1 } },
+  relic: { name: "Relic Picker", title: "junk hunter", sprite: "player_vanguard", action: "swap supplies", text: "Supplies for one clean relic shard.", cost: { supplies: 3 }, reward: { shards: 2 } },
+  medic: { name: "Road Medic", title: "field tent", sprite: "player_alt", action: "trade crops", text: "Crops for field supplies.", cost: { crops: 2 }, reward: { supplies: 2 } }
 };
 
 const VILLAGE_PROJECTS = [
@@ -2041,7 +2041,7 @@ const VILLAGE_PROJECTS = [
     color: "#7dffb2",
     max: 99,
     action: "repair garden",
-    text: "Spend supplies to repair the garden. Each row helps every tower climb.",
+    text: "Add one better garden row.",
     reward: "The garden has another working row.",
     bonus: "+3 max HP per rank. Ranks 2 and 4 add one extra supply from campaign floors."
   },
@@ -2053,7 +2053,7 @@ const VILLAGE_PROJECTS = [
     color: "#ffd35a",
     max: 99,
     action: "repair kitchen",
-    text: "Spend supplies to repair the kitchen. Meals turn into more utility before each fight.",
+    text: "Make the kitchen feed one more climb.",
     reward: "The kitchen can feed more people before each climb.",
     bonus: "+1 starting smoke per kitchen rank."
   },
@@ -2065,7 +2065,7 @@ const VILLAGE_PROJECTS = [
     color: "#7cc7ff",
     max: 99,
     action: "raise watch post",
-    text: "Spend supplies to raise the watch post. Scouts make Pulse more useful in the tower.",
+    text: "Raise the watch so scouts can see farther.",
     reward: "The watch post can see farther into the tower.",
     bonus: "+22 pulse range per watch post rank."
   }
@@ -2762,17 +2762,20 @@ function expireVillagePrepEffects() {
 function villageTaskPool(floor = 1) {
   const hub = ensureHubSave();
   const pool = [];
-  pool.push({ id: `maren_fish_${hub.towerDay}`, type: "turnin", title: "Bring Maren fish", giver: "Maren", text: "Bring Maren 2 fish.", need: 2, resource: "fish", prep: "maren_meal", rewardSupplies: 1, rewardShards: 1, villager: "maren" });
-  pool.push({ id: `rowan_ore_${hub.towerDay}`, type: "turnin", title: "Bring Rowan ore", giver: "Rowan", text: "Bring Rowan 2 ore.", need: 2, resource: "ore", prep: "rowan_oil", rewardSupplies: 1, rewardShards: 1, villager: "rowan" });
-  pool.push({ id: `tavi_scout_${hub.towerDay}`, type: "rubble", title: "Clear Tavi's view", giver: "Tavi", text: "Clear 1 rubble pile near the gate or watch.", need: 1, prep: "tavi_map", rewardSupplies: 1, rewardShards: 1, villager: "tavi" });
-  pool.push({ id: `garden_crop_${hub.towerDay}`, type: "farm", title: "Pull fresh food", giver: "Garden", text: "Harvest 1 crop.", need: 1, prep: "garden_tonic", rewardSupplies: 1, rewardShards: 1 });
-  pool.push({ id: `smith_project_${hub.towerDay}`, type: "project", title: "Fix one station", giver: "Board", text: "Upgrade any town project once.", need: 1, prep: "kitchen_stew", rewardSupplies: 1, rewardShards: 1 });
-  pool.push({ id: `stranger_crop_${hub.towerDay}`, type: "turnin", title: "Cook wants crops", giver: "Cook", text: "Bring the cook 2 crops.", need: 2, resource: "crops", prep: "kitchen_stew", rewardSupplies: 2, rewardShards: 1 });
-  pool.push({ id: `shrine_candle_${hub.towerDay}`, type: "turnin", title: "Light the shrine", giver: "Shrine", text: "Spend 2 supplies at the shrine.", need: 2, resource: "supplies", prep: "shrine_candle", rewardSupplies: 0, rewardShards: 1 });
-  pool.push({ id: `mine_loose_${hub.towerDay}`, type: "mine", title: "Mine fresh ore", giver: "Rowan", text: "Mine 1 ore node.", need: 1, prep: "rowan_oil", rewardSupplies: 1, rewardShards: 1, villager: "rowan" });
-  pool.push({ id: `pond_food_${hub.towerDay}`, type: "fish", title: "Catch pond fish", giver: "Maren", text: "Fish once at the pond.", need: 1, prep: "maren_meal", rewardSupplies: 1, rewardShards: 1, villager: "maren" });
-  pool.push({ id: `wood_repairs_${hub.towerDay}`, type: "chop", title: "Chop repair wood", giver: "Board", text: "Finish 1 stump and pick up the wood.", need: 1, prep: "tavi_map", rewardSupplies: 1, rewardShards: 1 });
-  pool.push({ id: `hairball_cleanup_${hub.towerDay}`, type: "hairball", title: "Clean hairballs", giver: "Village", text: "Clean 2 hairballs around town.", need: 2, prep: "garden_tonic", rewardSupplies: 1, rewardShards: 1 });
+  pool.push({ id: `maren_fish_${hub.towerDay}`, type: "turnin", title: "Fish for Maren", giver: "Maren", text: "Bring 2 fish.", need: 2, resource: "fish", prep: "maren_meal", rewardSupplies: 0, rewardShards: 0, villager: "maren" });
+  pool.push({ id: `rowan_ore_${hub.towerDay}`, type: "turnin", title: "Ore for Rowan", giver: "Rowan", text: "Bring 2 ore.", need: 2, resource: "ore", prep: "rowan_oil", rewardSupplies: 0, rewardShards: 0, villager: "rowan" });
+  pool.push({ id: `tavi_scout_${hub.towerDay}`, type: "rubble", title: "Clear Tavi's view", giver: "Tavi", text: "Clear 1 rubble pile.", need: 1, prep: "tavi_map", rewardSupplies: 0, rewardShards: 0, villager: "tavi" });
+  pool.push({ id: `garden_crop_${hub.towerDay}`, type: "farm", title: "Fresh crop", giver: "Garden", text: "Harvest 1 crop.", need: 1, prep: "garden_tonic", rewardSupplies: 0, rewardShards: 0 });
+  pool.push({ id: `smith_project_${hub.towerDay}`, type: "project", title: "Upgrade station", giver: "Board", text: "Upgrade any town project.", need: 1, prep: "kitchen_stew", rewardSupplies: 0, rewardShards: 0 });
+  pool.push({ id: `stranger_crop_${hub.towerDay}`, type: "turnin", title: "Crops for cook", giver: "Cook", text: "Bring 2 crops.", need: 2, resource: "crops", prep: "kitchen_stew", rewardSupplies: 0, rewardShards: 0 });
+  pool.push({ id: `shrine_candle_${hub.towerDay}`, type: "turnin", title: "Light shrine", giver: "Shrine", text: "Spend 2 supplies.", need: 2, resource: "supplies", prep: "shrine_candle", rewardSupplies: 0, rewardShards: 0 });
+  pool.push({ id: `mine_loose_${hub.towerDay}`, type: "mine", title: "Fresh ore", giver: "Rowan", text: "Break 1 ore node.", need: 1, prep: "rowan_oil", rewardSupplies: 0, rewardShards: 0, villager: "rowan" });
+  pool.push({ id: `pond_food_${hub.towerDay}`, type: "fish", title: "Pond fish", giver: "Maren", text: "Catch 1 fish.", need: 1, prep: "maren_meal", rewardSupplies: 0, rewardShards: 0, villager: "maren" });
+  pool.push({ id: `wood_repairs_${hub.towerDay}`, type: "chop", title: "Repair wood", giver: "Board", text: "Chop 1 stump or tree.", need: 1, prep: "tavi_map", rewardSupplies: 0, rewardShards: 0 });
+  pool.push({ id: `hairball_cleanup_${hub.towerDay}`, type: "hairball", title: "Clean hairballs", giver: "Village", text: "Clean 2 hairballs.", need: 2, prep: "garden_tonic", rewardSupplies: 0, rewardShards: 0 });
+  if (!villageBridgeFixed() && villageRequirementMet(VILLAGE_BRIDGE.req)) {
+    pool.push({ id: `bridge_repair_${hub.towerDay}`, type: "bridge", title: "Repair bridge", giver: "Pella", text: `Spend ${villageBridgeCostText()}.`, need: 1, prep: "tavi_map", rewardSupplies: 0, rewardShards: 0 });
+  }
   return pool.filter(task => {
     if (task.type === "chop" && !VILLAGE_STUMPS.some(stump => !villageStumpCleared(stump.id) && !villageObjectLocked(stump))) return false;
     if (task.type === "rubble" && !VILLAGE_RUBBLE.some(rubble => !villageRubbleCleared(rubble.id) && !villageObjectLocked(rubble))) return false;
@@ -2832,14 +2835,14 @@ function villageTaskText(task = activeBoardTask()) {
   if (!task) return "No board card selected. Open the daily board and pick a job.";
   const progress = task.type === "turnin" ? `${Math.min(hubResource(task.resource), task.need || 1)}/${task.need || 1}` : `${Math.min(task.progress || 0, task.need || 1)}/${task.need || 1}`;
   const prep = VILLAGE_PREP_DEFS[task.prep];
-  return `${villageTaskIcon(task)} ${task.title} ${progress} · ${prep ? prep.name : "reward"}`;
+  return `${villageTaskIcon(task)} ${task.title} ${progress}${prep ? ` · ${prep.name}` : ""}`;
 }
 
 function completeVillageTask(task, source = "work") {
   if (!task || task.done) return false;
   const hub = ensureHubSave();
-  const supplies = task.rewardSupplies || 0;
-  const shards = task.rewardShards || 0;
+  const supplies = Math.min(Number(task.rewardSupplies) || 0, 1);
+  const shards = Math.min(Number(task.rewardShards) || 0, 1);
   hub.supplies += supplies;
   save.shards += shards;
   if (task.villager && hub.helped?.[task.villager] !== undefined) {
@@ -2855,15 +2858,15 @@ function completeVillageTask(task, source = "work") {
   if (hub.selectedTaskId === task.id) hub.selectedTaskId = (hub.boardTasks || []).find(item => !item.done)?.id || null;
   hub.activeTask = (hub.boardTasks || []).find(item => item.id === hub.selectedTaskId) || null;
   hub.hope = (Number(hub.hope) || 0) + 1;
-  hub.lastGain = `Daily board complete. +${supplies} supply, +${shards} shard, +1 hope.`;
+  hub.lastGain = `Board job done. +1 hope${supplies ? `, +${supplies} supply` : ""}${shards ? `, +${shards} shard` : ""}.`;
   saveGame();
   villagePulse = 1;
   playAssetSfx("cache_upgrade", 0.42);
   playAssetSfx("ui_confirm_001", 0.34) || playAssetSfx("bonus_chime", 0.34);
   addParticles("reward", VILLAGE_DAILY_BOARD.x, VILLAGE_DAILY_BOARD.y - 22, -Math.PI / 2, 34);
-  floatText.push({ x: VILLAGE_DAILY_BOARD.x - 58, y: VILLAGE_DAILY_BOARD.y - 76, text: `BOARD +${supplies} +${shards} +hope`, t: 2.5 });
+  floatText.push({ x: VILLAGE_DAILY_BOARD.x - 50, y: VILLAGE_DAILY_BOARD.y - 76, text: "+1 hope", t: 2.2 });
   if (task.prep) grantVillagePrep(task.prep, task.giver || "Daily board");
-  else setVillageMessage("Task complete", `${task.title} is done. You earned ${supplies} supply and ${shards} shard.`, 3.2);
+  else setVillageMessage("Board", `${task.title} done. +1 hope.`, 3.2);
   checkVillageAchievements("board");
   updateHud();
   return true;
@@ -2894,7 +2897,7 @@ function selectVillageTask(id) {
     return;
   }
 
-  setVillageMessage(task.giver || "Daily board", `${task.text} ${villageTaskText(task)}.`, 3.4);
+  setVillageMessage(task.giver || "Board", `${villageTaskIcon(task)} ${task.text}`, 3.4);
 }
 
 function advanceVillageTask(type, amount = 1) {
@@ -2961,8 +2964,8 @@ function storySupplyRewardForFloor(floor) {
   let amount = 1;
   if (activeRouteType === "cache") amount += 1;
   if (isBossFloor(floor)) amount += 2;
-  amount += Math.floor(hubProjectRank("garden") / 2);
-  return amount;
+  amount += Math.min(4, Math.floor(Math.sqrt(Math.max(0, hubProjectRank("garden"))) / 2));
+  return Math.min(6, amount);
 }
 
 function addVillageSupplies(amount, source = "from the tower") {
@@ -3113,9 +3116,9 @@ function ensureVillageBoardTasks(force = false) {
   const nextHub = ensureHubSave();
   if (!Array.isArray(nextHub.boardTasks) || !nextHub.boardTasks.length) {
     nextHub.boardTasks = [
-      { id: `emergency_fish_${nextHub.towerDay}`, type: "fish", title: "Catch pond fish", giver: "Maren", text: "Fish once at the pond.", need: 1, prep: "maren_meal", rewardSupplies: 1, rewardShards: 1, done: false, progress: 0 },
-      { id: `emergency_ore_${nextHub.towerDay}`, type: "mine", title: "Mine fresh ore", giver: "Rowan", text: "Mine 1 ore node.", need: 1, prep: "rowan_oil", rewardSupplies: 1, rewardShards: 1, done: false, progress: 0 },
-      { id: `emergency_shrine_${nextHub.towerDay}`, type: "turnin", title: "Light the shrine", giver: "Shrine", text: "Spend 2 supplies at the shrine.", need: 2, resource: "supplies", prep: "shrine_candle", rewardSupplies: 0, rewardShards: 1, done: false, progress: 0 }
+      { id: `emergency_fish_${nextHub.towerDay}`, type: "fish", title: "Catch pond fish", giver: "Maren", text: "Fish once at the pond.", need: 1, prep: "maren_meal", rewardSupplies: 0, rewardShards: 0, done: false, progress: 0 },
+      { id: `emergency_ore_${nextHub.towerDay}`, type: "mine", title: "Mine fresh ore", giver: "Rowan", text: "Mine 1 ore node.", need: 1, prep: "rowan_oil", rewardSupplies: 0, rewardShards: 0, done: false, progress: 0 },
+      { id: `emergency_shrine_${nextHub.towerDay}`, type: "turnin", title: "Light the shrine", giver: "Shrine", text: "Spend 2 supplies at the shrine.", need: 2, resource: "supplies", prep: "shrine_candle", rewardSupplies: 0, rewardShards: 0, done: false, progress: 0 }
     ];
     nextHub.selectedTaskId = nextHub.boardTasks[0].id;
     nextHub.activeTask = nextHub.boardTasks[0];
@@ -3273,7 +3276,7 @@ function enterVillageBetweenStoryFloors(nextFloor, info = {}) {
   const supplies = info.suppliesFound ? ` You brought back ${info.suppliesFound} supplies.` : "";
   const boardText = task ? ` Board: ${villageTaskText(task)}.` : "";
   const omenText = omen ? ` ${omen.name}: ${omen.rewardText}` : "";
-  setVillageMessage("Back from the tower", `Floor ${currentFloor} is clear.${supplies}${boardText}${omenText} Go to the tower gate when you are ready for floor ${nextFloor}.`, 6.2);
+  setVillageMessage("Back", `Floor ${currentFloor} clear.${supplies} Board has work when you want it.`, 5.2);
   villagePulse = 1;
   lastTime = performance.now();
   updateHud();
@@ -3741,13 +3744,18 @@ function villageBridgeCanRepair() {
 }
 
 function villageBridgeCostText() {
-  return `${VILLAGE_BRIDGE.cost.supplies} supplies and ${VILLAGE_BRIDGE.cost.ore} ore`;
+  const cost = VILLAGE_BRIDGE.cost;
+  const parts = [];
+  if (cost.supplies) parts.push(`${cost.supplies} supplies`);
+  if (cost.ore) parts.push(`${cost.ore} ore`);
+  if (cost.hope) parts.push(`${cost.hope} hope`);
+  return parts.join(", ");
 }
 
 function villageBridgeActionText() {
   if (villageBridgeFixed()) return "cross bridge";
-  if (!villageBridgeCanRepair()) return `need ${villageRequirementText(VILLAGE_BRIDGE.req)}`;
-  return `repair bridge: ${villageBridgeCostText()} + 1 energy`;
+  if (!villageBridgeCanRepair()) return `bridge locked: ${villageRequirementText(VILLAGE_BRIDGE.req)}`;
+  return `repair bridge: ${villageBridgeCostText()}, 1 energy`;
 }
 
 function villageBridgeNearPlayer() {
@@ -3762,7 +3770,7 @@ function villageBridgeNearPlayer() {
 function repairVillageBridge() {
   const hub = ensureHubSave();
   if (hub.bridgeFixed) {
-    setVillageMessage("Bridge", "The bridge is repaired. The dark quarter is open.", 3.0);
+    setVillageMessage("Bridge", "Bridge repaired. The dark road is open.", 3.0);
     return;
   }
   if (!villageBridgeCanRepair()) {
@@ -3778,13 +3786,12 @@ function repairVillageBridge() {
   if (!spendVillageEnergy(1, "repairing the bridge")) return;
   for (const [key, value] of Object.entries(VILLAGE_BRIDGE.cost)) hub[key] = (Number(hub[key]) || 0) - value;
   hub.bridgeFixed = true;
-  hub.hope = (Number(hub.hope) || 0) + 3;
-  save.shards += 3;
   saveGame();
   playAssetSfx("town_building_work", 0.35);
   playAssetSfx("bonus_chime", 0.35);
-  unlockAchievement("bridge_repaired", "Other Side Open", "Repaired the bridge into the dark quarter.");
-  setVillageMessage("Bridge", "Bridge repaired. The dark quarter is open.", 4.5);
+  unlockAchievement("bridge_repaired", "Other Side Open", "Repaired the bridge into the dark road.");
+  advanceVillageTask("bridge");
+  setVillageMessage("Bridge", "Bridge repaired. The dark road is open.", 4.5);
 }
 
 function findVillageInteractTarget() {
@@ -3902,8 +3909,8 @@ function clearVillageRubble(id) {
   hub.supplies += supplies;
   hub.ore = (Number(hub.ore) || 0) + ore;
   if (shards) save.shards += shards;
-  hub.hope = (Number(hub.hope) || 0) + 1;
-  hub.lastGain = `+${supplies} supplies${ore ? `, +${ore} ore` : ""}${shards ? `, +${shards} shards` : ""}. +1 hope.`;
+  if (rubble.req) hub.hope = (Number(hub.hope) || 0) + 1;
+  hub.lastGain = `+${supplies} supplies${ore ? `, +${ore} ore` : ""}${shards ? `, +${shards} shards` : ""}${rubble.req ? ", +1 hope" : ""}.`;
   hub.lastHelp = "";
   saveGame();
   villagePulse = 1;
@@ -3911,10 +3918,10 @@ function clearVillageRubble(id) {
   playAssetSfx("bonus_chime", 0.24);
   addParticles("dust", rubble.x, rubble.y, -Math.PI / 2, 18);
   addParticles("reward", rubble.x, rubble.y - 8, -Math.PI / 2, 12);
-  const rewardText = `+${supplies} supplies${ore ? `  +${ore} ore` : ""}${shards ? `  +${shards} shards` : ""}  +1 hope`;
+  const rewardText = `+${supplies} supplies${ore ? `  +${ore} ore` : ""}${shards ? `  +${shards} shards` : ""}${rubble.req ? "  +1 hope" : ""}`;
   floatText.push({ x: rubble.x - 48, y: rubble.y - rubble.r - 12, text: rewardText, t: 2.0 });
   if (rubble.req) unlockAchievement("first_long_blocker", "That Was In The Way", "Removed a milestone locked town blocker.");
-  setVillageMessage("Village", `You cleared ${rubble.label}. ${hub.lastGain}`);
+  setVillageMessage("Village", `Cleared ${rubble.label}. ${hub.lastGain}`);
   advanceVillageTask("rubble");
 }
 
@@ -3974,13 +3981,13 @@ function mineVillageNode(id) {
   addHubResource("ore", oreFound);
   const bonusRoll = Math.random();
   let bonusText = "";
-  if (bonusRoll < 0.25) {
+  if (bonusRoll < 0.10) {
     addHubResource("seeds", 1);
     bonusText = " +1 seed";
-  } else if (bonusRoll < 0.42) {
+  } else if (bonusRoll < 0.17) {
     addHubResource("supplies", 1);
     bonusText = " +1 supply";
-  } else if (bonusRoll < 0.52) {
+  } else if (bonusRoll < 0.20) {
     save.shards += 1;
     bonusText = " +1 shard";
   }
@@ -4237,16 +4244,16 @@ function workVillageFarmPlot(id) {
     saveVillageFarmPlot(id, { state: "empty" });
     addHubResource("crops", 1);
     hub.farmHarvests = (Number(hub.farmHarvests) || 0) + 1;
-    hub.supplies += 2;
-    save.shards += 1;
-    hub.lastGain = "+1 crop, +2 supplies, +1 shard.";
+    const supplyBonus = Math.random() < 0.25 ? 1 : 0;
+    if (supplyBonus) hub.supplies += 1;
+    hub.lastGain = `+1 crop${supplyBonus ? ", +1 supply" : ""}.`;
     saveGame();
     villagePulse = 1;
     playAssetSfx("town_leaves", 0.28);
     playAssetSfx("bonus_chime", 0.28);
     addParticles("reward", plotDef.x, plotDef.y, -Math.PI / 2, 24);
-    floatText.push({ x: plotDef.x - 42, y: plotDef.y - 40, text: "+crop +2 supply", t: 1.1 });
-    setVillageMessage("Harvest", "The crop became supplies for the village and one shard for you.", 2.8);
+    floatText.push({ x: plotDef.x - 36, y: plotDef.y - 40, text: supplyBonus ? "+crop +supply" : "+crop", t: 1.1 });
+    setVillageMessage("Harvest", supplyBonus ? "Crop stored. Found one usable supply." : "Crop stored.", 2.8);
     advanceVillageTask("farm");
     return;
   }
@@ -4377,16 +4384,18 @@ function collectVillageStumpDrops() {
     if (d > 34) continue;
     delete hub.stumpDrops[stump.id];
     hub.supplies += stump.supplies || 1;
-    hub.hope = (Number(hub.hope) || 0) + 1;
+    const seedBonus = stump.treeKey || stump.longGoal || Math.random() < 0.35 ? 1 : 0;
+    if (seedBonus) hub.seeds = (Number(hub.seeds) || 0) + seedBonus;
+    if (stump.longGoal) hub.hope = (Number(hub.hope) || 0) + 1;
     if (stump.shards) save.shards += stump.shards;
-    hub.lastGain = stump.shards ? `Picked up wood, ${stump.supplies || 1} supplies, and ${stump.shards} shard${stump.shards === 1 ? "" : "s"}.` : `Picked up wood and ${stump.supplies || 1} suppl${(stump.supplies || 1) === 1 ? "y" : "ies"}.`;
+    hub.lastGain = `Picked up ${stump.supplies || 1} wood supply${(stump.supplies || 1) === 1 ? "" : "ies"}${seedBonus ? ", +1 seed" : ""}${stump.shards ? `, +${stump.shards} shard${stump.shards === 1 ? "" : "s"}` : ""}${stump.longGoal ? ", +1 hope" : ""}.`;
     collected = true;
     villagePulse = 1;
     playAssetSfx("reward", 0.42);
     playAssetSfx("bonus_chime", 0.26);
     addParticles("reward", stump.x, stump.y - 10, -Math.PI / 2, 22);
-    floatText.push({ x: stump.x - 54, y: stump.y - stump.r - 28, text: stump.shards ? `+${stump.supplies || 1} supply  +${stump.shards} shard  +1 hope` : `+${stump.supplies || 1} supply  +1 hope`, t: 2.0 });
-    setVillageMessage("Supplies picked up", stump.shards ? "You picked up the chopped wood and found a shard under it." : "You picked up the chopped wood for the village.", 2.6);
+    floatText.push({ x: stump.x - 54, y: stump.y - stump.r - 28, text: `+${stump.supplies || 1} supply${seedBonus ? " +seed" : ""}${stump.shards ? ` +${stump.shards} shard` : ""}${stump.longGoal ? " +hope" : ""}`, t: 2.0 });
+    setVillageMessage("Wood", hub.lastGain, 2.6);
     advanceVillageTask("chop");
   }
   if (collected) {
@@ -4917,10 +4926,13 @@ function drawVillageRiverAndBridge() {
   } else {
     drawTownAsset("platformer_bridge_logs", b.x - 56, b.y + 18, 68, -0.42, 0.85) || drawTownAsset("town_bridge", b.x - 56, b.y + 18, 64, -0.42, 0.85);
     drawTownAsset("platformer_bridge_logs", b.x + 56, b.y - 12, 64, 0.38, 0.75) || drawTownAsset("town_bridge", b.x + 56, b.y - 12, 58, 0.38, 0.75);
-    ctx.fillStyle = "rgba(255,92,122,0.82)";
-    ctx.font = "900 10px ui-monospace, monospace";
+    ctx.fillStyle = "rgba(255,92,122,0.78)";
+    ctx.font = "900 9px ui-monospace, monospace";
     ctx.textAlign = "center";
-    ctx.fillText("BRIDGE OUT", b.x, b.y - 48);
+    ctx.fillText(villageBridgeCanRepair() ? "REPAIR BRIDGE" : "BRIDGE LOCKED", b.x, b.y - 50);
+    ctx.fillStyle = "rgba(245,241,255,0.68)";
+    ctx.font = "800 7px ui-monospace, monospace";
+    ctx.fillText(villageBridgeCanRepair() ? villageBridgeCostText().toUpperCase() : villageRequirementText(VILLAGE_BRIDGE.req).toUpperCase(), b.x, b.y - 38);
   }
   const gravestones = [
     [2460, 520], [2550, 560], [2760, 530], [2920, 700], [2500, 970], [2675, 1140], [2860, 1220]
@@ -4931,6 +4943,10 @@ function drawVillageRiverAndBridge() {
   }
   drawTownAsset("platformer_block_warning", 2520, 820, 40, 0, 0.70);
   drawTownAsset("platformer_bush", 2860, 990, 44, 0, 0.55) || drawTownAsset("town_bush", 2860, 990, 44, 0, 0.55);
+  drawTownAsset("tiny_sign", 2528, 720, 38, 0, 0.82);
+  drawTownAsset("town_lamp", 2720, 705, 34, 0, villageBridgeFixed() ? 0.85 : 0.30);
+  drawTownAsset("town_crate_big", 2795, 790, 34, 0.1, 0.55);
+  drawTownAsset("town_barrel_b", 2828, 805, 28, 0, 0.48);
   ctx.restore();
 }
 
@@ -5391,7 +5407,7 @@ function drawVillageRubble() {
     ctx.strokeStyle = locked ? "rgba(255,92,122,0.55)" : "rgba(255,211,90,0.45)";
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
-    ctx.arc(rubble.x, rubble.y, rubble.r + 12 + Math.sin(nowSec() * 2 + rubble.x) * 2, 0, Math.PI * 2);
+    ctx.arc(rubble.x, rubble.y, rubble.r + 7, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
     if (locked) {
@@ -5449,7 +5465,7 @@ function drawVillageStumps() {
       ctx.strokeStyle = "rgba(255,92,122,0.58)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(stump.x, stump.y, stump.r + 16 + Math.sin(nowSec() * 2 + stump.x) * 2, 0, Math.PI * 2);
+      ctx.arc(stump.x, stump.y, stump.r + 8, 0, Math.PI * 2);
       ctx.stroke();
       ctx.fillStyle = "rgba(3,5,12,0.72)";
       ctx.fillRect(stump.x - 58, stump.y - stump.r - 31, 116, 18);
@@ -5861,10 +5877,13 @@ function drawVillageTownfolk() {
       ctx.arc(point.x, point.y, 15, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.strokeStyle = "rgba(255,211,90,0.42)";
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, 32 + Math.sin(nowSec() * 2 + npc.x) * 2, 0, Math.PI * 2);
-    ctx.stroke();
+    const nearNpc = Math.hypot(villagePlayer.x - point.x, villagePlayer.y - point.y) < 88;
+    if (nearNpc) {
+      ctx.strokeStyle = "rgba(255,211,90,0.42)";
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 28, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     ctx.textAlign = "center";
     ctx.fillStyle = "#f5f1ff";
     ctx.font = "900 10px ui-monospace, monospace";
@@ -5895,10 +5914,12 @@ function drawVillageVisitor() {
     ctx.arc(x, y, 14, 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.strokeStyle = "rgba(255,211,90,0.65)";
-  ctx.beginPath();
-  ctx.arc(x, y, 34 + Math.sin(nowSec() * 2) * 2, 0, Math.PI * 2);
-  ctx.stroke();
+  if (Math.hypot(villagePlayer.x - x, villagePlayer.y - y) < 92) {
+    ctx.strokeStyle = "rgba(255,211,90,0.50)";
+    ctx.beginPath();
+    ctx.arc(x, y, 30, 0, Math.PI * 2);
+    ctx.stroke();
+  }
   ctx.fillStyle = "#ffd35a";
   ctx.font = "900 10px ui-monospace, monospace";
   ctx.textAlign = "center";
@@ -5920,11 +5941,13 @@ function drawVillageVillagers() {
     ctx.beginPath();
     ctx.ellipse(point.x + 2, point.y + 18, 26, 8, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = hexToRgba(spot.color, 0.48 + Math.min(0.3, rank * 0.05));
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, 31 + Math.sin(nowSec() * 1.8 + spot.x) * 2, 0, Math.PI * 2);
-    ctx.stroke();
+    if (Math.hypot(villagePlayer.x - point.x, villagePlayer.y - point.y) < 90) {
+      ctx.strokeStyle = hexToRgba(spot.color, 0.48 + Math.min(0.25, rank * 0.04));
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 28, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     if (!drawImageAsset(villager.sprite, point.x, point.y, size, size)) {
       ctx.fillStyle = spot.color;
       ctx.beginPath();
@@ -5999,14 +6022,14 @@ function drawVillageTaskMarkers() {
   ctx.textAlign = "center";
   for (const target of targets) {
     const bob = Math.sin(nowSec() * 5 + target.x) * 4;
-    ctx.strokeStyle = "rgba(255,211,90,0.86)";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,211,90,0.42)";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(target.x, target.y - 34 + bob, 14, 0, Math.PI * 2);
+    ctx.arc(target.x, target.y - 28 + bob, 9, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.fillStyle = "#ffd35a";
-    ctx.font = "900 8px ui-monospace, monospace";
-    ctx.fillText(target.label, target.x, target.y - 50 + bob);
+    ctx.fillStyle = "rgba(255,211,90,0.70)";
+    ctx.font = "900 7px ui-monospace, monospace";
+    ctx.fillText(target.label, target.x, target.y - 41 + bob);
   }
   ctx.restore();
 }
@@ -6090,11 +6113,11 @@ function drawVillageScreenUi() {
   const task = activeBoardTask();
   const omen = activeVillageOmen();
   const dailyEvent = activeVillageDailyEvent();
-  const todayX = 416;
-  const todayY = 20;
-  const todayW = 292;
-  ctx.globalAlpha = 0.72;
-  ctx.fillStyle = "rgba(3,5,12,0.24)";
+  const todayX = 430;
+  const todayY = 18;
+  const todayW = 260;
+  ctx.globalAlpha = 0.48;
+  ctx.fillStyle = "rgba(3,5,12,0.18)";
   ctx.fillRect(todayX, todayY, todayW, 34);
   ctx.strokeStyle = "rgba(125,255,178,0.18)";
   ctx.strokeRect(todayX, todayY, todayW, 34);
@@ -6105,12 +6128,12 @@ function drawVillageScreenUi() {
   ctx.fillStyle = "rgba(245,241,255,0.78)";
   ctx.font = "900 9px ui-monospace, monospace";
   const taskText = task ? villageTaskText(task) : "Board has jobs";
-  ctx.fillText((linesFor(taskText, todayW - 20)[0] || "").slice(0, 42), todayX + 10, todayY + 27);
+  ctx.fillText((linesFor(taskText, todayW - 20)[0] || "").slice(0, 36), todayX + 10, todayY + 27);
 
   const returnCard = hub.lastReturnCard;
   const returnAge = returnCard?.ts ? Math.max(0, (Date.now() - returnCard.ts) / 1000) : 99;
-  if (returnCard && returnCard.floor && returnAge < 5) {
-    const alpha = clamp(1 - returnAge / 5, 0, 1);
+  if (returnCard && returnCard.floor && returnAge < 8) {
+    const alpha = clamp(1 - returnAge / 8, 0, 1);
     ctx.save();
     ctx.globalAlpha = 0.85 * alpha;
     ctx.fillStyle = "rgba(3,5,12,0.45)";
