@@ -112,6 +112,21 @@ const ASSET_PATHS = {
     tiny_sword: "./assets/town/tiny_sword.png",
     tiny_log: "./assets/town/tiny_log.png",
     tiny_barrel: "./assets/town/tiny_barrel.png",
+    grave_crypt_large: "./assets/town/grave_crypt_large.png",
+    grave_crypt: "./assets/town/grave_crypt.png",
+    grave_stone_cross: "./assets/town/grave_stone_cross.png",
+    grave_stone_broken: "./assets/town/grave_stone_broken.png",
+    grave_pine_crooked: "./assets/town/grave_pine_crooked.png",
+    grave_lantern: "./assets/town/grave_lantern.png",
+    grave_altar: "./assets/town/grave_altar.png",
+    grave_iron_fence: "./assets/town/grave_iron_fence.png",
+    grave_rocks_tall: "./assets/town/grave_rocks_tall.png",
+    grave_trunk_long: "./assets/town/grave_trunk_long.png",
+    fantasy_cart: "./assets/town/fantasy_cart.png",
+    fantasy_fountain_round: "./assets/town/fantasy_fountain_round.png",
+    fantasy_fence_gate: "./assets/town/fantasy_fence_gate.png",
+    dungeon_chest: "./assets/town/dungeon_chest.png",
+    dungeon_rocks: "./assets/town/dungeon_rocks.png",
     smoke_white_00: "./assets/fx/smoke/white_00.png",
     smoke_white_04: "./assets/fx/smoke/white_04.png",
     smoke_white_08: "./assets/fx/smoke/white_08.png",
@@ -728,6 +743,7 @@ const DEFAULT_HUB_SAVE = {
   townLog: [],
   homeRank: 0,
   homeRestDay: -1,
+  bridgeFixed: false,
   chest: { supplies: 0, seeds: 0, ore: 0, fish: 0, crops: 0 },
   helped: {
     maren: 0,
@@ -1853,7 +1869,7 @@ const player = {
 
 let bots = [];
 
-const VILLAGE_WORLD = { w: 2200, h: 1500 };
+const VILLAGE_WORLD = { w: 3000, h: 1680 };
 const villagePlayer = {
   x: 1100,
   y: 650,
@@ -1879,6 +1895,9 @@ const VILLAGE_POND = { x: 330, y: 300, rx: 156, ry: 88 };
 const VILLAGE_HOME = { x: 1320, y: 430, w: 180, h: 120 };
 const VILLAGE_CHEST = { x: 1248, y: 282 };
 const VILLAGE_VISITOR_SPOT = { x: 1395, y: 282 };
+const VILLAGE_RIVER = { x: 2210, y: 0, w: 116, h: VILLAGE_WORLD.h };
+const VILLAGE_BRIDGE = { x: 2268, y: 760, w: 190, h: 96, cost: { supplies: 12, ore: 4 }, req: { homeRank: 2, bestFloor: 4, text: "House rank 2 and floor 4" } };
+const VILLAGE_DARK_DISTRICT = { x: 2350, y: 0, w: VILLAGE_WORLD.w - 2350, h: VILLAGE_WORLD.h };
 const VILLAGE_DAILY_BOARD = { x: 846, y: 288, r: 58 };
 
 const VILLAGE_MESS_SPOTS = [
@@ -1903,13 +1922,17 @@ const VILLAGE_VILLAGER_SPOTS = [
 const VILLAGE_TOWNSFOLK = [
   { id: "pella", name: "Pella", title: "Builder", x: 1500, y: 520, sprite: "player_alt", icon: "tiny_axe", action: "help Pella", need: { supplies: 3 }, prep: "kitchen_stew", rewardHope: 2, text: "Pella can shore up the road before the next climb." },
   { id: "nix", name: "Nix", title: "Forager", x: 620, y: 610, sprite: "player_marine", icon: "tiny_flower", action: "help Nix", need: { crops: 1, seeds: 1 }, prep: "garden_tonic", rewardHope: 1, text: "Nix turns spare food into a small field tonic." },
-  { id: "orin", name: "Orin", title: "Cartographer", x: 1640, y: 440, sprite: "player_phantom", icon: "tiny_target", action: "help Orin", need: { ore: 1 }, prep: "tavi_map", rewardHope: 1, text: "Orin marks a safer stair path for tonight." }
+  { id: "orin", name: "Orin", title: "Cartographer", x: 1640, y: 440, sprite: "player_phantom", icon: "tiny_target", action: "help Orin", need: { ore: 1 }, prep: "tavi_map", rewardHope: 1, text: "Orin marks a safer stair path for tonight." },
+  { id: "vesper", name: "Vesper", title: "Gate Keeper", x: 2580, y: 520, sprite: "enemy_vampire", icon: "grave_lantern", action: "help Vesper", need: { ore: 2 }, prep: "shrine_candle", rewardHope: 2, needsBridge: true, text: "Vesper tends the old graves and trades wards for ore." },
+  { id: "moss", name: "Moss", title: "Marsh Cook", x: 2750, y: 930, sprite: "rpg_orc", icon: "tiny_flower", action: "help Moss", need: { fish: 2 }, prep: "garden_tonic", rewardHope: 2, needsBridge: true, text: "Moss cooks in the dark district and sends tonics back across the bridge." }
 ];
 
 const VILLAGE_TOWNSFOLK_PATROLS = {
   pella: [{ x: 1500, y: 520 }, { x: 1580, y: 470 }, { x: 1685, y: 560 }, { x: 1515, y: 650 }, { x: 1420, y: 565 }, { x: 1500, y: 520 }],
   nix: [{ x: 620, y: 610 }, { x: 520, y: 550 }, { x: 440, y: 690 }, { x: 590, y: 820 }, { x: 745, y: 650 }, { x: 620, y: 610 }],
-  orin: [{ x: 1640, y: 440 }, { x: 1740, y: 475 }, { x: 1840, y: 610 }, { x: 1690, y: 760 }, { x: 1510, y: 610 }, { x: 1640, y: 440 }]
+  orin: [{ x: 1640, y: 440 }, { x: 1740, y: 475 }, { x: 1840, y: 610 }, { x: 1690, y: 760 }, { x: 1510, y: 610 }, { x: 1640, y: 440 }],
+  vesper: [{ x: 2580, y: 520 }, { x: 2680, y: 470 }, { x: 2840, y: 610 }, { x: 2700, y: 740 }, { x: 2500, y: 650 }, { x: 2580, y: 520 }],
+  moss: [{ x: 2750, y: 930 }, { x: 2860, y: 850 }, { x: 2910, y: 1040 }, { x: 2660, y: 1120 }, { x: 2520, y: 960 }, { x: 2750, y: 930 }]
 };
 
 const VILLAGE_RUBBLE = [
@@ -1924,7 +1947,10 @@ const VILLAGE_RUBBLE = [
   { id: "rubble_garden", x: 574, y: 548, r: 24, label: "dead garden beds" },
   { id: "rubble_watch", x: 1850, y: 570, r: 24, label: "watch post boards" },
   { id: "rubble_kitchen", x: 1298, y: 896, r: 22, label: "cold firepit" },
-  { id: "rubble_road", x: 1110, y: 1235, r: 24, label: "road debris" }
+  { id: "rubble_road", x: 1110, y: 1235, r: 24, label: "road debris" },
+  { id: "blocker_old_oak", x: 725, y: 380, r: 38, label: "fallen old oak", kind: "oak", supplies: 3, shards: 1, req: { homeRank: 1, text: "House rank 1" } },
+  { id: "blocker_cracked_boulder", x: 1515, y: 1285, r: 42, label: "cracked tower boulder", kind: "boulder", supplies: 2, ore: 2, shards: 1, req: { bestFloor: 4, text: "Reach floor 4" } },
+  { id: "blocker_sealed_cart", x: 2020, y: 1015, r: 42, label: "sealed supply cart", kind: "cart", supplies: 5, shards: 3, req: { homeRank: 3, bestFloor: 6, text: "House rank 3 and floor 6" } }
 ];
 
 const VILLAGE_STUMPS = [
@@ -1943,7 +1969,10 @@ const VILLAGE_STUMPS = [
   { id: "stump_watch_north", x: 1745, y: 464, r: 20, hp: 3, supplies: 1 },
   { id: "stump_watch_south", x: 1920, y: 840, r: 20, hp: 3, supplies: 1 },
   { id: "stump_road_left", x: 760, y: 1280, r: 20, hp: 3, supplies: 1 },
-  { id: "stump_road_right", x: 1430, y: 1274, r: 20, hp: 3, supplies: 1 }
+  { id: "stump_road_right", x: 1430, y: 1274, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_giant_oak", x: 520, y: 1160, r: 36, hp: 8, supplies: 4, shards: 2, longGoal: true, req: { homeRank: 2, text: "House rank 2" } },
+  { id: "stump_ironroot", x: 1668, y: 1180, r: 40, hp: 10, supplies: 5, shards: 3, longGoal: true, req: { homeRank: 3, bestFloor: 4, text: "House rank 3 and floor 4" } },
+  { id: "stump_ancient_root", x: 2050, y: 1320, r: 44, hp: 12, supplies: 7, shards: 4, longGoal: true, req: { homeRank: 5, bestFloor: 6, text: "House rank 5 and floor 6" } }
 ];
 
 let villageToolSwing = { t: 0, x: 0, y: 0, angle: 0 };
@@ -2054,7 +2083,8 @@ const VILLAGE_TREE_LINES = [
   [88, 1180, "town_tree_green"], [170, 1330, "town_tree_gold"], [312, 1420, "town_tree_green"],
   [1920, 1250, "town_tree_blue"], [2040, 1120, "town_tree_green"], [2140, 890, "town_tree_gold"],
   [120, 740, "town_tree_blue"], [2048, 720, "town_tree_green"], [80, 520, "town_tree_green"], [2100, 420, "town_tree_green"],
-  [520, 1240, "town_tree_blue"], [1580, 1320, "town_tree_green"]
+  [520, 1240, "town_tree_blue"], [1580, 1320, "town_tree_green"],
+  [2440, 260, "grave_pine_crooked"], [2760, 330, "grave_pine_crooked"], [2920, 720, "grave_pine_crooked"], [2480, 1250, "grave_pine_crooked"]
 ];
 
 const VILLAGE_PREP_DEFS = {
@@ -2135,6 +2165,7 @@ function loadSave() {
         townLog: Array.isArray(parsed.hub?.townLog) ? parsed.hub.townLog.slice(0, 32) : [],
         homeRank: Number(parsed.hub?.homeRank) || 0,
         homeRestDay: Number(parsed.hub?.homeRestDay ?? -1),
+        bridgeFixed: Boolean(parsed.hub?.bridgeFixed),
         chest: {
           ...structuredClone(DEFAULT_HUB_SAVE).chest,
           ...(parsed.hub?.chest || {})
@@ -2198,6 +2229,7 @@ function checkVillageAchievements(source = "") {
   if ((hub.homeRank || 0) >= 3) unlockAchievement("home_rank_3", "Indoor Person", "Reached house rank 3.");
   if (source === "hairball") unlockAchievement("first_hairball", "Not My Job", "Cleaned your first hairball.");
   if (source === "chest") unlockAchievement("used_chest", "It Stacks", "Moved an item through the chest.");
+  if (hubRubbleClearedCount() + hubStumpClearedCount() >= 24) unlockAchievement("town_unblocked", "No Excuses Left", "Removed 24 town blockers.");
 }
 
 function updateAchievementToasts(dt) {
@@ -2301,6 +2333,7 @@ function ensureHubSave() {
     townLog: Array.isArray(save.hub?.townLog) ? save.hub.townLog.slice(0, 32) : [],
     homeRank: Number(save.hub?.homeRank) || 0,
     homeRestDay: Number(save.hub?.homeRestDay ?? -1),
+    bridgeFixed: Boolean(save.hub?.bridgeFixed),
     chest: {
       ...structuredClone(DEFAULT_HUB_SAVE).chest,
       ...(save.hub?.chest || {})
@@ -2707,8 +2740,8 @@ function villageTaskPool(floor = 1) {
   pool.push({ id: `wood_repairs_${hub.towerDay}`, type: "chop", title: "Chop repair wood", giver: "Board", text: "Finish 1 stump and pick up the wood.", need: 1, prep: "tavi_map", rewardSupplies: 1, rewardShards: 1 });
   pool.push({ id: `hairball_cleanup_${hub.towerDay}`, type: "hairball", title: "Clean hairballs", giver: "Village", text: "Clean 2 hairballs around town.", need: 2, prep: "garden_tonic", rewardSupplies: 1, rewardShards: 1 });
   return pool.filter(task => {
-    if (task.type === "chop" && !VILLAGE_STUMPS.some(stump => !villageStumpCleared(stump.id))) return false;
-    if (task.type === "rubble" && !VILLAGE_RUBBLE.some(rubble => !villageRubbleCleared(rubble.id))) return false;
+    if (task.type === "chop" && !VILLAGE_STUMPS.some(stump => !villageStumpCleared(stump.id) && !villageObjectLocked(stump))) return false;
+    if (task.type === "rubble" && !VILLAGE_RUBBLE.some(rubble => !villageRubbleCleared(rubble.id) && !villageObjectLocked(rubble))) return false;
     if (task.type === "project" && !VILLAGE_PROJECTS.some(project => hubProjectRank(project.id) < project.max)) return false;
     return true;
   });
@@ -2742,11 +2775,37 @@ function activeBoardTask() {
   return (hub.boardTasks || []).find(task => task.id === hub.selectedTaskId) || hub.activeTask || null;
 }
 
+function villageTaskIcon(task) {
+  if (!task) return "📌";
+  if (task.type === "fish" || task.resource === "fish") return "🐟";
+  if (task.type === "mine" || task.resource === "ore") return "🪨";
+  if (task.type === "farm" || task.resource === "crops") return "🥕";
+  if (task.type === "chop") return "🪓";
+  if (task.type === "rubble") return "🧹";
+  if (task.type === "hairball") return "🐾";
+  if (task.type === "project") return "🔨";
+  if (task.prep === "shrine_candle") return "🕯️";
+  return "📌";
+}
+
+function villageTaskShort(task) {
+  if (!task) return "Pick a job";
+  if (task.type === "turnin" && task.resource) return `${villageTaskIcon(task)} Bring ${task.need} ${task.resource}`;
+  if (task.type === "fish") return `${villageTaskIcon(task)} Fish once`;
+  if (task.type === "mine") return `${villageTaskIcon(task)} Mine ore`;
+  if (task.type === "farm") return `${villageTaskIcon(task)} Harvest crop`;
+  if (task.type === "chop") return `${villageTaskIcon(task)} Chop wood`;
+  if (task.type === "rubble") return `${villageTaskIcon(task)} Clear debris`;
+  if (task.type === "hairball") return `${villageTaskIcon(task)} Clean ${task.need || 2} hairballs`;
+  if (task.type === "project") return `${villageTaskIcon(task)} Upgrade station`;
+  return `${villageTaskIcon(task)} ${task.title}`;
+}
+
 function villageTaskText(task = activeBoardTask()) {
   if (!task) return "No board card selected. Open the daily board and pick a job.";
   const progress = task.type === "turnin" ? `${Math.min(hubResource(task.resource), task.need || 1)}/${task.need || 1}` : `${Math.min(task.progress || 0, task.need || 1)}/${task.need || 1}`;
   const prep = VILLAGE_PREP_DEFS[task.prep];
-  return `${task.title} ${progress} · ${prep ? prep.name : "reward"}`;
+  return `${villageTaskIcon(task)} ${task.title} ${progress} · ${prep ? prep.name : "reward"}`;
 }
 
 function completeVillageTask(task, source = "work") {
@@ -3055,8 +3114,8 @@ function renderVillageDailyBoard() {
     return `
       <button class="dailyTaskCard ${selected ? "selected" : ""} ${task.done ? "completed" : ""}" data-action="selectVillageTask" data-task-id="${task.id}" ${task.done ? "disabled" : ""}>
         <span class="routeTag">${selected ? "SELECTED" : (task.giver || "BOARD")}</span>
-        <b>${task.title}</b>
-        <p>${task.text}</p>
+        <b>${villageTaskIcon(task)} ${task.title}</b>
+        <p>${villageTaskShort(task)}</p>
         <small>${progress} · fills ${prep ? prep.slot : "reward"}: ${prep ? prep.name : "+reward"}</small>
       </button>
     `;
@@ -3077,7 +3136,7 @@ function renderVillageDailyBoard() {
           <div class="powerIcon big">!</div>
           <div>
             <b>Daily board</b>
-            <p>${villageTaskText(activeBoardTask()) || "Pick a board card, finish it, then check the gate."}</p>
+            <p>${activeBoardTask() ? villageTaskShort(activeBoardTask()) : "Pick a board card."}</p>
           </div>
         </div>
       </div>
@@ -3216,7 +3275,8 @@ function returnToVillageFromOverlay() {
 }
 
 function setVillageMessage(speaker, text, t = 3.4) {
-  const ttl = clamp(Number(t) || 3.4, 1.4, 5.0);
+  const base = Number(t) || 3.4;
+  const ttl = clamp(base * 2, 2.8, 10.0);
   villageMessage = { speaker, text, t: ttl, maxT: ttl };
   pushVillageLogEntry(speaker, text);
 }
@@ -3485,11 +3545,11 @@ function sleepVillageHouse() {
 
 const CHEST_RESOURCES = ["supplies", "seeds", "ore", "fish", "crops"];
 const CHEST_RESOURCE_META = {
-  supplies: { name: "Supplies", glyph: "S", hint: "wood, crates, repair parts" },
-  seeds: { name: "Seeds", glyph: "✦", hint: "plant these in the garden" },
-  ore: { name: "Ore", glyph: "O", hint: "Rowan turns this into tool prep" },
-  fish: { name: "Fish", glyph: "F", hint: "Maren turns this into meal prep" },
-  crops: { name: "Crops", glyph: "C", hint: "food for kitchen and board jobs" }
+  supplies: { name: "Supplies", glyph: "🪵", hint: "wood, crates, repair parts" },
+  seeds: { name: "Seeds", glyph: "🌱", hint: "plant these in the garden" },
+  ore: { name: "Ore", glyph: "🪨", hint: "Rowan turns this into tool prep" },
+  fish: { name: "Fish", glyph: "🐟", hint: "Maren turns this into meal prep" },
+  crops: { name: "Crops", glyph: "🥕", hint: "food for kitchen and board jobs" }
 };
 
 function chestSlotHtml(resource, amount, location) {
@@ -3563,6 +3623,99 @@ function moveChestResource(resource, direction) {
   renderVillageChest();
 }
 
+
+function villageBridgeFixed() {
+  return Boolean(ensureHubSave().bridgeFixed);
+}
+
+function villageBridgeCanRepair() {
+  return villageRequirementMet(VILLAGE_BRIDGE.req);
+}
+
+function villageBridgeCostText() {
+  return `${VILLAGE_BRIDGE.cost.supplies} supplies and ${VILLAGE_BRIDGE.cost.ore} ore`;
+}
+
+function villageBridgeActionText() {
+  if (villageBridgeFixed()) return "cross bridge";
+  if (!villageBridgeCanRepair()) return `need ${villageRequirementText(VILLAGE_BRIDGE.req)}. Then ${villageBridgeCostText()}`;
+  return `repair bridge: ${villageBridgeCostText()} + 1 energy`;
+}
+
+function villageBridgeNearPlayer() {
+  const bridge = VILLAGE_BRIDGE;
+  const approachX = villagePlayer.x < bridge.x ? bridge.x - bridge.w / 2 : bridge.x + bridge.w / 2;
+  const nearestX = clamp(villagePlayer.x, approachX - 86, approachX + 86);
+  const nearestY = clamp(villagePlayer.y, bridge.y - bridge.h, bridge.y + bridge.h);
+  return {
+    x: nearestX,
+    y: nearestY,
+    distance: Math.hypot(villagePlayer.x - nearestX, villagePlayer.y - nearestY)
+  };
+}
+
+function repairVillageBridge() {
+  const hub = ensureHubSave();
+  if (hub.bridgeFixed) {
+    setVillageMessage("Bridge", "The bridge is repaired. The dark quarter is open.", 3.0);
+    return;
+  }
+  if (!villageBridgeCanRepair()) {
+    const hub = ensureHubSave();
+    setVillageMessage(
+      "Bridge",
+      `Bridge repair goal: ${villageRequirementText(VILLAGE_BRIDGE.req)}. Current: house rank ${hub.homeRank || 0}, best floor ${save.bestFloor || 0}.`,
+      4.2
+    );
+    return;
+  }
+  for (const [key, value] of Object.entries(VILLAGE_BRIDGE.cost)) {
+    if ((Number(hub[key]) || 0) < value) {
+      setVillageMessage("Bridge", `Need ${villageBridgeCostText()} to repair the bridge.`, 3.0);
+      return;
+    }
+  }
+  if (!spendVillageEnergy(1, "repairing the bridge")) return;
+  for (const [key, value] of Object.entries(VILLAGE_BRIDGE.cost)) hub[key] = (Number(hub[key]) || 0) - value;
+  hub.bridgeFixed = true;
+  hub.hope = (Number(hub.hope) || 0) + 3;
+  saveGame();
+  villagePulse = 1;
+  playAssetSfx("town_building_work", 0.34);
+  playAssetSfx("bonus_chime", 0.32);
+  unlockAchievement("bridge_repaired", "Other Side Open", "Repaired the bridge into the dark quarter.");
+  setVillageMessage("Bridge", "Bridge repaired. The dark quarter is open now. +3 hope.", 4.0);
+}
+
+function villageRequirementMet(req = {}) {
+  const hub = ensureHubSave();
+  if (req.homeRank && (Number(hub.homeRank) || 0) < req.homeRank) return false;
+  if (req.bestFloor && (Number(save.bestFloor) || 0) < req.bestFloor) return false;
+  if (req.project && hubProjectRank(req.project) < (req.projectRank || 1)) return false;
+  return true;
+}
+
+function villageRequirementText(req = {}) {
+  if (req.text) return req.text;
+  const parts = [];
+  if (req.homeRank) parts.push(`House rank ${req.homeRank}`);
+  if (req.bestFloor) parts.push(`floor ${req.bestFloor}`);
+  if (req.project) parts.push(`${req.project} rank ${req.projectRank || 1}`);
+  return parts.length ? parts.join(" and ") : "more town progress";
+}
+
+function villageObjectLocked(item) {
+  return item?.req && !villageRequirementMet(item.req);
+}
+
+function villageLockedActionText(item) {
+  return `locked: ${villageRequirementText(item.req)}`;
+}
+
+function villageRubbleActionText(rubble) {
+  return villageObjectLocked(rubble) ? villageLockedActionText(rubble) : "clear obstacle";
+}
+
 function villageRubbleCleared(id) {
   return Boolean(ensureHubSave().rubbleCleared?.[id]);
 }
@@ -3585,6 +3738,10 @@ function villageBlocked(x, y, r) {
   for (const stump of VILLAGE_STUMPS) {
     if (villageStumpCleared(stump.id)) continue;
     if (Math.hypot(x - stump.x, y - stump.y) < r + stump.r * 0.75) return true;
+  }
+  if (x > VILLAGE_RIVER.x - r && x < VILLAGE_RIVER.x + VILLAGE_RIVER.w + r) {
+    const onBridgeLane = y > VILLAGE_BRIDGE.y - VILLAGE_BRIDGE.h * 0.7 && y < VILLAGE_BRIDGE.y + VILLAGE_BRIDGE.h * 0.7;
+    if (!villageBridgeFixed() || !onBridgeLane) return true;
   }
   return false;
 }
@@ -3633,13 +3790,13 @@ function findVillageInteractTarget() {
   for (const rubble of VILLAGE_RUBBLE) {
     if (villageRubbleCleared(rubble.id)) continue;
     const distance = Math.hypot(villagePlayer.x - rubble.x, villagePlayer.y - rubble.y);
-    if (distance <= 66) consider({ type: "rubble", id: rubble.id, label: rubble.label, action: "clear rubble", distance });
+    if (distance <= Math.max(66, rubble.r + 44)) consider({ type: "rubble", id: rubble.id, label: rubble.label, action: villageRubbleActionText(rubble), distance });
   }
 
   for (const stump of VILLAGE_STUMPS) {
     if (villageStumpCleared(stump.id)) continue;
     const distance = Math.hypot(villagePlayer.x - stump.x, villagePlayer.y - stump.y);
-    if (distance <= 66) consider({ type: "stump", id: stump.id, label: "tree stump", action: villageStumpActionText(stump), distance });
+    if (distance <= Math.max(66, stump.r + 44)) consider({ type: "stump", id: stump.id, label: stump.longGoal ? "old growth stump" : "tree stump", action: villageStumpActionText(stump), distance });
   }
 
   for (const plot of VILLAGE_FARM_PLOTS) {
@@ -3655,6 +3812,16 @@ function findVillageInteractTarget() {
   for (const spot of VILLAGE_FISHING_SPOTS) {
     const distance = Math.hypot(villagePlayer.x - spot.x, villagePlayer.y - spot.y);
     if (distance <= 82) consider({ type: "fish", id: spot.id, label: "village pond", action: villageFishActionText(), distance });
+  }
+
+  const bridgePoint = villageBridgeNearPlayer();
+  if (bridgePoint.distance <= 98) {
+    consider({
+      type: "bridge",
+      label: villageBridgeFixed() ? "east bridge" : "broken bridge",
+      action: villageBridgeActionText(),
+      distance: bridgePoint.distance
+    });
   }
 
   const visitor = activeVillageVisitor();
@@ -3708,11 +3875,24 @@ function clearVillageRubble(id) {
   const hub = ensureHubSave();
   const rubble = VILLAGE_RUBBLE.find(item => item.id === id);
   if (!rubble || hub.rubbleCleared[id]) return;
-  if (!spendVillageEnergy(1, "clearing rubble")) return;
+  if (villageObjectLocked(rubble)) {
+    playAssetSfx("ui_button_click", 0.18);
+    floatText.push({ x: rubble.x - 42, y: rubble.y - rubble.r - 28, text: "locked", t: 1.0 });
+    setVillageMessage("Long term goal", `${rubble.label} needs ${villageRequirementText(rubble.req)} before you can remove it.`, 3.2);
+    return;
+  }
+  if (!spendVillageEnergy(1, "clearing obstacle")) return;
   hub.rubbleCleared[id] = true;
-  hub.supplies += 1;
+  const supplies = rubble.supplies || 1;
+  const ore = rubble.ore || 0;
+  const shards = rubble.shards || 0;
+  const seedGain = /wood|cart|garden|boards|root|oak/i.test(`${rubble.label || ""} ${rubble.kind || ""}`) ? 1 : 0;
+  hub.supplies += supplies;
+  hub.ore = (Number(hub.ore) || 0) + ore;
+  if (seedGain) hub.seeds = (Number(hub.seeds) || 0) + seedGain;
+  if (shards) save.shards += shards;
   hub.hope = (Number(hub.hope) || 0) + 1;
-  hub.lastGain = "+1 supply found while clearing the village. +1 hope.";
+  hub.lastGain = `+${supplies} supplies${ore ? `, +${ore} ore` : ""}${seedGain ? `, +${seedGain} seed` : ""}${shards ? `, +${shards} shards` : ""}. +1 hope.`;
   hub.lastHelp = "";
   saveGame();
   villagePulse = 1;
@@ -3720,8 +3900,10 @@ function clearVillageRubble(id) {
   playAssetSfx("bonus_chime", 0.24);
   addParticles("dust", rubble.x, rubble.y, -Math.PI / 2, 18);
   addParticles("reward", rubble.x, rubble.y - 8, -Math.PI / 2, 12);
-  floatText.push({ x: rubble.x - 38, y: rubble.y - 36, text: "+1 supply  +1 hope", t: 1.0 });
-  setVillageMessage("Village", "You cleared rubble, found one supply, and raised the town's spirits a little.");
+  const rewardText = `+${supplies} supplies${ore ? `  +${ore} ore` : ""}${seedGain ? `  +${seedGain} seed` : ""}${shards ? `  +${shards} shards` : ""}  +1 hope`;
+  floatText.push({ x: rubble.x - 48, y: rubble.y - rubble.r - 12, text: rewardText, t: 1.0 });
+  if (rubble.req) unlockAchievement("first_long_blocker", "That Was In The Way", "Removed a milestone locked town blocker.");
+  setVillageMessage("Village", `You cleared ${rubble.label}. ${hub.lastGain}`);
   advanceVillageTask("rubble");
 }
 
@@ -3753,16 +3935,28 @@ function mineVillageNode(id) {
     hub.dailyEventUsed.loose_stone = true;
   }
   addHubResource("ore", oreFound);
+  const bonusRoll = Math.random();
+  let bonusText = "";
+  if (bonusRoll < 0.25) {
+    addHubResource("seeds", 1);
+    bonusText = " +1 seed";
+  } else if (bonusRoll < 0.40) {
+    addHubResource("supplies", 1);
+    bonusText = " +1 supply";
+  } else if (bonusRoll < 0.48) {
+    save.shards += 1;
+    bonusText = " +1 shard";
+  }
   if (mine.shards) save.shards += mine.shards;
-  hub.lastGain = mine.shards ? `+${oreFound} ore and +1 shard from mining.` : `+${oreFound} ore from mining.`;
+  hub.lastGain = mine.shards ? `+${oreFound} ore and +1 shard from mining.${bonusText}` : `+${oreFound} ore from mining.${bonusText}`;
   saveGame();
   villagePulse = 1;
   playAssetSfx("town_mine", 0.42);
   playAssetSfx("bonus_chime", 0.16);
   addParticles("dust", mine.x, mine.y, -Math.PI / 2, 18);
   addParticles("reward", mine.x, mine.y - 8, -Math.PI / 2, 12);
-  floatText.push({ x: mine.x - 36, y: mine.y - 42, text: mine.shards ? `+${oreFound} ore  +shard` : `+${oreFound} ore`, t: 1.0 });
-  setVillageMessage("Mining", mine.shards ? `You broke loose ${oreFound} ore and found a shard inside the rock.` : `You broke loose ${oreFound} ore for repairs and prep.`, 2.8);
+  floatText.push({ x: mine.x - 42, y: mine.y - 42, text: `${oreFound} ore${mine.shards ? " +shard" : ""}${bonusText}`, t: 1.0 });
+  setVillageMessage("Mining", mine.shards ? `You broke loose ${oreFound} ore and found a shard inside the rock.${bonusText}` : `You broke loose ${oreFound} ore for repairs and prep.${bonusText}`, 2.8);
   advanceVillageTask("mine");
 }
 
@@ -3926,6 +4120,10 @@ function interactVillageTownsperson(id) {
   const npc = VILLAGE_TOWNSFOLK.find(item => item.id === id);
   if (!npc) return;
   const hub = ensureHubSave();
+  if (npc.needsBridge && !villageBridgeFixed()) {
+    setVillageMessage(npc.name, "Repair the east bridge before asking for help here.", 3.0);
+    return;
+  }
   const need = npc.need || {};
   for (const [key, value] of Object.entries(need)) {
     if ((Number(hub[key]) || 0) < value) {
@@ -3964,16 +4162,18 @@ function collectVillageStumpDrops() {
     const d = Math.hypot(villagePlayer.x - stump.x, villagePlayer.y - stump.y);
     if (d > 34) continue;
     delete hub.stumpDrops[stump.id];
+    const seedGain = stump.longGoal ? 3 : 1;
     hub.supplies += stump.supplies || 1;
+    hub.seeds = (Number(hub.seeds) || 0) + seedGain;
     hub.hope = (Number(hub.hope) || 0) + 1;
     if (stump.shards) save.shards += stump.shards;
-    hub.lastGain = stump.shards ? "Picked up wood, one supply, and one shard." : "Picked up wood and one supply.";
+    hub.lastGain = stump.shards ? `Picked up wood, ${stump.supplies || 1} supplies, ${seedGain} seeds, and ${stump.shards} shard${stump.shards === 1 ? "" : "s"}.` : `Picked up wood, ${stump.supplies || 1} suppl${(stump.supplies || 1) === 1 ? "y" : "ies"}, and ${seedGain} seed${seedGain === 1 ? "" : "s"}.`;
     collected = true;
     villagePulse = 1;
     playAssetSfx("reward", 0.42);
     playAssetSfx("bonus_chime", 0.26);
     addParticles("reward", stump.x, stump.y - 10, -Math.PI / 2, 22);
-    floatText.push({ x: stump.x - 46, y: stump.y - 44, text: stump.shards ? "+1 supply  +1 shard  +1 hope" : "+1 supply  +1 hope", t: 1.0 });
+    floatText.push({ x: stump.x - 60, y: stump.y - stump.r - 28, text: stump.shards ? `+${stump.supplies || 1} supply  +${seedGain} seed  +${stump.shards} shard` : `+${stump.supplies || 1} supply  +${seedGain} seed`, t: 1.0 });
     setVillageMessage("Supplies picked up", stump.shards ? "You picked up the chopped wood and found a shard under it." : "You picked up the chopped wood for the village.", 2.6);
     advanceVillageTask("chop");
   }
@@ -3988,14 +4188,22 @@ function villageStumpHitCount(id) {
 }
 
 function villageStumpActionText(stump) {
+  if (villageObjectLocked(stump)) return villageLockedActionText(stump);
   const hits = villageStumpHitCount(stump.id);
   const left = Math.max(1, stump.hp - hits);
-  return `chop stump (${left} hit${left === 1 ? "" : "s"}, 1 energy on break)`;
+  const label = stump.longGoal ? "old growth" : "stump";
+  return `chop ${label} (${left} hit${left === 1 ? "" : "s"}, 1 energy on break)`;
 }
 
 function chopVillageStump(id) {
   const stump = VILLAGE_STUMPS.find(item => item.id === id);
   if (!stump || villageStumpCleared(id)) return false;
+  if (villageObjectLocked(stump)) {
+    playAssetSfx("ui_button_click", 0.18);
+    floatText.push({ x: stump.x - 42, y: stump.y - stump.r - 24, text: "locked", t: 1.0 });
+    setVillageMessage("Long term goal", `${stump.longGoal ? "This old growth stump" : "This stump"} needs ${villageRequirementText(stump.req)} before you can remove it.`, 3.2);
+    return false;
+  }
 
   const hits = villageStumpHitCount(id) + 1;
   if (hits >= stump.hp && !spendVillageEnergy(1, "finishing stump")) return false;
@@ -4020,6 +4228,7 @@ function chopVillageStump(id) {
 
   hub.stumpsCleared[id] = true;
   hub.stumpDrops[id] = true;
+  if (stump.longGoal) unlockAchievement("first_old_growth", "Old Growth, New Road", "Chopped a milestone locked giant stump.");
   delete hub.stumpHits[id];
   hub.lastGain = "Wood is ready to pick up.";
   hub.lastHelp = "";
@@ -4041,7 +4250,7 @@ function swingVillageToolAt(x, y) {
     if (villageStumpCleared(stump.id)) continue;
     const playerDistance = Math.hypot(villagePlayer.x - stump.x, villagePlayer.y - stump.y);
     const clickDistance = Math.hypot(x - stump.x, y - stump.y);
-    if (playerDistance <= 74 && clickDistance <= 54) {
+    if (playerDistance <= Math.max(74, stump.r + 52) && clickDistance <= Math.max(54, stump.r + 34)) {
       const score = playerDistance + clickDistance * 0.65;
       if (!best || score < best.score) best = { stump, score };
     }
@@ -4086,6 +4295,7 @@ function villageTargetWorldPoint(target) {
   }
   if (target.type === "fish") return { ...VILLAGE_FISHING_SPOTS[0] };
   if (target.type === "visitor") return { ...VILLAGE_VISITOR_SPOT };
+  if (target.type === "bridge") return villageBridgeNearPlayer();
   if (target.type === "townsperson") {
     const item = VILLAGE_TOWNSFOLK.find(npc => npc.id === target.id);
     return item ? villageTownfolkPoint(item) : null;
@@ -4128,7 +4338,7 @@ function clickVillageActionAt(x, y) {
     const point = villageTargetWorldPoint(target);
     const clickedPrompt = y - camera.y > H - 96;
     const clickedTarget = point && Math.hypot(x - point.x, y - point.y) <= (target.type === "fish" ? 118 : 96);
-    if (clickedPrompt || clickedTarget || target.type === "mine" || target.type === "farm" || target.type === "fish" || target.type === "visitor" || target.type === "townsperson") {
+    if (clickedPrompt || clickedTarget || target.type === "bridge" || target.type === "mine" || target.type === "farm" || target.type === "fish" || target.type === "visitor" || target.type === "townsperson") {
       interactVillage();
       return true;
     }
@@ -4255,6 +4465,10 @@ function interactVillage() {
     interactVillageVisitor();
     return;
   }
+  if (target.type === "bridge") {
+    repairVillageBridge();
+    return;
+  }
   if (target.type === "townsperson") {
     interactVillageTownsperson(target.id);
     return;
@@ -4343,6 +4557,7 @@ function drawVillage() {
 
   drawVillageGround();
   drawVillagePond();
+  drawVillageRiverAndDarkDistrict();
   drawVillagePaths();
   drawVillageExtraAreas();
   drawVillageHomeAndChest();
@@ -4494,6 +4709,75 @@ function drawVillagePond() {
   drawTownAsset("town_bridge", px + 148, py + 18, 34, 0.1, 0.9);
 }
 
+function drawVillageRiverAndDarkDistrict() {
+  const river = VILLAGE_RIVER;
+  const bridge = VILLAGE_BRIDGE;
+  ctx.save();
+  ctx.fillStyle = "rgba(16, 19, 35, 0.30)";
+  ctx.fillRect(VILLAGE_DARK_DISTRICT.x, 0, VILLAGE_DARK_DISTRICT.w, VILLAGE_DARK_DISTRICT.h);
+  ctx.fillStyle = "rgba(54, 62, 48, 0.20)";
+  ctx.fillRect(VILLAGE_DARK_DISTRICT.x, 0, VILLAGE_DARK_DISTRICT.w, VILLAGE_DARK_DISTRICT.h);
+
+  for (let y = 0; y < VILLAGE_WORLD.h; y += 32) {
+    for (let x = river.x; x < river.x + river.w; x += 32) {
+      drawTownAssetRect(villageHash(x, y) > 0.5 ? "town_water_a" : "town_water_b", x, y, 34, 34, 0.94);
+    }
+  }
+  ctx.strokeStyle = "rgba(42,34,32,0.55)";
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.moveTo(river.x - 4, 0);
+  ctx.lineTo(river.x - 10, VILLAGE_WORLD.h);
+  ctx.moveTo(river.x + river.w + 5, 0);
+  ctx.lineTo(river.x + river.w + 12, VILLAGE_WORLD.h);
+  ctx.stroke();
+
+  ctx.fillStyle = villageBridgeFixed() ? "rgba(114,76,42,0.92)" : "rgba(73,49,38,0.56)";
+  ctx.fillRect(bridge.x - bridge.w / 2, bridge.y - 30, bridge.w, 60);
+  for (let i = -2; i <= 2; i++) {
+    drawTownAsset("town_bridge", bridge.x + i * 34, bridge.y, 42, 0, villageBridgeFixed() ? 0.98 : 0.48);
+  }
+  if (!villageBridgeFixed()) {
+    drawTownAsset("grave_trunk_long", bridge.x - 16, bridge.y + 4, 92, 0.12, 0.92);
+    drawTownAsset("town_crate_big", bridge.x + 58, bridge.y + 9, 34, 0, 0.86);
+    ctx.textAlign = "center";
+    ctx.font = "900 10px ui-monospace, monospace";
+    if (villageBridgeCanRepair()) {
+      ctx.fillStyle = "rgba(125,255,178,0.9)";
+      ctx.fillText("REPAIR BRIDGE", bridge.x, bridge.y - 56);
+      ctx.fillStyle = "rgba(245,241,255,0.82)";
+      ctx.fillText(villageBridgeCostText().toUpperCase(), bridge.x, bridge.y - 42);
+    } else {
+      ctx.fillStyle = "rgba(255,92,122,0.86)";
+      ctx.fillText("BRIDGE LOCKED", bridge.x, bridge.y - 58);
+      ctx.fillStyle = "rgba(245,241,255,0.78)";
+      ctx.font = "900 8px ui-monospace, monospace";
+      ctx.fillText(villageRequirementText(VILLAGE_BRIDGE.req).toUpperCase(), bridge.x, bridge.y - 44);
+    }
+  }
+
+  const gx = 2580;
+  const gy = 520;
+  ctx.fillStyle = "rgba(0,0,0,0.22)";
+  ctx.beginPath();
+  ctx.ellipse(gx + 80, gy + 260, 380, 86, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+  drawTownAsset("grave_crypt_large", gx, gy, 150, 0, 0.98) || drawTownAsset("town_wall_c", gx, gy, 96, 0, 0.9);
+  drawTownAsset("grave_altar", gx + 240, gy + 36, 72, 0, 0.95);
+  drawTownAsset("grave_lantern", gx + 170, gy + 118, 52, 0, 0.95);
+  drawTownAsset("grave_pine_crooked", gx + 360, gy + 108, 92, 0.05, 0.92);
+  drawTownAsset("grave_pine_crooked", gx - 190, gy + 250, 90, -0.08, 0.92);
+  for (let i = 0; i < 8; i++) {
+    const x = gx - 210 + (i % 4) * 92;
+    const y = gy + 205 + Math.floor(i / 4) * 78;
+    drawTownAsset(i % 2 ? "grave_stone_cross" : "grave_stone_broken", x, y, 46, 0, 0.9);
+  }
+  for (let i = 0; i < 7; i++) drawTownAsset("grave_iron_fence", gx - 280 + i * 72, gy + 342, 58, 0, 0.72);
+  drawTownAsset("fantasy_cart", gx + 430, gy + 320, 80, 0, 0.92);
+  drawTownAsset("dungeon_chest", gx + 365, gy + 250, 58, 0, 0.95);
+  ctx.restore();
+}
+
 function drawVillagePaths() {
   const cx = VILLAGE_TOWER_GATE.x;
   const drawCurve = (points, width, color) => {
@@ -4526,6 +4810,9 @@ function drawVillagePaths() {
   branch([{ x: cx, y: 500 }, { x: 1225, y: 470 }, { x: VILLAGE_HOME.x, y: VILLAGE_HOME.y + 72 }]);
   branch([{ x: cx, y: 690 }, { x: 1240, y: 760 }, { x: VILLAGE_PROJECTS[1].x, y: VILLAGE_PROJECTS[1].y }]);
   branch([{ x: cx, y: 640 }, { x: 1500, y: 620 }, { x: VILLAGE_PROJECTS[2].x, y: VILLAGE_PROJECTS[2].y }]);
+  branch([{ x: cx, y: 650 }, { x: 1770, y: 735 }, { x: VILLAGE_BRIDGE.x, y: VILLAGE_BRIDGE.y }]);
+  branch([{ x: VILLAGE_BRIDGE.x + 82, y: VILLAGE_BRIDGE.y }, { x: 2480, y: 780 }, { x: 2700, y: 650 }]);
+  branch([{ x: VILLAGE_BRIDGE.x + 82, y: VILLAGE_BRIDGE.y }, { x: 2540, y: 990 }, { x: 2760, y: 1030 }]);
   branch([{ x: cx, y: 820 }, { x: 870, y: 925 }, { x: VILLAGE_SERVICE_BUILDINGS.power.x + 96, y: VILLAGE_SERVICE_BUILDINGS.power.y + 116 }]);
   branch([{ x: cx, y: 910 }, { x: 1380, y: 970 }, { x: VILLAGE_SERVICE_BUILDINGS.collection.x + 96, y: VILLAGE_SERVICE_BUILDINGS.collection.y + 114 }]);
   branch([{ x: cx, y: 1060 }, { x: 1080, y: 1190 }, { x: VILLAGE_SERVICE_BUILDINGS.road.x + 82, y: VILLAGE_SERVICE_BUILDINGS.road.y + 110 }]);
@@ -4903,15 +5190,37 @@ function drawVillageRubble() {
     ctx.beginPath();
     ctx.ellipse(rubble.x + 3, rubble.y + rubble.r * 0.65, rubble.r * 1.15, rubble.r * 0.34, 0, 0, Math.PI * 2);
     ctx.fill();
-    drawTownAsset("town_stump", rubble.x - rubble.r * 0.26, rubble.y, rubble.r * 1.25, 0.1, 0.9);
-    drawTownAsset("town_crate_small", rubble.x + rubble.r * 0.28, rubble.y + 4, rubble.r * 1.05, -0.15, 0.8);
-    drawTownAsset("town_stone_dark", rubble.x - rubble.r * 0.16, rubble.y + 12, rubble.r * 0.9, 0.2, 0.6);
-    ctx.strokeStyle = "rgba(255,211,90,0.45)";
+    if (rubble.kind === "boulder") {
+      drawTownAsset("town_stone_dark", rubble.x - rubble.r * 0.15, rubble.y, rubble.r * 1.8, 0.15, 0.9);
+      drawTownAsset("town_stone_a", rubble.x + rubble.r * 0.3, rubble.y + rubble.r * 0.25, rubble.r * 1.1, -0.15, 0.75);
+    } else if (rubble.kind === "cart") {
+      drawTownAsset("town_crate_big", rubble.x - rubble.r * 0.34, rubble.y, rubble.r * 1.35, 0.05, 0.9);
+      drawTownAsset("town_barrel_a", rubble.x + rubble.r * 0.36, rubble.y + 6, rubble.r * 1.0, 0, 0.82);
+      drawTownAsset("tiny_chest", rubble.x + 2, rubble.y - rubble.r * 0.42, rubble.r * 0.85, 0, 0.95);
+    } else if (rubble.kind === "oak") {
+      drawTownAsset("town_stump", rubble.x - rubble.r * 0.45, rubble.y + 4, rubble.r * 1.6, 0.25, 0.95);
+      drawTownAsset("tiny_log", rubble.x + rubble.r * 0.3, rubble.y - 2, rubble.r * 1.45, -0.18, 0.95);
+      drawTownAsset("town_bush", rubble.x + rubble.r * 0.62, rubble.y + 10, rubble.r * 0.8, 0, 0.6);
+    } else {
+      drawTownAsset("town_stump", rubble.x - rubble.r * 0.26, rubble.y, rubble.r * 1.25, 0.1, 0.9);
+      drawTownAsset("town_crate_small", rubble.x + rubble.r * 0.28, rubble.y + 4, rubble.r * 1.05, -0.15, 0.8);
+      drawTownAsset("town_stone_dark", rubble.x - rubble.r * 0.16, rubble.y + 12, rubble.r * 0.9, 0.2, 0.6);
+    }
+    const locked = villageObjectLocked(rubble);
+    ctx.strokeStyle = locked ? "rgba(255,92,122,0.55)" : "rgba(255,211,90,0.45)";
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
     ctx.arc(rubble.x, rubble.y, rubble.r + 12 + Math.sin(nowSec() * 2 + rubble.x) * 2, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
+    if (locked) {
+      ctx.fillStyle = "rgba(3,5,12,0.72)";
+      ctx.fillRect(rubble.x - 56, rubble.y - rubble.r - 32, 112, 18);
+      ctx.fillStyle = "#ff6b6b";
+      ctx.font = "900 8px ui-monospace, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(villageRequirementText(rubble.req).toUpperCase(), rubble.x, rubble.y - rubble.r - 19);
+    }
     ctx.restore();
   }
 }
@@ -4923,14 +5232,18 @@ function drawVillageStumps() {
     ctx.save();
     ctx.fillStyle = "rgba(0,0,0,0.24)";
     ctx.beginPath();
-    ctx.ellipse(stump.x + 2, stump.y + 12, 22, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(stump.x + 2, stump.y + stump.r * 0.6, stump.r * 1.1, Math.max(8, stump.r * 0.38), 0, 0, Math.PI * 2);
     ctx.fill();
     if (cleared) {
       if (!villageStumpDropReady(stump.id)) drawGrassTuft(stump.x + 6, stump.y + 8, 0.55, 0.32);
       ctx.restore();
       continue;
     }
-    drawTownAsset("town_stump", stump.x, stump.y, 34, 0, 0.95);
+    drawTownAsset("town_stump", stump.x, stump.y, Math.max(34, stump.r * 1.7), 0, 0.95);
+    if (stump.longGoal) {
+      drawTownAsset("grave_trunk_long", stump.x, stump.y - stump.r * 0.25, Math.max(64, stump.r * 2.4), -0.18, 0.96) || drawTownAsset("town_bush", stump.x + stump.r * 0.55, stump.y + stump.r * 0.14, stump.r * 0.92, 0, 0.55);
+      drawTownAsset("grave_rocks_tall", stump.x - stump.r * 0.55, stump.y + stump.r * 0.2, stump.r * 0.75, 0, 0.85);
+    }
     if (hits > 0) {
       ctx.strokeStyle = "rgba(255,211,90,0.65)";
       ctx.lineWidth = 2;
@@ -4941,11 +5254,25 @@ function drawVillageStumps() {
       ctx.lineTo(stump.x - 8, stump.y + 8);
       ctx.stroke();
       ctx.fillStyle = "rgba(3,5,12,0.68)";
-      ctx.fillRect(stump.x - 18, stump.y + 23, 36, 5);
+      const barW = Math.max(36, stump.r * 1.6);
+      ctx.fillRect(stump.x - barW / 2, stump.y + stump.r + 3, barW, 5);
       ctx.fillStyle = "#ffd35a";
-      ctx.fillRect(stump.x - 18, stump.y + 23, 36 * clamp(hits / stump.hp, 0, 1), 5);
+      ctx.fillRect(stump.x - barW / 2, stump.y + stump.r + 3, barW * clamp(hits / stump.hp, 0, 1), 5);
     }
-    drawTownAsset("tiny_axe", stump.x + 18, stump.y - 18, 24, -0.7, 0.92);
+    if (villageObjectLocked(stump)) {
+      ctx.strokeStyle = "rgba(255,92,122,0.58)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(stump.x, stump.y, stump.r + 16 + Math.sin(nowSec() * 2 + stump.x) * 2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(3,5,12,0.72)";
+      ctx.fillRect(stump.x - 58, stump.y - stump.r - 31, 116, 18);
+      ctx.fillStyle = "#ff6b6b";
+      ctx.font = "900 8px ui-monospace, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(villageRequirementText(stump.req).toUpperCase(), stump.x, stump.y - stump.r - 18);
+    }
+    drawTownAsset("tiny_axe", stump.x + stump.r * 0.85, stump.y - stump.r * 0.75, 24, -0.7, 0.92);
     ctx.restore();
   }
 }
@@ -5454,8 +5781,8 @@ function drawVillageToolSwing() {
 
 function villageTaskMarkerTargets(task = activeBoardTask()) {
   if (!task || task.done) return [];
-  if (task.type === "rubble") return VILLAGE_RUBBLE.filter(rubble => !villageRubbleCleared(rubble.id)).map(rubble => ({ x: rubble.x, y: rubble.y, label: "BOARD" })).slice(0, 4);
-  if (task.type === "chop") return VILLAGE_STUMPS.filter(stump => !villageStumpCleared(stump.id)).map(stump => ({ x: stump.x, y: stump.y, label: "BOARD" })).slice(0, 4);
+  if (task.type === "rubble") return VILLAGE_RUBBLE.filter(rubble => !villageRubbleCleared(rubble.id) && !villageObjectLocked(rubble)).map(rubble => ({ x: rubble.x, y: rubble.y, label: "BOARD" })).slice(0, 4);
+  if (task.type === "chop") return VILLAGE_STUMPS.filter(stump => !villageStumpCleared(stump.id) && !villageObjectLocked(stump)).map(stump => ({ x: stump.x, y: stump.y, label: "BOARD" })).slice(0, 4);
   if (task.type === "mine") return VILLAGE_MINE_NODES.filter(mine => !villageMineClearedToday(mine.id)).map(mine => ({ x: mine.x, y: mine.y, label: "BOARD" })).slice(0, 3);
   if (task.type === "fish") return VILLAGE_FISHING_SPOTS.map(spot => ({ x: spot.x, y: spot.y, label: "BOARD" }));
   if (task.type === "farm") return VILLAGE_FARM_PLOTS.map(plot => ({ x: plot.x, y: plot.y, label: "BOARD" })).slice(0, 5);
@@ -5580,13 +5907,13 @@ function drawVillageScreenUi() {
   ctx.fillText("JOB", todayX + 10, todayY + 13);
   ctx.fillStyle = "rgba(245,241,255,0.78)";
   ctx.font = "900 9px ui-monospace, monospace";
-  const taskText = task ? villageTaskText(task) : "Board has jobs";
+  const taskText = task ? villageTaskShort(task) : "Board has jobs";
   ctx.fillText((linesFor(taskText, todayW - 20)[0] || "").slice(0, 42), todayX + 10, todayY + 27);
 
   const returnCard = hub.lastReturnCard;
   const returnAge = returnCard?.ts ? Math.max(0, (Date.now() - returnCard.ts) / 1000) : 99;
-  if (returnCard && returnCard.floor && returnAge < 5) {
-    const alpha = clamp(1 - returnAge / 5, 0, 1);
+  if (returnCard && returnCard.floor && returnAge < 10) {
+    const alpha = clamp(1 - returnAge / 10, 0, 1);
     ctx.save();
     ctx.globalAlpha = 0.85 * alpha;
     ctx.fillStyle = "rgba(3,5,12,0.45)";
@@ -6211,7 +6538,10 @@ function achievementUnlockRows() {
     ["builder_3", "Actual Contractor", "Upgrade town projects 3 times."],
     ["cleanup_5", "Less Embarrassing", "Clear 5 rubble piles."],
     ["wood_3", "Stump Goblin", "Chop 3 stumps."],
-    ["visitors_3", "Road Gets Busy", "Meet 3 visitor types."]
+    ["visitors_3", "Road Gets Busy", "Meet 3 visitor types."],
+    ["first_long_blocker", "That Was In The Way", "Remove a milestone locked blocker."],
+    ["first_old_growth", "Old Growth, New Road", "Chop a giant gated stump."],
+    ["town_unblocked", "No Excuses Left", "Remove 24 town blockers."]
   ];
   return data.map(([id, reward, text]) => ({ done: Boolean(earned[id]), text, reward }));
 }
@@ -9990,6 +10320,7 @@ function draw() {
   drawStageGlow(palette);
   drawDecals("floor");
   drawGrid(palette);
+  drawStageThemeProps(palette);
   drawPulse(palette);
   drawEchoes();
   drawMovementTraces();
@@ -10261,6 +10592,37 @@ function drawSmokes() {
     ctx.stroke();
     ctx.setLineDash([]);
   }
+}
+
+function drawStageThemeProps(palette) {
+  if (!activeStage) return;
+  ctx.save();
+  const id = activeStage.baseId || activeStage.id;
+  const points = [
+    { x: worldW * 0.18, y: worldH * 0.18 },
+    { x: worldW * 0.82, y: worldH * 0.20 },
+    { x: worldW * 0.20, y: worldH * 0.78 },
+    { x: worldW * 0.78, y: worldH * 0.74 },
+    { x: worldW * 0.50, y: worldH * 0.50 }
+  ];
+  if (["undercrypt", "violet_split", "red_lock"].includes(id)) {
+    drawTownAsset("grave_crypt", points[0].x, points[0].y, 82, 0, 0.30);
+    drawTownAsset("grave_stone_cross", points[1].x, points[1].y, 44, 0, 0.36);
+    drawTownAsset("grave_stone_broken", points[2].x, points[2].y, 44, 0, 0.36);
+    drawTownAsset("grave_lantern", points[3].x, points[3].y, 42, 0, 0.34);
+  } else if (["forest_wire", "whiteout"].includes(id)) {
+    drawTownAsset("grave_pine_crooked", points[0].x, points[0].y, 74, 0, 0.28);
+    drawTownAsset("town_tree_blue", points[1].x, points[1].y, 72, 0, 0.24);
+    drawTownAsset("town_bush", points[2].x, points[2].y, 48, 0, 0.30);
+  } else if (["amber_cross", "graybox"].includes(id)) {
+    drawTownAsset("fantasy_cart", points[0].x, points[0].y, 76, 0, 0.24);
+    drawTownAsset("town_crate_big", points[1].x, points[1].y, 48, 0, 0.28);
+    drawTownAsset("town_barrel_a", points[2].x, points[2].y, 38, 0, 0.26);
+  } else {
+    drawTownAsset("dungeon_chest", points[0].x, points[0].y, 52, 0, 0.24);
+    drawTownAsset("dungeon_rocks", points[1].x, points[1].y, 52, 0, 0.24);
+  }
+  ctx.restore();
 }
 
 function drawPulse(palette) {

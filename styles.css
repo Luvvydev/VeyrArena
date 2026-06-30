@@ -4072,7 +4072,7 @@ body[data-screen="game"] #pauseButton {
   height: 54px;
   padding: 0;
   border: 3px solid rgba(217, 222, 234, 0.48);
-  background: rgba(164, 164, 164, 0.72);
+  background: rgba(164, 164, 164, 0.64);
   box-shadow: inset 3px 3px 0 rgba(255,255,255,0.26), inset -3px -3px 0 rgba(0,0,0,0.36);
   cursor: pointer;
 }
@@ -4094,7 +4094,7 @@ body[data-screen="game"] #pauseButton {
   display: grid;
   place-items: center;
   color: #0b111c;
-  font: 900 16px ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 900 21px "Apple Color Emoji", "Segoe UI Emoji", ui-monospace, SFMono-Regular, Menlo, monospace;
   border: 2px solid rgba(3,5,12,0.55);
   box-shadow: 2px 2px 0 rgba(0,0,0,0.28);
 }
