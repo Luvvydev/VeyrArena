@@ -1853,10 +1853,10 @@ const player = {
 
 let bots = [];
 
-const VILLAGE_WORLD = { w: 1680, h: 1120 };
+const VILLAGE_WORLD = { w: 2200, h: 1500 };
 const villagePlayer = {
-  x: 840,
-  y: 745,
+  x: 1100,
+  y: 650,
   r: 12,
   speed: 178,
   angle: -Math.PI / 2,
@@ -1872,88 +1872,190 @@ let villageMesses = [];
 let villageNextMessAt = 0;
 const achievementToasts = [];
 
+const VILLAGE_TOWER_GATE = { x: 1100, y: 155 };
+const VILLAGE_SHRINE = { x: 1100, y: 440 };
+const VILLAGE_WELL = { x: 912, y: 420 };
+const VILLAGE_POND = { x: 330, y: 300, rx: 156, ry: 88 };
+const VILLAGE_HOME = { x: 1320, y: 430, w: 180, h: 120 };
+const VILLAGE_CHEST = { x: 1248, y: 282 };
+const VILLAGE_VISITOR_SPOT = { x: 1395, y: 282 };
+const VILLAGE_DAILY_BOARD = { x: 846, y: 288, r: 58 };
+
 const VILLAGE_MESS_SPOTS = [
-  { x: 650, y: 348 }, { x: 750, y: 514 }, { x: 928, y: 506 }, { x: 1055, y: 340 },
-  { x: 574, y: 690 }, { x: 1112, y: 690 }, { x: 822, y: 770 }, { x: 418, y: 590 }, { x: 1256, y: 590 }
+  { x: 650, y: 360 }, { x: 930, y: 350 }, { x: 1290, y: 360 }, { x: 1540, y: 420 },
+  { x: 475, y: 475 }, { x: 820, y: 520 }, { x: 1180, y: 615 }, { x: 1515, y: 650 },
+  { x: 425, y: 770 }, { x: 760, y: 810 }, { x: 1160, y: 810 }, { x: 1635, y: 840 },
+  { x: 610, y: 1040 }, { x: 980, y: 1120 }, { x: 1360, y: 1100 }, { x: 1765, y: 1040 }
 ];
 
 const VILLAGER_PATROLS = {
-  maren: [{ x: 410, y: 572 }, { x: 560, y: 510 }, { x: 650, y: 350 }, { x: 520, y: 645 }, { x: 410, y: 572 }],
-  rowan: [{ x: 840, y: 612 }, { x: 960, y: 576 }, { x: 1050, y: 360 }, { x: 860, y: 760 }, { x: 720, y: 612 }, { x: 840, y: 612 }],
-  tavi: [{ x: 1270, y: 572 }, { x: 1130, y: 500 }, { x: 1038, y: 310 }, { x: 1376, y: 690 }, { x: 1270, y: 572 }]
+  maren: [{ x: 360, y: 720 }, { x: 465, y: 630 }, { x: 618, y: 540 }, { x: 450, y: 805 }, { x: 360, y: 720 }],
+  rowan: [{ x: 950, y: 930 }, { x: 1120, y: 850 }, { x: 1280, y: 880 }, { x: 1010, y: 1080 }, { x: 820, y: 930 }, { x: 950, y: 930 }],
+  tavi: [{ x: 1720, y: 720 }, { x: 1540, y: 610 }, { x: 1440, y: 370 }, { x: 1900, y: 600 }, { x: 1720, y: 720 }]
 };
 
-const VILLAGE_TOWER_GATE = { x: 840, y: 118 };
-const VILLAGE_SHRINE = { x: 840, y: 312 };
-const VILLAGE_WELL = { x: 656, y: 322 };
-const VILLAGE_HOME = { x: 1218, y: 982, w: 180, h: 120 };
-const VILLAGE_CHEST = { x: 1328, y: 918 };
-
 const VILLAGE_VILLAGER_SPOTS = [
-  { id: "maren", x: 410, y: 572, hut: { x: 280, y: 388, w: 220, h: 150 }, color: "#7dffb2" },
-  { id: "rowan", x: 840, y: 612, hut: { x: 720, y: 428, w: 240, h: 158 }, color: "#ffd35a" },
-  { id: "tavi", x: 1270, y: 572, hut: { x: 1168, y: 388, w: 220, h: 150 }, color: "#7cc7ff" }
+  { id: "maren", x: 360, y: 720, hut: { x: 220, y: 548, w: 230, h: 152 }, color: "#7dffb2" },
+  { id: "rowan", x: 950, y: 930, hut: { x: 820, y: 756, w: 250, h: 164 }, color: "#ffd35a" },
+  { id: "tavi", x: 1720, y: 720, hut: { x: 1585, y: 548, w: 230, h: 152 }, color: "#7cc7ff" }
 ];
 
+const VILLAGE_TOWNSFOLK = [
+  { id: "pella", name: "Pella", title: "Builder", x: 1500, y: 520, sprite: "player_alt", icon: "tiny_axe", action: "help Pella", need: { supplies: 3 }, prep: "kitchen_stew", rewardHope: 2, text: "Pella can shore up the road before the next climb." },
+  { id: "nix", name: "Nix", title: "Forager", x: 620, y: 610, sprite: "player_marine", icon: "tiny_flower", action: "help Nix", need: { crops: 1, seeds: 1 }, prep: "garden_tonic", rewardHope: 1, text: "Nix turns spare food into a small field tonic." },
+  { id: "orin", name: "Orin", title: "Cartographer", x: 1640, y: 440, sprite: "player_phantom", icon: "tiny_target", action: "help Orin", need: { ore: 1 }, prep: "tavi_map", rewardHope: 1, text: "Orin marks a safer stair path for tonight." }
+];
+
+const VILLAGE_TOWNSFOLK_PATROLS = {
+  pella: [{ x: 1500, y: 520 }, { x: 1580, y: 470 }, { x: 1685, y: 560 }, { x: 1515, y: 650 }, { x: 1420, y: 565 }, { x: 1500, y: 520 }],
+  nix: [{ x: 620, y: 610 }, { x: 520, y: 550 }, { x: 440, y: 690 }, { x: 590, y: 820 }, { x: 745, y: 650 }, { x: 620, y: 610 }],
+  orin: [{ x: 1640, y: 440 }, { x: 1740, y: 475 }, { x: 1840, y: 610 }, { x: 1690, y: 760 }, { x: 1510, y: 610 }, { x: 1640, y: 440 }]
+};
+
 const VILLAGE_RUBBLE = [
-  { id: "rubble_well", x: 606, y: 316, r: 24, label: "old stones" },
-  { id: "rubble_shrine", x: 990, y: 312, r: 22, label: "broken candles" },
-  { id: "rubble_maren", x: 226, y: 536, r: 23, label: "fallen wood" },
-  { id: "rubble_rowan", x: 1010, y: 606, r: 21, label: "scrap pile" },
-  { id: "rubble_tavi", x: 1468, y: 530, r: 24, label: "dead lanterns" },
-  { id: "rubble_gate_left", x: 690, y: 150, r: 25, label: "gate rubble" },
-  { id: "rubble_gate_right", x: 990, y: 150, r: 25, label: "gate rubble" },
-  { id: "rubble_path", x: 840, y: 724, r: 22, label: "path debris" },
-  { id: "rubble_garden", x: 308, y: 852, r: 24, label: "dead garden beds" },
-  { id: "rubble_watch", x: 1398, y: 786, r: 24, label: "watch post boards" },
-  { id: "rubble_kitchen", x: 912, y: 884, r: 22, label: "cold firepit" },
-  { id: "rubble_road", x: 780, y: 1012, r: 24, label: "road debris" }
+  { id: "rubble_well", x: 872, y: 432, r: 22, label: "old stones" },
+  { id: "rubble_shrine", x: 1225, y: 440, r: 22, label: "broken candles" },
+  { id: "rubble_maren", x: 224, y: 736, r: 23, label: "fallen wood" },
+  { id: "rubble_rowan", x: 1092, y: 932, r: 21, label: "scrap pile" },
+  { id: "rubble_tavi", x: 1905, y: 690, r: 24, label: "dead lanterns" },
+  { id: "rubble_gate_left", x: 945, y: 210, r: 24, label: "gate rubble" },
+  { id: "rubble_gate_right", x: 1265, y: 210, r: 24, label: "gate rubble" },
+  { id: "rubble_path", x: 1098, y: 690, r: 22, label: "path debris" },
+  { id: "rubble_garden", x: 574, y: 548, r: 24, label: "dead garden beds" },
+  { id: "rubble_watch", x: 1850, y: 570, r: 24, label: "watch post boards" },
+  { id: "rubble_kitchen", x: 1298, y: 896, r: 22, label: "cold firepit" },
+  { id: "rubble_road", x: 1110, y: 1235, r: 24, label: "road debris" }
 ];
 
 const VILLAGE_STUMPS = [
-  { id: "stump_west_pond", x: 112, y: 312, r: 20, hp: 3, supplies: 1 },
-  { id: "stump_pond_south", x: 424, y: 326, r: 20, hp: 3, supplies: 1 },
-  { id: "stump_gate_left", x: 612, y: 416, r: 20, hp: 4, supplies: 1, shards: 1 },
-  { id: "stump_gate_right", x: 1076, y: 416, r: 20, hp: 4, supplies: 1, shards: 1 },
-  { id: "stump_maren_outer", x: 156, y: 628, r: 20, hp: 3, supplies: 1 },
-  { id: "stump_maren_south", x: 492, y: 678, r: 20, hp: 3, supplies: 1 },
-  { id: "stump_rowan_south", x: 1014, y: 672, r: 20, hp: 3, supplies: 1 },
-  { id: "stump_tavi_outer", x: 1510, y: 640, r: 20, hp: 3, supplies: 1 },
-  { id: "stump_garden_left", x: 108, y: 902, r: 20, hp: 3, supplies: 1 },
-  { id: "stump_garden_right", x: 458, y: 992, r: 20, hp: 3, supplies: 1 },
-  { id: "stump_kitchen_left", x: 644, y: 930, r: 20, hp: 4, supplies: 1, shards: 1 },
-  { id: "stump_kitchen_right", x: 1032, y: 960, r: 20, hp: 3, supplies: 1 },
-  { id: "stump_watch_north", x: 1354, y: 706, r: 20, hp: 3, supplies: 1 },
-  { id: "stump_watch_south", x: 1522, y: 910, r: 20, hp: 3, supplies: 1 },
-  { id: "stump_road_left", x: 596, y: 1060, r: 20, hp: 3, supplies: 1 },
-  { id: "stump_road_right", x: 1076, y: 1060, r: 20, hp: 3, supplies: 1 }
+  { id: "stump_west_pond", x: 112, y: 342, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_pond_south", x: 506, y: 382, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_gate_left", x: 852, y: 392, r: 20, hp: 4, supplies: 1, shards: 1 },
+  { id: "stump_gate_right", x: 1350, y: 392, r: 20, hp: 4, supplies: 1, shards: 1 },
+  { id: "stump_maren_outer", x: 128, y: 740, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_maren_south", x: 518, y: 852, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_rowan_south", x: 1142, y: 1052, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_tavi_outer", x: 1988, y: 728, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_garden_left", x: 458, y: 604, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_garden_right", x: 828, y: 648, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_kitchen_left", x: 1140, y: 902, r: 20, hp: 4, supplies: 1, shards: 1 },
+  { id: "stump_kitchen_right", x: 1450, y: 1008, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_watch_north", x: 1745, y: 464, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_watch_south", x: 1920, y: 840, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_road_left", x: 760, y: 1280, r: 20, hp: 3, supplies: 1 },
+  { id: "stump_road_right", x: 1430, y: 1274, r: 20, hp: 3, supplies: 1 }
 ];
 
 let villageToolSwing = { t: 0, x: 0, y: 0, angle: 0 };
 
 const VILLAGE_MINE_NODES = [
-  { id: "mine_north", x: 1338, y: 246, r: 24, ore: 1, shards: 1 },
-  { id: "mine_east", x: 1530, y: 344, r: 24, ore: 1, shards: 0 },
-  { id: "mine_watch", x: 1486, y: 720, r: 24, ore: 2, shards: 1 }
+  { id: "mine_north", x: 1762, y: 286, r: 24, ore: 1, shards: 1 },
+  { id: "mine_east", x: 2030, y: 488, r: 24, ore: 1, shards: 0 },
+  { id: "mine_watch", x: 1888, y: 860, r: 24, ore: 2, shards: 1 }
 ];
 
 const VILLAGE_FISHING_SPOTS = [
-  { id: "pond", x: 354, y: 228, r: 36, name: "pond" }
+  { id: "pond", x: 464, y: 320, r: 36, name: "pond" }
 ];
 
 const VILLAGE_FARM_PLOTS = [
-  { id: "farm_1", x: 180, y: 820 },
-  { id: "farm_2", x: 230, y: 820 },
-  { id: "farm_3", x: 280, y: 820 },
-  { id: "farm_4", x: 330, y: 820 },
-  { id: "farm_5", x: 180, y: 870 },
-  { id: "farm_6", x: 230, y: 870 },
-  { id: "farm_7", x: 280, y: 870 },
-  { id: "farm_8", x: 330, y: 870 }
+  { id: "farm_1", x: 548, y: 520 },
+  { id: "farm_2", x: 598, y: 520 },
+  { id: "farm_3", x: 648, y: 520 },
+  { id: "farm_4", x: 698, y: 520 },
+  { id: "farm_5", x: 548, y: 570 },
+  { id: "farm_6", x: 598, y: 570 },
+  { id: "farm_7", x: 648, y: 570 },
+  { id: "farm_8", x: 698, y: 570 }
 ];
 
-const VILLAGE_VISITOR_SPOT = { x: 1028, y: 246 };
-const VILLAGE_DAILY_BOARD = { x: 640, y: 228, r: 58 };
+const VILLAGE_VISITORS = {
+  seed: { name: "Seed Seller", title: "traveling shop", sprite: "player_alt", action: "buy seed pouch", text: "A stranger brought seeds from another village.", cost: { supplies: 2 }, reward: { seeds: 3, shards: 1 } },
+  miner: { name: "Ore Buyer", title: "road trader", sprite: "player_vanguard", action: "trade ore", text: "A trader wants clean ore for repair work.", cost: { ore: 2 }, reward: { shards: 5, supplies: 1 } },
+  fisher: { name: "Fish Cook", title: "camp cook", sprite: "player_marine", action: "trade fish", text: "A cook is buying fish for the road crew.", cost: { fish: 2 }, reward: { supplies: 4, shards: 1 } },
+  gift: { name: "Lost Pilgrim", title: "visitor", sprite: "player_phantom", action: "accept gift", text: "A pilgrim came to thank the village for keeping the road lit.", cost: {}, reward: { supplies: 2, seeds: 1, shards: 1 } },
+  relic: { name: "Relic Picker", title: "junk hunter", sprite: "player_vanguard", action: "swap supplies", text: "A junk hunter wants supplies and pays in shards.", cost: { supplies: 3 }, reward: { shards: 4, ore: 1 } },
+  medic: { name: "Road Medic", title: "field tent", sprite: "player_alt", action: "trade crops", text: "A medic is packing food for the road.", cost: { crops: 2 }, reward: { fish: 1, supplies: 2, shards: 1 } }
+};
+
+const VILLAGE_PROJECTS = [
+  {
+    id: "garden",
+    name: "Garden",
+    x: 640,
+    y: 555,
+    color: "#7dffb2",
+    max: 99,
+    action: "repair garden",
+    text: "Spend supplies to repair the garden. Each row helps every tower climb.",
+    reward: "The garden has another working row.",
+    bonus: "+3 max HP per rank. Ranks 2 and 4 add one extra supply from campaign floors."
+  },
+  {
+    id: "kitchen",
+    name: "Kitchen",
+    x: 1280,
+    y: 890,
+    color: "#ffd35a",
+    max: 99,
+    action: "repair kitchen",
+    text: "Spend supplies to repair the kitchen. Meals turn into more utility before each fight.",
+    reward: "The kitchen can feed more people before each climb.",
+    bonus: "+1 starting smoke per kitchen rank."
+  },
+  {
+    id: "watchpost",
+    name: "Watch Post",
+    x: 1840,
+    y: 560,
+    color: "#7cc7ff",
+    max: 99,
+    action: "raise watch post",
+    text: "Spend supplies to raise the watch post. Scouts make Pulse more useful in the tower.",
+    reward: "The watch post can see farther into the tower.",
+    bonus: "+22 pulse range per watch post rank."
+  }
+];
+
+const VILLAGE_SERVICE_BUILDINGS = {
+  collection: { x: 1510, y: 965, w: 190, h: 128, label: "Gear House", action: "open collection", color: "#c77dff" },
+  power: { x: 650, y: 1020, w: 190, h: 128, label: "Training Hall", action: "open power ups", color: "#7cc7ff" },
+  road: { x: 1030, y: 1280, w: 160, h: 108, label: "Road House", action: "main menu", color: "#ffd35a" }
+};
+
+const VILLAGE_OBSTACLES = [
+  { x: 0, y: -80, w: VILLAGE_WORLD.w, h: 100 },
+  { x: -80, y: 0, w: 100, h: VILLAGE_WORLD.h },
+  { x: VILLAGE_WORLD.w - 20, y: 0, w: 100, h: VILLAGE_WORLD.h },
+  { x: 0, y: VILLAGE_WORLD.h - 20, w: VILLAGE_WORLD.w, h: 100 },
+  { x: VILLAGE_TOWER_GATE.x - 150, y: VILLAGE_TOWER_GATE.y - 62, w: 300, h: 104 },
+  { x: VILLAGE_SHRINE.x - 92, y: VILLAGE_SHRINE.y - 70, w: 184, h: 120 },
+  { x: VILLAGE_VILLAGER_SPOTS[0].hut.x + 12, y: VILLAGE_VILLAGER_SPOTS[0].hut.y + 64, w: VILLAGE_VILLAGER_SPOTS[0].hut.w - 24, h: 68 },
+  { x: VILLAGE_VILLAGER_SPOTS[1].hut.x + 12, y: VILLAGE_VILLAGER_SPOTS[1].hut.y + 64, w: VILLAGE_VILLAGER_SPOTS[1].hut.w - 24, h: 72 },
+  { x: VILLAGE_VILLAGER_SPOTS[2].hut.x + 12, y: VILLAGE_VILLAGER_SPOTS[2].hut.y + 64, w: VILLAGE_VILLAGER_SPOTS[2].hut.w - 24, h: 68 },
+  { x: VILLAGE_SERVICE_BUILDINGS.collection.x + 18, y: VILLAGE_SERVICE_BUILDINGS.collection.y + 42, w: VILLAGE_SERVICE_BUILDINGS.collection.w - 36, h: 70 },
+  { x: VILLAGE_SERVICE_BUILDINGS.power.x + 18, y: VILLAGE_SERVICE_BUILDINGS.power.y + 42, w: VILLAGE_SERVICE_BUILDINGS.power.w - 36, h: 70 },
+  { x: VILLAGE_SERVICE_BUILDINGS.road.x + 18, y: VILLAGE_SERVICE_BUILDINGS.road.y + 42, w: VILLAGE_SERVICE_BUILDINGS.road.w - 36, h: 54 },
+  { x: VILLAGE_HOME.x - 84, y: VILLAGE_HOME.y - 52, w: 168, h: 92 },
+  { x: VILLAGE_POND.x - VILLAGE_POND.rx + 18, y: VILLAGE_POND.y - VILLAGE_POND.ry + 10, w: VILLAGE_POND.rx * 2 - 36, h: VILLAGE_POND.ry * 2 - 20 }
+];
+
+const VILLAGE_DECOR = Array.from({ length: 245 }, (_, i) => ({
+  x: 54 + ((i * 173) % (VILLAGE_WORLD.w - 108)),
+  y: 82 + ((i * 91) % (VILLAGE_WORLD.h - 164)),
+  s: 0.5 + ((i * 37) % 82) / 100,
+  a: ((i * 29) % 628) / 100,
+  kind: i % 13 === 0 ? "flower" : i % 7 === 0 ? "bush" : "grass"
+}));
+
+const VILLAGE_TREE_LINES = [
+  [74, 120, "town_tree_green"], [132, 96, "town_tree_green"], [292, 120, "town_tree_blue"],
+  [1600, 92, "town_tree_gold"], [1735, 110, "town_tree_green"], [2030, 158, "town_tree_blue"],
+  [88, 1180, "town_tree_green"], [170, 1330, "town_tree_gold"], [312, 1420, "town_tree_green"],
+  [1920, 1250, "town_tree_blue"], [2040, 1120, "town_tree_green"], [2140, 890, "town_tree_gold"],
+  [120, 740, "town_tree_blue"], [2048, 720, "town_tree_green"], [80, 520, "town_tree_green"], [2100, 420, "town_tree_green"],
+  [520, 1240, "town_tree_blue"], [1580, 1320, "town_tree_green"]
+];
 
 const VILLAGE_PREP_DEFS = {
   maren_meal: { slot: "meal", name: "Maren's Meal", text: "+15 max HP next floor", apply: () => { runStats.maxHpBonus += 15; }, revert: () => { runStats.maxHpBonus -= 15; } },
@@ -1978,92 +2080,6 @@ const VILLAGE_DAILY_EVENTS = [
   { id: "forge_heat", name: "Forge heat", text: "Village projects cost one less supply today." },
   { id: "rain", name: "Soft rain", text: "New seeds are planted and watered together." },
   { id: "sick_tent", name: "Sick tent", text: "Helping Maren pays extra trust today." }
-];
-
-const VILLAGE_VISITORS = {
-  seed: { name: "Seed Seller", title: "traveling shop", sprite: "player_alt", action: "buy seed pouch", text: "A stranger brought seeds from another village.", cost: { supplies: 2 }, reward: { seeds: 3, shards: 1 } },
-  miner: { name: "Ore Buyer", title: "road trader", sprite: "player_vanguard", action: "trade ore", text: "A trader wants clean ore for repair work.", cost: { ore: 2 }, reward: { shards: 5, supplies: 1 } },
-  fisher: { name: "Fish Cook", title: "camp cook", sprite: "player_marine", action: "trade fish", text: "A cook is buying fish for the road crew.", cost: { fish: 2 }, reward: { supplies: 4, shards: 1 } },
-  gift: { name: "Lost Pilgrim", title: "visitor", sprite: "player_phantom", action: "accept gift", text: "A pilgrim came to thank the village for keeping the road lit.", cost: {}, reward: { supplies: 2, seeds: 1, shards: 1 } }
-};
-
-const VILLAGE_PROJECTS = [
-  {
-    id: "garden",
-    name: "Garden",
-    x: 260,
-    y: 835,
-    color: "#7dffb2",
-    max: 99,
-    action: "repair garden",
-    text: "Spend supplies to repair the garden. Each row helps every tower climb.",
-    reward: "The garden has another working row.",
-    bonus: "+3 max HP per rank. Ranks 2 and 4 add one extra supply from campaign floors."
-  },
-  {
-    id: "kitchen",
-    name: "Kitchen",
-    x: 840,
-    y: 885,
-    color: "#ffd35a",
-    max: 99,
-    action: "repair kitchen",
-    text: "Spend supplies to repair the kitchen. Meals turn into more utility before each fight.",
-    reward: "The kitchen can feed more people before each climb.",
-    bonus: "+1 starting smoke per kitchen rank."
-  },
-  {
-    id: "watchpost",
-    name: "Watch Post",
-    x: 1420,
-    y: 790,
-    color: "#7cc7ff",
-    max: 99,
-    action: "raise watch post",
-    text: "Spend supplies to raise the watch post. Scouts make Pulse more useful in the tower.",
-    reward: "The watch post can see farther into the tower.",
-    bonus: "+22 pulse range per watch post rank."
-  }
-];
-
-const VILLAGE_SERVICE_BUILDINGS = {
-  collection: { x: 470, y: 780, w: 190, h: 128, label: "Gear House", action: "open collection", color: "#c77dff" },
-  power: { x: 1030, y: 780, w: 190, h: 128, label: "Training Hall", action: "open power ups", color: "#7cc7ff" },
-  road: { x: 760, y: 980, w: 160, h: 108, label: "Road House", action: "main menu", color: "#ffd35a" }
-};
-
-const VILLAGE_OBSTACLES = [
-  { x: 0, y: -80, w: VILLAGE_WORLD.w, h: 100 },
-  { x: -80, y: 0, w: 100, h: VILLAGE_WORLD.h },
-  { x: VILLAGE_WORLD.w - 20, y: 0, w: 100, h: VILLAGE_WORLD.h },
-  { x: 0, y: VILLAGE_WORLD.h - 20, w: VILLAGE_WORLD.w, h: 100 },
-  { x: 700, y: 44, w: 280, h: 110 },
-  { x: 746, y: 238, w: 188, h: 118 },
-  { x: 280, y: 430, w: 220, h: 92 },
-  { x: 720, y: 476, w: 240, h: 92 },
-  { x: 1168, y: 430, w: 220, h: 92 },
-  { x: 470, y: 818, w: 190, h: 72 },
-  { x: 1030, y: 818, w: 190, h: 72 },
-  { x: 760, y: 1018, w: 160, h: 56 },
-  { x: 156, y: 116, w: 160, h: 112 },
-  { x: 1368, y: 120, w: 154, h: 110 },
-  { x: 610, y: 300, w: 88, h: 58 }
-];
-
-const VILLAGE_DECOR = Array.from({ length: 170 }, (_, i) => ({
-  x: 54 + ((i * 173) % (VILLAGE_WORLD.w - 108)),
-  y: 82 + ((i * 91) % (VILLAGE_WORLD.h - 164)),
-  s: 0.5 + ((i * 37) % 82) / 100,
-  a: ((i * 29) % 628) / 100,
-  kind: i % 13 === 0 ? "flower" : i % 7 === 0 ? "bush" : "grass"
-}));
-
-const VILLAGE_TREE_LINES = [
-  [74, 120, "town_tree_green"], [112, 84, "town_tree_green"], [308, 108, "town_tree_blue"],
-  [348, 102, "town_tree_gold"], [1180, 102, "town_tree_gold"], [1490, 128, "town_tree_green"], [1560, 174, "town_tree_blue"],
-  [78, 820, "town_tree_green"], [132, 920, "town_tree_gold"], [220, 990, "town_tree_green"],
-  [1438, 984, "town_tree_blue"], [1530, 916, "town_tree_green"], [1598, 820, "town_tree_gold"],
-  [112, 1018, "town_tree_blue"], [1558, 1018, "town_tree_green"], [60, 620, "town_tree_green"], [1600, 620, "town_tree_green"]
 ];
 
 const SMOKE_WHITE_FRAMES = ["smoke_white_00", "smoke_white_04", "smoke_white_08", "smoke_white_12", "smoke_white_16", "smoke_white_20", "smoke_white_24"];
@@ -2395,6 +2411,43 @@ function villageVillagerPoint(spot) {
   };
 }
 
+function villagePathPoint(path, speed = 0.05, seed = 0) {
+  if (!Array.isArray(path) || path.length < 2) return path?.[0] || { x: 0, y: 0 };
+  const progress = (nowSec() * speed + seed) % 1;
+  const scaled = progress * (path.length - 1);
+  const index = Math.floor(scaled);
+  const local = scaled - index;
+  const a = path[index];
+  const b = path[Math.min(path.length - 1, index + 1)];
+  return {
+    x: a.x + (b.x - a.x) * local,
+    y: a.y + (b.y - a.y) * local
+  };
+}
+
+function villageTownfolkPoint(npc) {
+  const path = VILLAGE_TOWNSFOLK_PATROLS[npc.id] || [{ x: npc.x, y: npc.y }];
+  return villagePathPoint(path, 0.04 + (npc.name.length % 3) * 0.006, npc.x * 0.0007);
+}
+
+function villageMessSpotSafe(x, y) {
+  if (villageBlocked(x, y, 16)) return false;
+  const keepAway = [
+    VILLAGE_TOWER_GATE,
+    VILLAGE_SHRINE,
+    VILLAGE_HOME,
+    VILLAGE_DAILY_BOARD,
+    VILLAGE_VISITOR_SPOT,
+    VILLAGE_CHEST,
+    ...VILLAGE_MINE_NODES,
+    ...VILLAGE_FISHING_SPOTS,
+    ...VILLAGE_PROJECTS,
+    ...VILLAGE_VILLAGER_SPOTS.map(spot => villageVillagerPoint(spot)),
+    ...VILLAGE_TOWNSFOLK.map(npc => villageTownfolkPoint(npc))
+  ];
+  return !keepAway.some(point => Math.hypot(x - point.x, y - point.y) < 72);
+}
+
 function hubVillagerById(id) {
   return HUB_VILLAGERS.find(villager => villager.id === id);
 }
@@ -2565,7 +2618,7 @@ function updateFarmGrowthAfterTower() {
 
 function assignVillageVisitor(source = "tower") {
   const hub = ensureHubSave();
-  const types = ["seed", "gift", "miner", "fisher"];
+  const types = ["seed", "gift", "miner", "fisher", "relic", "medic"];
   const type = types[(hub.towerDay + String(source).length) % types.length];
   hub.visitor = { type, day: hub.towerDay, bought: false };
 }
@@ -3126,7 +3179,7 @@ function enterVillageBetweenStoryFloors(nextFloor, info = {}) {
     request: task?.title || "Open the daily board",
     status: event?.name || "quiet day",
     omen: omen?.name || "none",
-    t: nowSec()
+    ts: Date.now()
   };
   saveGame();
   const supplies = info.suppliesFound ? ` You brought back ${info.suppliesFound} supplies.` : "";
@@ -3208,12 +3261,28 @@ function maybeSpawnVillageMess() {
     const next = (spotIndex + i) % VILLAGE_MESS_SPOTS.length;
     if (!used.has(next)) { spotIndex = next; break; }
   }
-  const spot = VILLAGE_MESS_SPOTS[spotIndex];
+  let spot = VILLAGE_MESS_SPOTS[spotIndex];
+  let x = spot.x;
+  let y = spot.y;
+  for (let i = 0; i < VILLAGE_MESS_SPOTS.length; i++) {
+    const testIndex = (spotIndex + i) % VILLAGE_MESS_SPOTS.length;
+    const test = VILLAGE_MESS_SPOTS[testIndex];
+    const tx = test.x + rand(-8, 8);
+    const ty = test.y + rand(-8, 8);
+    if (!used.has(testIndex) && villageMessSpotSafe(tx, ty)) {
+      spotIndex = testIndex;
+      spot = test;
+      x = tx;
+      y = ty;
+      break;
+    }
+  }
+  if (!villageMessSpotSafe(x, y)) return;
   villageMesses.push({
     id: `mess_${Math.round(now * 1000)}`,
     spotIndex,
-    x: spot.x + rand(-8, 8),
-    y: spot.y + rand(-8, 8)
+    x,
+    y
   });
   villageNextMessAt = now + rand(12, 20);
   if (villageMesses.length === 1) setVillageMessage("Village", "Hairball on the road. Clean it with E for hope.", 3.2);
@@ -3565,6 +3634,12 @@ function findVillageInteractTarget() {
     if (distance <= 82) consider({ type: "visitor", label: visitor.name, action: visitor.action, distance });
   }
 
+  for (const npc of VILLAGE_TOWNSFOLK) {
+    const point = villageTownfolkPoint(npc);
+    const distance = Math.hypot(villagePlayer.x - point.x, villagePlayer.y - point.y);
+    if (distance <= 92) consider({ type: "townsperson", id: npc.id, label: `${npc.name} · ${npc.title}`, action: npc.action, distance });
+  }
+
   const boardDistance = Math.hypot(villagePlayer.x - VILLAGE_DAILY_BOARD.x, villagePlayer.y - VILLAGE_DAILY_BOARD.y);
   if (boardDistance <= 92) consider({ type: "board", label: "Daily board", action: "open daily board", distance: boardDistance });
 
@@ -3814,6 +3889,36 @@ function interactVillageVisitor() {
   setVillageMessage(visitor.name, `${visitor.text} Trade complete: ${rewardText}. Another visitor may arrive after your next tower fight.`, 3.4);
 }
 
+function costText(cost = {}) {
+  return Object.entries(cost).map(([k, v]) => `${v} ${k}`).join(", ") || "free";
+}
+
+function interactVillageTownsperson(id) {
+  const npc = VILLAGE_TOWNSFOLK.find(item => item.id === id);
+  if (!npc) return;
+  const hub = ensureHubSave();
+  const need = npc.need || {};
+  for (const [key, value] of Object.entries(need)) {
+    if ((Number(hub[key]) || 0) < value) {
+      const point = villageTownfolkPoint(npc);
+      setVillageMessage(npc.name, `Need ${costText(need)}. ${npc.text}`, 3.0);
+      floatText.push({ x: point.x - 32, y: point.y - 46, text: "need items", t: 0.9 });
+      return;
+    }
+  }
+  if (!spendVillageEnergy(1, `helping ${npc.name}`)) return;
+  payVisitorCost(need);
+  hub.hope = (Number(hub.hope) || 0) + (npc.rewardHope || 1);
+  hub.collection.visitors[npc.id] = true;
+  saveGame();
+  const point = villageTownfolkPoint(npc);
+  if (npc.prep) grantVillagePrep(npc.prep, npc.name);
+  playAssetSfx("bonus_chime", 0.28);
+  addParticles("reward", point.x, point.y - 10, -Math.PI / 2, 18);
+  floatText.push({ x: point.x - 36, y: point.y - 48, text: `+${npc.rewardHope || 1} hope`, t: 1.0 });
+  setVillageMessage(npc.name, `${npc.text} You helped ${npc.name} and got +${npc.rewardHope || 1} hope.`, 3.0);
+}
+
 function villageStumpCleared(id) {
   return Boolean(ensureHubSave().stumpsCleared?.[id]);
 }
@@ -3952,6 +4057,10 @@ function villageTargetWorldPoint(target) {
   }
   if (target.type === "fish") return { ...VILLAGE_FISHING_SPOTS[0] };
   if (target.type === "visitor") return { ...VILLAGE_VISITOR_SPOT };
+  if (target.type === "townsperson") {
+    const item = VILLAGE_TOWNSFOLK.find(npc => npc.id === target.id);
+    return item ? villageTownfolkPoint(item) : null;
+  }
   if (target.type === "board") return { ...VILLAGE_DAILY_BOARD };
   if (target.type === "project") {
     const item = hubProjectById(target.id);
@@ -3990,7 +4099,7 @@ function clickVillageActionAt(x, y) {
     const point = villageTargetWorldPoint(target);
     const clickedPrompt = y - camera.y > H - 96;
     const clickedTarget = point && Math.hypot(x - point.x, y - point.y) <= (target.type === "fish" ? 118 : 96);
-    if (clickedPrompt || clickedTarget || target.type === "mine" || target.type === "farm" || target.type === "fish" || target.type === "visitor") {
+    if (clickedPrompt || clickedTarget || target.type === "mine" || target.type === "farm" || target.type === "fish" || target.type === "visitor" || target.type === "townsperson") {
       interactVillage();
       return true;
     }
@@ -4117,6 +4226,10 @@ function interactVillage() {
     interactVillageVisitor();
     return;
   }
+  if (target.type === "townsperson") {
+    interactVillageTownsperson(target.id);
+    return;
+  }
   if (target.type === "board") {
     renderVillageDailyBoard();
     return;
@@ -4202,7 +4315,7 @@ function drawVillage() {
   drawVillageGround();
   drawVillagePond();
   drawVillagePaths();
-  drawVillageWell();
+  drawVillageExtraAreas();
   drawVillageHomeAndChest();
   drawVillageFences();
   drawVillageWallsAndTrees();
@@ -4217,6 +4330,7 @@ function drawVillage() {
   drawVillageStations();
   drawVillageTaskMarkers();
   drawVillageMesses();
+  drawVillageTownfolk();
   drawVillageVisitor();
   drawVillageVillagers();
   drawVillagePlayer();
@@ -4297,7 +4411,7 @@ function drawVillageGround() {
     }
   }
 
-  const g = ctx.createRadialGradient(640, 332, 60, 640, 332, 720);
+  const g = ctx.createRadialGradient(VILLAGE_TOWER_GATE.x, VILLAGE_SHRINE.y, 80, VILLAGE_TOWER_GATE.x, VILLAGE_SHRINE.y, 900);
   g.addColorStop(0, "rgba(228,218,131,0.13)");
   g.addColorStop(0.55, "rgba(31,52,43,0.08)");
   g.addColorStop(1, "rgba(3,5,12,0.48)");
@@ -4324,16 +4438,16 @@ function drawVillageGround() {
 }
 
 function drawVillagePond() {
-  const px = 222;
-  const py = 190;
+  const px = VILLAGE_POND.x;
+  const py = VILLAGE_POND.y;
   ctx.save();
   ctx.beginPath();
-  ctx.ellipse(px, py, 132, 78, -0.08, 0, Math.PI * 2);
+  ctx.ellipse(px, py, VILLAGE_POND.rx, VILLAGE_POND.ry, -0.08, 0, Math.PI * 2);
   ctx.clip();
   ctx.fillStyle = "#62cde2";
-  ctx.fillRect(px - 150, py - 92, 300, 184);
-  for (let y = py - 96; y < py + 92; y += 32) {
-    for (let x = px - 150; x < px + 154; x += 32) {
+  ctx.fillRect(px - VILLAGE_POND.rx - 18, py - VILLAGE_POND.ry - 14, VILLAGE_POND.rx * 2 + 36, VILLAGE_POND.ry * 2 + 28);
+  for (let y = py - VILLAGE_POND.ry - 16; y < py + VILLAGE_POND.ry + 16; y += 32) {
+    for (let x = px - VILLAGE_POND.rx - 18; x < px + VILLAGE_POND.rx + 18; x += 32) {
       drawTownAssetRect(villageHash(x, y) > 0.5 ? "town_water_a" : "town_water_b", x, y, 34, 34, 0.96);
     }
   }
@@ -4341,7 +4455,7 @@ function drawVillagePond() {
   ctx.strokeStyle = "rgba(156,97,58,0.72)";
   ctx.lineWidth = 5;
   ctx.beginPath();
-  ctx.ellipse(px, py, 132, 78, -0.08, 0, Math.PI * 2);
+  ctx.ellipse(px, py, VILLAGE_POND.rx, VILLAGE_POND.ry, -0.08, 0, Math.PI * 2);
   ctx.stroke();
   ctx.fillStyle = "rgba(255,255,255,0.22)";
   ctx.beginPath();
@@ -4353,59 +4467,49 @@ function drawVillagePond() {
 
 function drawVillagePaths() {
   const cx = VILLAGE_TOWER_GATE.x;
-  ctx.save();
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-
-  const drawPathStroke = (width, color) => {
+  const drawCurve = (points, width, color) => {
     ctx.strokeStyle = color;
     ctx.lineWidth = width;
     ctx.beginPath();
-    ctx.moveTo(cx, 1052);
-    ctx.bezierCurveTo(cx - 6, 880, cx + 12, 662, cx, 420);
-    ctx.bezierCurveTo(cx - 4, 326, cx, 230, cx, 112);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(410, 570);
-    ctx.bezierCurveTo(510, 494, 684, 430, cx, 388);
-    ctx.bezierCurveTo(990, 430, 1148, 500, 1270, 570);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(560, 900);
-    ctx.bezierCurveTo(642, 825, 760, 770, cx, 740);
-    ctx.bezierCurveTo(942, 770, 1046, 825, 1120, 900);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(260, 835);
-    ctx.bezierCurveTo(440, 820, 650, 820, cx, 792);
-    ctx.bezierCurveTo(1050, 820, 1240, 800, 1420, 790);
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i += 2) {
+      const c = points[i];
+      const e = points[i + 1] || c;
+      ctx.quadraticCurveTo(c.x, c.y, e.x, e.y);
+    }
     ctx.stroke();
   };
+  const branch = points => {
+    drawCurve(points, 88, "rgba(88,60,38,0.34)");
+    drawCurve(points, 62, "rgba(137,96,58,0.72)");
+  };
 
-  drawPathStroke(90, "rgba(88,60,38,0.36)");
-  drawPathStroke(70, "rgba(137,96,58,0.74)");
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  branch([
+    { x: cx, y: VILLAGE_WORLD.h - 110 },
+    { x: cx - 12, y: 1110 }, { x: cx, y: 790 },
+    { x: cx + 10, y: 520 }, { x: cx, y: 220 }
+  ]);
+  branch([{ x: cx, y: 430 }, { x: 930, y: 385 }, { x: VILLAGE_POND.x + 160, y: VILLAGE_POND.y + 30 }]);
+  branch([{ x: cx, y: 470 }, { x: 860, y: 510 }, { x: VILLAGE_PROJECTS[0].x, y: VILLAGE_PROJECTS[0].y }]);
+  branch([{ x: cx, y: 500 }, { x: 1225, y: 470 }, { x: VILLAGE_HOME.x, y: VILLAGE_HOME.y + 72 }]);
+  branch([{ x: cx, y: 690 }, { x: 1240, y: 760 }, { x: VILLAGE_PROJECTS[1].x, y: VILLAGE_PROJECTS[1].y }]);
+  branch([{ x: cx, y: 640 }, { x: 1500, y: 620 }, { x: VILLAGE_PROJECTS[2].x, y: VILLAGE_PROJECTS[2].y }]);
+  branch([{ x: cx, y: 820 }, { x: 870, y: 925 }, { x: VILLAGE_SERVICE_BUILDINGS.power.x + 96, y: VILLAGE_SERVICE_BUILDINGS.power.y + 116 }]);
+  branch([{ x: cx, y: 910 }, { x: 1380, y: 970 }, { x: VILLAGE_SERVICE_BUILDINGS.collection.x + 96, y: VILLAGE_SERVICE_BUILDINGS.collection.y + 114 }]);
+  branch([{ x: cx, y: 1060 }, { x: 1080, y: 1190 }, { x: VILLAGE_SERVICE_BUILDINGS.road.x + 82, y: VILLAGE_SERVICE_BUILDINGS.road.y + 110 }]);
+  branch([{ x: VILLAGE_VILLAGER_SPOTS[0].x, y: VILLAGE_VILLAGER_SPOTS[0].y + 70 }, { x: 640, y: 740 }, { x: cx, y: 680 }]);
+  branch([{ x: VILLAGE_VILLAGER_SPOTS[1].x, y: VILLAGE_VILLAGER_SPOTS[1].y + 70 }, { x: 1020, y: 860 }, { x: cx, y: 780 }]);
+  branch([{ x: VILLAGE_VILLAGER_SPOTS[2].x, y: VILLAGE_VILLAGER_SPOTS[2].y + 70 }, { x: 1510, y: 780 }, { x: cx, y: 690 }]);
 
-  ctx.globalAlpha = 0.24;
-  for (let y = 126; y < 1056; y += 32) {
+  ctx.globalAlpha = 0.20;
+  for (let y = 190; y < VILLAGE_WORLD.h - 80; y += 34) {
     drawTownAsset("town_dirt_a", cx - 18 + Math.sin(y * 0.04) * 8, y, 34, 0, 0.9);
     drawTownAsset("town_dirt_b", cx + 18 + Math.cos(y * 0.035) * 8, y + 8, 34, 0, 0.8);
   }
-  for (let i = 0; i < 28; i++) {
-    const t = i / 27;
-    drawTownAsset(i % 2 ? "town_dirt_a" : "town_dirt_b", 410 + (cx - 410) * t, 570 + (388 - 570) * t - Math.sin(t * Math.PI) * 26, 34, 0, 0.85);
-    drawTownAsset(i % 2 ? "town_dirt_b" : "town_dirt_a", cx + (1270 - cx) * t, 388 + (570 - 388) * t + Math.sin(t * Math.PI) * 26, 34, 0, 0.85);
-  }
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = "rgba(255,219,123,0.11)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(cx, 1052);
-  ctx.bezierCurveTo(cx - 6, 880, cx + 12, 662, cx, 420);
-  ctx.bezierCurveTo(cx - 4, 326, cx, 230, cx, 112);
-  ctx.stroke();
   ctx.restore();
 }
 
@@ -4431,6 +4535,39 @@ function drawVillageWell() {
   ctx.quadraticCurveTo(x, y - 36, x + 34, y + 4);
   ctx.stroke();
   drawTownAsset("town_barrel_c", x + 58, y + 30, 28, 0, 0.9);
+  ctx.restore();
+}
+
+function drawVillageExtraAreas() {
+  ctx.save();
+  const marketX = VILLAGE_VISITOR_SPOT.x;
+  const marketY = VILLAGE_VISITOR_SPOT.y + 16;
+  ctx.fillStyle = "rgba(0,0,0,0.22)";
+  ctx.beginPath();
+  ctx.ellipse(marketX, marketY + 18, 138, 28, 0, 0, Math.PI * 2);
+  ctx.fill();
+  drawTownAsset("town_crate_big", marketX - 86, marketY + 14, 34, 0, 0.9);
+  drawTownAsset("town_crate_small", marketX - 54, marketY + 18, 28, 0, 0.85);
+  drawTownAsset("town_barrel_a", marketX + 74, marketY + 20, 30, 0, 0.85);
+  drawTownAsset("tiny_chest", marketX + 104, marketY + 12, 32, 0, 0.96);
+  drawTownAsset("tiny_sign", marketX, marketY - 24, 42, 0, 0.92);
+
+  const forgeX = VILLAGE_SERVICE_BUILDINGS.power.x + 250;
+  const forgeY = VILLAGE_SERVICE_BUILDINGS.power.y + 44;
+  ctx.fillStyle = "rgba(0,0,0,0.24)";
+  ctx.beginPath();
+  ctx.ellipse(forgeX, forgeY + 34, 120, 26, 0, 0, Math.PI * 2);
+  ctx.fill();
+  drawTownAsset("town_barrel_b", forgeX - 72, forgeY + 22, 30, 0, 0.85);
+  drawTownAsset("town_crate_big", forgeX - 34, forgeY + 26, 34, 0, 0.85);
+  drawTownAsset("tiny_tool_pickaxe", forgeX + 26, forgeY + 6, 34, -0.65, 0.95);
+  drawTownAsset("tiny_axe", forgeX + 64, forgeY + 10, 30, 0.35, 0.95);
+
+  const groveX = 420;
+  const groveY = 520;
+  drawTownAsset("town_lamp", groveX - 48, groveY, 34, 0, 0.9);
+  drawTownAsset("town_barrel_c", groveX + 44, groveY + 28, 28, 0, 0.85);
+  drawTownAsset("tiny_flower", groveX, groveY + 34, 22, 0, 0.9);
   ctx.restore();
 }
 
@@ -4465,7 +4602,7 @@ function drawVillageHomeAndChest() {
   ctx.fillStyle = "#ffd35a";
   ctx.font = "900 9px ui-monospace, monospace";
   ctx.textAlign = "center";
-  ctx.fillText("CHEST", VILLAGE_CHEST.x, VILLAGE_CHEST.y + 38);
+  ctx.fillText("STORAGE", VILLAGE_CHEST.x, VILLAGE_CHEST.y + 38);
   ctx.restore();
 }
 
@@ -5155,6 +5292,37 @@ function drawVillageMesses() {
   ctx.restore();
 }
 
+function drawVillageTownfolk() {
+  ctx.save();
+  for (const npc of VILLAGE_TOWNSFOLK) {
+    const point = villageTownfolkPoint(npc);
+    ctx.fillStyle = "rgba(0,0,0,0.30)";
+    ctx.beginPath();
+    ctx.ellipse(point.x + 2, point.y + 18, 25, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    drawTownAsset("town_crate_small", point.x - 38, point.y + 14, 24, 0, 0.82);
+    drawTownAsset(npc.icon || "tiny_sign", point.x - 38, point.y - 8, 22, 0, 0.9);
+    if (!drawImageAsset(npc.sprite || "player_alt", point.x, point.y, 44, 44)) {
+      ctx.fillStyle = "#ffd35a";
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 15, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = "rgba(255,211,90,0.42)";
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 32 + Math.sin(nowSec() * 2 + npc.x) * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#f5f1ff";
+    ctx.font = "900 10px ui-monospace, monospace";
+    ctx.fillText(npc.name, point.x, point.y + 45);
+    ctx.fillStyle = "rgba(245,241,255,0.70)";
+    ctx.font = "900 7px ui-monospace, monospace";
+    ctx.fillText(npc.title.toUpperCase(), point.x, point.y + 56);
+  }
+  ctx.restore();
+}
+
 function drawVillageVisitor() {
   const visitor = activeVillageVisitor();
   if (!visitor) return;
@@ -5312,16 +5480,21 @@ function drawVillageScreenUi() {
   };
 
   ctx.save();
-  ctx.fillStyle = "rgba(3,5,12,0.56)";
+  const hudHover = mouse.screenX >= 16 && mouse.screenX <= 398 && mouse.screenY >= 16 && mouse.screenY <= 120;
+  const hudA = hudHover ? 1 : 0.16;
+  ctx.globalAlpha = hudA;
+  ctx.fillStyle = hudHover ? "rgba(3,5,12,0.52)" : "rgba(3,5,12,0.10)";
   ctx.fillRect(16, 16, 382, 104);
-  ctx.strokeStyle = "rgba(255,211,90,0.55)";
+  ctx.strokeStyle = hudHover ? "rgba(255,211,90,0.48)" : "rgba(255,211,90,0.08)";
   ctx.strokeRect(16, 16, 382, 104);
+  ctx.globalAlpha = hudHover ? 1 : 0.36;
   ctx.fillStyle = "#f5f1ff";
   ctx.font = "900 18px ui-monospace, monospace";
   ctx.fillText("Mira's Village", 32, 42);
   ctx.fillStyle = "rgba(217,222,234,0.72)";
   ctx.font = "800 11px ui-monospace, monospace";
   ctx.fillText("WASD move  ·  Shift run  ·  E interact  ·  Enter log", 32, 62);
+  ctx.globalAlpha = hudHover ? 1 : 0.30;
   ctx.fillStyle = "rgba(255,255,255,0.12)";
   ctx.fillRect(32, 74, 220, 7);
   ctx.fillStyle = "#7dffb2";
@@ -5341,6 +5514,7 @@ function drawVillageScreenUi() {
   ctx.fillStyle = energy <= 1 ? "#ff6b6b" : "rgba(217,222,234,0.65)";
   ctx.font = "900 8px ui-monospace, monospace";
   ctx.fillText("tower refills town day", 280, 101);
+  ctx.globalAlpha = 1;
 
   ctx.fillStyle = "rgba(3,5,12,0.58)";
   ctx.fillRect(W - 220, 16, 204, 84);
@@ -5380,7 +5554,7 @@ function drawVillageScreenUi() {
   ctx.fillText((linesFor(taskText, todayW - 20)[0] || "").slice(0, 42), todayX + 10, todayY + 27);
 
   const returnCard = hub.lastReturnCard;
-  const returnAge = returnCard?.t ? nowSec() - returnCard.t : 99;
+  const returnAge = returnCard?.ts ? Math.max(0, (Date.now() - returnCard.ts) / 1000) : 99;
   if (returnCard && returnCard.floor && returnAge < 5) {
     const alpha = clamp(1 - returnAge / 5, 0, 1);
     ctx.save();
