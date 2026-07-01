@@ -4135,3 +4135,19 @@ body[data-screen="game"] #pauseButton {
   .inventoryArrow { display: none; }
   .inventorySlotGrid { grid-template-columns: repeat(6, 54px); }
 }
+
+/* v61 polish: completed chapters should not dominate the chapter board. */
+.compactChapterCard {
+  min-height: 118px !important;
+  max-height: 142px;
+  opacity: 0.72;
+}
+.compactChapterCard .contractFacts {
+  display: none !important;
+}
+.compactChapterCard b {
+  font-size: 24px !important;
+}
+.compactChapterCard p {
+  max-width: 420px;
+}

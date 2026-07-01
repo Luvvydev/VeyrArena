@@ -166,6 +166,23 @@ const ASSET_PATHS = {
     fx_crosshair: "./assets/fx/crosshair.png",
     fx_hit: "./assets/fx/hit.png",
     fx_burst: "./assets/fx/burst.png",
+    light_circle_soft: "./assets/fx/light_masks/circle_b_noise.png",
+    light_ring_streaks: "./assets/fx/light_masks/circle_rings_b_streaks.png",
+    light_cone_noise: "./assets/fx/light_masks/cone_composed_a_noise.png",
+    prop_factory_cog_a: "./assets/floor_props/factory_cog_a.png",
+    prop_factory_cog_b: "./assets/floor_props/factory_cog_b.png",
+    prop_factory_button_round: "./assets/floor_props/factory_button_round.png",
+    prop_factory_catwalk: "./assets/floor_props/factory_catwalk_straight.png",
+    prop_dungeon_column: "./assets/floor_props/dungeon_column.png",
+    prop_dungeon_gate: "./assets/floor_props/dungeon_gate.png",
+    prop_dungeon_trap: "./assets/floor_props/dungeon_trap.png",
+    prop_dungeon_stones: "./assets/floor_props/dungeon_stones.png",
+    prop_dungeon_banner: "./assets/floor_props/dungeon_banner.png",
+    prop_dungeon_chest: "./assets/floor_props/dungeon_chest_prop.png",
+    prop_mod_gate_bars: "./assets/floor_props/mod_gate_bars.png",
+    prop_mod_gate_door: "./assets/floor_props/mod_gate_door.png",
+    prop_mod_room_small: "./assets/floor_props/mod_room_small.png",
+    prop_mod_corridor: "./assets/floor_props/mod_corridor.png",
     rpg_soldier: "./assets/sprites/rpg_soldier_idle.png",
     rpg_orc: "./assets/sprites/rpg_orc_idle.png",
     enemy_vampire: "./assets/sprites/enemy_vampire_idle.png",
@@ -261,6 +278,26 @@ const ASSET_PATHS = {
     footstep_laminate_2: "./assets/sfx/footstep_laminate_2.mp3",
     footstep_laminate_3: "./assets/sfx/footstep_laminate_3.mp3",
     footstep_laminate_4: "./assets/sfx/footstep_laminate_4.mp3",
+    polish_achievement: "./assets/sfx/polish_achievement.mp3",
+    polish_bullet_impact: "./assets/sfx/polish_bullet_impact.mp3",
+    polish_creepy_whisper: "./assets/sfx/polish_creepy_whisper.mp3",
+    polish_heartbeat: "./assets/sfx/polish_heartbeat.mp3",
+    polish_steam_hiss: "./assets/sfx/polish_steam_hiss.mp3",
+    polish_dungeon_ambience: "./assets/sfx/polish_dungeon_ambience.mp3",
+    polish_demonic_whisper: "./assets/sfx/polish_demonic_whisper.mp3",
+    polish_heavy_breathing: "./assets/sfx/polish_heavy_breathing.mp3",
+    polish_summon: "./assets/sfx/polish_summon.mp3",
+    polish_water_drips: "./assets/sfx/polish_water_drips.mp3",
+    polish_magic_charge: "./assets/sfx/polish_magic_charge.mp3",
+    polish_monster_death: "./assets/sfx/polish_monster_death.mp3",
+    polish_crystal_break: "./assets/sfx/polish_crystal_break.mp3",
+    polish_fire_ambience: "./assets/sfx/polish_fire_ambience.mp3",
+    polish_chains: "./assets/sfx/polish_chains.mp3",
+    polish_level_up: "./assets/sfx/polish_level_up.mp3",
+    polish_powerup: "./assets/sfx/polish_powerup.mp3",
+    polish_death_collapse: "./assets/sfx/polish_death_collapse.mp3",
+    polish_boss_roar: "./assets/sfx/polish_boss_roar.mp3",
+    polish_quest_complete: "./assets/sfx/polish_quest_complete.mp3",
     voice_ready: "./assets/voice/ready.ogg",
     voice_fight: "./assets/voice/fight.ogg",
     voice_winner: "./assets/voice/winner.ogg",
@@ -386,7 +423,52 @@ function updateMusicVolume() {
   musicAudio.volume = clamp(0.55 * volumeFor("music"), 0, 0.65);
 }
 
+function stopAmbient() {
+  if (!ambientAudio) return;
+  try {
+    ambientAudio.pause();
+    ambientAudio.currentTime = 0;
+  } catch {}
+  ambientAudio = null;
+  ambientKey = "";
+}
+
+function updateAmbientVolume() {
+  if (!ambientAudio) return;
+  ambientAudio.volume = clamp(ambientBaseVolume * volumeFor("ambient"), 0, 0.24);
+}
+
+function startAmbient(key, volume = 0.12) {
+  const src = assetAudio[key];
+  if (!src || audioShouldMuteForFocus()) return;
+  if (ambientKey === key && ambientAudio) {
+    ambientBaseVolume = volume;
+    updateAmbientVolume();
+    return;
+  }
+  stopAmbient();
+  try {
+    ambientAudio = src.cloneNode();
+    ambientAudio.loop = true;
+    ambientKey = key;
+    ambientBaseVolume = volume;
+    updateAmbientVolume();
+    ambientAudio.play().catch(() => {});
+  } catch {
+    ambientAudio = null;
+    ambientKey = "";
+  }
+}
+
+function updateFloorAmbience() {
+  if (mode !== "running" && mode !== "countdown" && mode !== "bossIntro" && mode !== "killReplay") return;
+  const theme = floorTheme(currentFloor);
+  if (!theme?.ambient) return stopAmbient();
+  startAmbient(theme.ambient, theme.ambientVolume || 0.12);
+}
+
 function updateOneShotAudioVolumes() {
+  updateAmbientVolume();
   for (const audio of [...activeOneShotAudio]) {
     if (!audio || audio.ended) {
       activeOneShotAudio.delete(audio);
@@ -424,6 +506,7 @@ function startMusic(key) {
 
 function startVillageMusic() {
   // Use the soft music cue, not the sharp village ambience loops.
+  stopAmbient();
   startMusic("music_town");
 }
 
@@ -563,6 +646,9 @@ let lastCountdownCue = "";
 let audioCtx = null;
 let musicAudio = null;
 let musicKey = "";
+let ambientAudio = null;
+let ambientKey = "";
+let ambientBaseVolume = 0.14;
 let lastPlayerFootstepAt = 0;
 let lastPlayerTraceAt = 0;
 let playerTraceSide = 1;
@@ -967,6 +1053,7 @@ const DEFAULT_SAVE = {
     sfx: 0.7,
     voice: 0.42,
     music: 0.22,
+    ambient: 0.65,
     footsteps: 0.8,
     muteUnfocused: true
   }
@@ -1593,6 +1680,161 @@ const BOSS_ABILITY_REWARDS = {
 
 let runStats = null;
 
+const FLOOR_THEMES = {
+  1: {
+    title: "Gate Level",
+    subtitle: "The tower starts clean so you can learn its teeth.",
+    stageName: "F1 Gate Level",
+    ambient: "polish_dungeon_ambience",
+    ambientVolume: 0.075,
+    tint: "#7cc7ff",
+    darkness: 0.08,
+    propSet: "entry",
+    objectiveNames: {
+      clear: ["Clear the gate", "Eliminate the gate guards."],
+      survive: ["Hold the entry", "Stay alive until the lower door unlocks."],
+      crystals: ["Break the gate wards", "Destroy 3 lock wards."],
+      hold: ["Hold the stair seal", "Stand inside the stair seal until it opens."]
+    },
+    clue: "The lower gate is organized, not abandoned. Someone maintains this place."
+  },
+  2: {
+    title: "First Guardian",
+    subtitle: "A named guard blocks the first real stair.",
+    stageName: "F2 First Guardian",
+    ambient: "polish_chains",
+    ambientVolume: 0.085,
+    tint: "#ffd166",
+    darkness: 0.11,
+    propSet: "prison",
+    objectiveNames: {
+      clear: ["Break the guard line", "Eliminate every guard between you and the stair."],
+      survive: ["Survive the lock-in", "Stay alive while the gate mechanism resets."],
+      crystals: ["Break the stair locks", "Destroy 3 stair locks."],
+      hold: ["Hold the brass seal", "Stand inside the brass seal until the gate opens."]
+    },
+    clue: "The first boss is not random. The tower assigns people to stop climbers early."
+  },
+  3: {
+    title: "The Furnace",
+    subtitle: "Heat, valves, and smoke make the room move around you.",
+    stageName: "F3 The Furnace",
+    ambient: "polish_fire_ambience",
+    ambientVolume: 0.095,
+    tint: "#ff8a3d",
+    darkness: 0.14,
+    propSet: "furnace",
+    objectiveNames: {
+      clear: ["Clear the furnace", "Eliminate the guards around the boilers."],
+      survive: ["Survive the heat cycle", "Stay alive until the furnace pressure drops."],
+      crystals: ["Destroy pressure cores", "Break 3 furnace pressure cores."],
+      hold: ["Hold the vent seal", "Stand in the vent seal until the pressure releases."]
+    },
+    clue: "Old machinery still feeds the tower. The fire is being kept alive."
+  },
+  4: {
+    title: "Broken Workshop",
+    subtitle: "Tools, scrap, and repair parts are guarded here.",
+    stageName: "F4 Broken Workshop",
+    ambient: "polish_steam_hiss",
+    ambientVolume: 0.075,
+    tint: "#ffb86b",
+    darkness: 0.13,
+    propSet: "workshop",
+    objectiveNames: {
+      clear: ["Clear the workshop", "Eliminate the guards holding Rowan's tools."],
+      survive: ["Survive the machine room", "Stay alive until the gears unlock."],
+      crystals: ["Break machine hearts", "Destroy 3 machine hearts."],
+      hold: ["Hold the repair sigil", "Stand in the repair sigil until the door opens."]
+    },
+    clue: "This floor explains where the village gets its broken tools and why repairs matter."
+  },
+  5: {
+    title: "Map Room",
+    subtitle: "The tower watches routes before it opens them.",
+    stageName: "F5 Map Room",
+    ambient: "polish_water_drips",
+    ambientVolume: 0.07,
+    tint: "#7cc7ff",
+    darkness: 0.16,
+    propSet: "surveillance",
+    objectiveNames: {
+      clear: ["Clear the map room", "Eliminate the watchers."],
+      survive: ["Survive the scan", "Stay alive until the scan burns out."],
+      crystals: ["Destroy surveillance relays", "Break 3 surveillance relays."],
+      hold: ["Hold the map signal", "Stand in the signal until the route is copied."]
+    },
+    clue: "The tower is watching routes, not just rooms. Mira's path was tracked."
+  },
+  6: {
+    title: "The Blackout",
+    subtitle: "Floor 6 turns off certainty and puts the boss in room three.",
+    stageName: "F6 The Blackout",
+    ambient: "polish_heartbeat",
+    ambientVolume: 0.075,
+    tint: "#8c7dff",
+    darkness: 0.32,
+    propSet: "blackout",
+    objectiveNames: {
+      clear: ["Clear the blackout", "Eliminate every shape moving in the dark."],
+      survive: ["Survive the blackout", "Stay alive until the emergency seal opens."],
+      crystals: ["Break dark anchors", "Destroy 3 dark anchors."],
+      hold: ["Hold the emergency circle", "Stand in the emergency circle while the lights fail."]
+    },
+    clue: "The tower changes tactics here. It no longer waits for the final room."
+  },
+  7: {
+    title: "Witch Gallery",
+    subtitle: "Curses, false movement, and purple light make the room lie.",
+    stageName: "F7 Witch Gallery",
+    ambient: "polish_creepy_whisper",
+    ambientVolume: 0.07,
+    tint: "#c77dff",
+    darkness: 0.22,
+    propSet: "witch",
+    objectiveNames: {
+      clear: ["Clear the gallery", "Eliminate the witches and their guard."],
+      survive: ["Survive the curse", "Stay alive while the curse circle starves."],
+      crystals: ["Break curse totems", "Destroy 3 curse totems."],
+      hold: ["Hold the warding circle", "Stand in the warding circle until the curse weakens."]
+    },
+    clue: "The witches are not guards. They are collaborators."
+  },
+  8: {
+    title: "Boss Prison",
+    subtitle: "The tower stops pretending the fights are separate.",
+    stageName: "F8 Boss Prison",
+    ambient: "polish_demonic_whisper",
+    ambientVolume: 0.075,
+    tint: "#ff5c7a",
+    darkness: 0.20,
+    propSet: "prison",
+    objectiveNames: {
+      clear: ["Break the boss prison", "Eliminate the bosses before the cell seals."],
+      survive: ["Survive the prison alarm", "Stay alive until the prison gate fails."],
+      crystals: ["Break soul locks", "Destroy 3 soul locks."],
+      hold: ["Hold the cell seal", "Stand in the seal and force the cell open."]
+    },
+    clue: "The tower combines bosses because it is afraid you learned them one at a time."
+  }
+};
+
+function floorTheme(floor = currentFloor) {
+  return FLOOR_THEMES[clamp(Number(floor) || 1, 1, 8)] || FLOOR_THEMES[1];
+}
+
+function floorObjectiveCopy(type, floor = currentFloor) {
+  const simple = {
+    clear: ["Kill all enemies", "Kill every enemy to open the door."],
+    survive: ["Survive", "Stay alive until the timer ends."],
+    crystals: ["Destroy the cores", "Destroy every marked core to open the door."],
+    hold: ["Hold the ritual", "Stand inside the marked ritual until it completes."]
+  };
+  const themed = floorTheme(floor)?.objectiveNames?.[type];
+  const copy = themed || simple[type] || simple.clear;
+  return { label: copy[0], detail: copy[1] };
+}
+
 const STAGES = [
   {
     id: "graybox",
@@ -2066,6 +2308,7 @@ let villagePulse = 0;
 let villageEnergyFlash = 0;
 let villageHistoryOpen = false;
 let villageMesses = [];
+let villageSeedDrops = [];
 let villageNextMessAt = 0;
 let villageFishingGame = null;
 let villageMapOpen = false;
@@ -2484,7 +2727,7 @@ function drawAchievementToasts() {
 }
 
 function setVolumeSetting(name, value) {
-  const allowed = new Set(["master", "sfx", "voice", "music", "footsteps"]);
+  const allowed = new Set(["master", "sfx", "voice", "music", "ambient", "footsteps"]);
   if (!allowed.has(name)) return;
   save.settings = {
     ...structuredClone(DEFAULT_SAVE.settings),
@@ -2701,7 +2944,16 @@ function villagePathPoint(path, speed = 0.05, seed = 0) {
 
 function villageTownfolkPoint(npc) {
   const path = VILLAGE_TOWNSFOLK_PATROLS[npc.id] || [{ x: npc.x, y: npc.y }];
-  return villagePathPoint(path, 0.04 + (npc.name.length % 3) * 0.006, npc.x * 0.0007);
+  const moving = villagePathPoint(path, 0.04 + (npc.name.length % 3) * 0.006, npc.x * 0.0007);
+  const last = npc._lastPoint || moving;
+  const nearLast = Math.hypot(villagePlayer.x - last.x, villagePlayer.y - last.y) < 112;
+  const nearMoving = Math.hypot(villagePlayer.x - moving.x, villagePlayer.y - moving.y) < 112;
+  if (nearLast || nearMoving) {
+    npc._lastPoint = last;
+    return last;
+  }
+  npc._lastPoint = moving;
+  return moving;
 }
 
 function shiftVillagePath(path, dx, dy) {
@@ -3186,6 +3438,19 @@ function villageFarmPlotById(id) {
   return villageAllFarmPlots().find(plot => plot.id === id);
 }
 
+function villageCanTendGardenToday() {
+  const hub = ensureHubSave();
+  if ((Number(hub.seeds) || 0) > 0) return true;
+  return villageAllFarmPlots().some(plotDef => {
+    const plot = villageFarmPlot(plotDef.id);
+    return plot.state === "ready" || (plot.state === "planted" && !plot.watered);
+  });
+}
+
+function villageStoredResourceCount(name) {
+  return Number(ensureHubSave()[name]) || 0;
+}
+
 function villageEquippedTool() {
   const hub = ensureHubSave();
   const id = hub.equippedTownTool || "hand";
@@ -3349,7 +3614,7 @@ function villageTaskPool(floor = 1) {
   pool.push({ id: `maren_fish_${hub.towerDay}`, type: "turnin", title: "Fish for Maren", giver: "Maren", text: "Bring 2 fish.", need: 2, resource: "fish", prep: "maren_meal", rewardSupplies: 0, rewardShards: 0, villager: "maren" });
   pool.push({ id: `rowan_ore_${hub.towerDay}`, type: "turnin", title: "Ore for Rowan", giver: "Rowan", text: "Bring 2 ore.", need: 2, resource: "ore", prep: "rowan_oil", rewardSupplies: 0, rewardShards: 0, villager: "rowan" });
   pool.push({ id: `tavi_scout_${hub.towerDay}`, type: "rubble", title: "Clear Tavi's view", giver: "Tavi", text: "Clear 1 rubble pile.", need: 1, prep: "tavi_map", rewardSupplies: 0, rewardShards: 0, villager: "tavi" });
-  pool.push({ id: `garden_crop_${hub.towerDay}`, type: "farm", title: "Fresh crop", giver: "Garden", text: "Harvest 1 crop.", need: 1, prep: "garden_tonic", rewardSupplies: 0, rewardShards: 0 });
+  pool.push({ id: `garden_tend_${hub.towerDay}`, type: "farm", title: "Tend garden", giver: "Garden", text: "Plant, water, or harvest 1 garden plot.", need: 1, prep: "garden_tonic", rewardSupplies: 0, rewardShards: 0 });
   pool.push({ id: `smith_project_${hub.towerDay}`, type: "project", title: "Upgrade station", giver: "Board", text: "Upgrade any town project.", need: 1, prep: "kitchen_stew", rewardSupplies: 0, rewardShards: 0 });
   pool.push({ id: `stranger_crop_${hub.towerDay}`, type: "turnin", title: "Crops for cook", giver: "Cook", text: "Bring 2 crops.", need: 2, resource: "crops", prep: "kitchen_stew", rewardSupplies: 0, rewardShards: 0 });
   pool.push({ id: `shrine_candle_${hub.towerDay}`, type: "turnin", title: "Light shrine", giver: "Shrine", text: "Spend 2 supplies.", need: 2, resource: "supplies", prep: "shrine_candle", rewardSupplies: 0, rewardShards: 0 });
@@ -3369,6 +3634,9 @@ function villageTaskPool(floor = 1) {
     if (task.type === "chop" && !VILLAGE_STUMPS.some(stump => !villageStumpCleared(stump.id) && !villageObjectLocked(stump))) return false;
     if (task.type === "rubble" && !VILLAGE_RUBBLE.some(rubble => !villageRubbleCleared(rubble.id) && !villageObjectLocked(rubble))) return false;
     if (task.type === "project" && !VILLAGE_PROJECTS.some(project => hubProjectRank(project.id) < project.max)) return false;
+    if (task.type === "farm" && !villageCanTendGardenToday()) return false;
+    if (task.type === "turnin" && task.resource && villageStoredResourceCount(task.resource) < (task.need || 1)) return false;
+    if (task.type === "bridge" && (!villageBridgeCanRepair() || !canPayVillageCost(VILLAGE_BRIDGE.cost))) return false;
     return true;
   });
 }
@@ -3422,7 +3690,11 @@ function villageTaskIcon(task) {
 }
 
 function villageTaskText(task = activeBoardTask()) {
-  if (!task) return "No board card selected. Open the daily board and pick a job.";
+  if (!task) {
+    const hub = ensureHubSave();
+    const allDone = Array.isArray(hub.boardTasks) && hub.boardTasks.length && hub.boardTasks.every(item => item && item.done);
+    return allDone ? "All posted jobs are done. Enter the tower to refresh the board." : "No board card selected. Open the daily board and pick a job.";
+  }
   const progress = task.type === "turnin" ? `${Math.min(hubResource(task.resource), task.need || 1)}/${task.need || 1}` : `${Math.min(task.progress || 0, task.need || 1)}/${task.need || 1}`;
   const prep = VILLAGE_PREP_DEFS[task.prep];
   return `${villageTaskIcon(task)} ${task.title} ${progress}${prep ? ` · ${prep.name}` : ""}`;
@@ -3492,18 +3764,20 @@ function selectVillageTask(id) {
 
 function advanceVillageTask(type, amount = 1, context = {}) {
   const hub = ensureHubSave();
-  const task = activeBoardTask();
-  if (!task || task.done || task.type !== type) return false;
-  if (task.dark && !context.dark) return false;
-  task.progress = Math.min(task.need || 1, (Number(task.progress) || 0) + amount);
-  const boardTask = (hub.boardTasks || []).find(item => item.id === task.id);
-  if (boardTask) boardTask.progress = task.progress;
-  hub.activeTask = task;
-  if (task.progress < (task.need || 1)) {
-    saveGame();
-    return false;
+  const tasks = (hub.boardTasks || []).filter(task => task && !task.done && task.type === type);
+  if (!tasks.length) return false;
+  let completedAny = false;
+  let progressedAny = false;
+  for (const task of tasks) {
+    if (task.dark && !context.dark) continue;
+    task.progress = Math.min(task.need || 1, (Number(task.progress) || 0) + amount);
+    progressedAny = true;
+    if (task.progress >= (task.need || 1)) {
+      completedAny = completeVillageTask(task, type) || completedAny;
+    }
   }
-  return completeVillageTask(task, type);
+  if (!completedAny && progressedAny) saveGame();
+  return completedAny;
 }
 
 function hubHelpCost(villager) {
@@ -3702,22 +3976,31 @@ function hubVillagerCard(villager) {
 
 function ensureVillageBoardTasks(force = false) {
   const hub = ensureHubSave();
-  const hasUsableTask = Array.isArray(hub.boardTasks) && hub.boardTasks.some(task => task && task.id && !task.done);
-  if (force || !hasUsableTask) assignVillageBoardAfterFloor(Math.max(1, currentFloor || hub.towerDay || 1));
+  const day = Number(hub.towerDay) || 0;
+  const hasTodayBoard = Array.isArray(hub.boardTasks) && hub.boardTasks.length && Number(hub.boardTaskDay ?? -1) === day;
+  if (force || !hasTodayBoard) assignVillageBoardAfterFloor(Math.max(1, currentFloor || day || 1));
   const nextHub = ensureHubSave();
   if (!Array.isArray(nextHub.boardTasks) || !nextHub.boardTasks.length) {
     nextHub.boardTasks = [
       { id: `emergency_fish_${nextHub.towerDay}`, type: "fish", title: "Catch pond fish", giver: "Maren", text: "Fish once at the pond.", need: 1, prep: "maren_meal", rewardSupplies: 0, rewardShards: 0, done: false, progress: 0 },
-      { id: `emergency_ore_${nextHub.towerDay}`, type: "mine", title: "Mine fresh ore", giver: "Rowan", text: "Mine 1 ore node.", need: 1, prep: "rowan_oil", rewardSupplies: 0, rewardShards: 0, done: false, progress: 0 },
-      { id: `emergency_shrine_${nextHub.towerDay}`, type: "turnin", title: "Light the shrine", giver: "Shrine", text: "Spend 2 supplies at the shrine.", need: 2, resource: "supplies", prep: "shrine_candle", rewardSupplies: 0, rewardShards: 0, done: false, progress: 0 }
+      { id: `emergency_hairball_${nextHub.towerDay}`, type: "hairball", title: "Clean road hairballs", giver: "Village", text: "Clean 1 hairball.", need: 1, prep: "garden_tonic", rewardSupplies: 0, rewardShards: 0, done: false, progress: 0 }
     ];
+    nextHub.boardTaskDay = day;
     nextHub.selectedTaskId = nextHub.boardTasks[0].id;
     nextHub.activeTask = nextHub.boardTasks[0];
+    ensureHairballsForBoardTask(nextHub.boardTasks[1]);
     saveGame();
   }
+  const nextOpen = nextHub.boardTasks.find(task => task && !task.done);
+  if (!nextOpen) {
+    nextHub.selectedTaskId = null;
+    nextHub.activeTask = null;
+    saveGame();
+    return nextHub.boardTasks || [];
+  }
   if (!nextHub.selectedTaskId || !nextHub.boardTasks.some(task => task.id === nextHub.selectedTaskId && !task.done)) {
-    nextHub.selectedTaskId = nextHub.boardTasks.find(task => !task.done)?.id || nextHub.boardTasks[0]?.id || null;
-    nextHub.activeTask = nextHub.boardTasks.find(task => task.id === nextHub.selectedTaskId) || null;
+    nextHub.selectedTaskId = nextOpen.id;
+    nextHub.activeTask = nextOpen;
     saveGame();
   }
   return nextHub.boardTasks || [];
@@ -3726,7 +4009,8 @@ function ensureVillageBoardTasks(force = false) {
 function villageResourceSinkDefs() {
   const hub = ensureHubSave();
   return [
-    { id: "restock", icon: "📋", title: "Restock board", cost: { supplies: 2 }, desc: "New daily jobs.", blocked: false },
+    { id: "restock", icon: "📋", title: "Board refresh", cost: {}, desc: "New jobs post after you return from the tower.", blocked: true, blockedText: "Refreshes after tower" },
+    { id: "seeds", icon: "🌱", title: "Trade for seeds", cost: { supplies: 1 }, desc: "+3 seeds for farming.", blocked: false },
     { id: "tools", icon: "🛠️", title: "Sharpen tools", cost: { supplies: 2, ore: 1 }, desc: "Tool prep.", blocked: Boolean(hub.prep?.tool) },
     { id: "meal", icon: "🍲", title: "Feed camp", cost: { supplies: 2, fish: 1 }, desc: "Meal prep.", blocked: Boolean(hub.prep?.meal) },
     { id: "lamps", icon: "🕯️", title: "Light lamps", cost: { supplies: 2, hope: 1 }, desc: "Shrine prep. Clears hairballs.", blocked: Boolean(hub.prep?.shrine) }
@@ -3756,7 +4040,7 @@ function renderVillageResourceSinkButtons() {
         <span class="routeTag">${villageCostText(sink.cost)}</span>
         <b><span style="font-size:21px; margin-right:8px; vertical-align:-2px;">${sink.icon}</span>${sink.title}</b>
         <p>${sink.desc}</p>
-        <small>${sink.blocked ? "Slot already filled" : canPay ? "Spend resources" : "Need resources"}</small>
+        <small>${sink.blocked ? (sink.blockedText || "Slot already filled") : canPay ? "Spend resources" : "Need resources"}</small>
       </button>
     `;
   }).join("");
@@ -3773,6 +4057,9 @@ function useVillageSink(id) {
   if (id === "restock") {
     assignVillageBoardAfterFloor(Math.max(1, currentFloor || ensureHubSave().towerDay || 1));
     setVillageMessage("Board", "New jobs posted.", 2.4);
+  } else if (id === "seeds") {
+    addHubResource("seeds", 3);
+    setVillageMessage("Seed cart", "Traded 1 supply for 3 seeds.", 2.4);
   } else if (id === "tools") {
     grantVillagePrep("rowan_oil", "Upkeep");
   } else if (id === "meal") {
@@ -3797,7 +4084,7 @@ function renderVillageDailyBoard() {
     const progress = task.type === "turnin" ? `${Math.min(hubResource(task.resource), task.need || 1)}/${task.need || 1} ${task.resource}` : `${Math.min(task.progress || 0, task.need || 1)}/${task.need || 1}`;
     return `
       <button class="dailyTaskCard ${selected ? "selected" : ""} ${task.done ? "completed" : ""}" data-action="selectVillageTask" data-task-id="${task.id}" ${task.done ? "disabled" : ""}>
-        <span class="routeTag">${selected ? "SELECTED" : (task.giver || "BOARD")}</span>
+        <span class="routeTag">${task.done ? "DONE" : (task.giver || "BOARD")}</span>
         <b><span style="font-size:22px; margin-right:8px; vertical-align:-2px;">${villageTaskIcon(task)}</span>${task.title}</b>
         <p>${task.text}</p>
         <small>${progress} · ${prep ? prep.slot.toUpperCase() : "REWARD"}: ${prep ? prep.name : "+reward"}</small>
@@ -3809,8 +4096,8 @@ function renderVillageDailyBoard() {
     <div class="vsScreen framedScreen routeChoiceScreen dailyBoardScreen">
       ${renderTopStrip("Daily Board", "backVillage")}
       <div class="vsPanel levelPanel routePanel">
-        <h2>Pick one town job</h2>
-        <p class="panelLead">You have ${villageEnergy()}/${villageMaxEnergy()} town energy. Finish jobs to load meal, tool, scout, or shrine prep for the next climb.</p>
+        <h2>Town jobs</h2>
+        <p class="panelLead">You have ${villageEnergy()}/${villageMaxEnergy()} town energy. A few jobs post each tower day. If you finish them all, the board waits until you return from the tower.</p>
         <div class="dailyBoardMeta">
           <div><b>${event?.name || "Quiet day"}</b><span>${event?.text || "Nothing unusual is happening in town today."}</span></div>
           <div><b>${omen?.name || "No omen"}</b><span>${omen?.text || "No clear tower omen right now."}</span></div>
@@ -3822,7 +4109,7 @@ function renderVillageDailyBoard() {
           <div class="powerIcon big">!</div>
           <div>
             <b>Daily board</b>
-            <p>${villageTaskText(activeBoardTask()) || "Pick a board card, finish it, then check the gate."}</p>
+            <p>${villageTaskText(activeBoardTask()) || "All posted jobs are done. Enter the tower to refresh the board."}</p>
           </div>
         </div>
       </div>
@@ -3838,14 +4125,14 @@ function renderTowerCheckpointPanel() {
   const cost = target ? towerStabilizeCost(target) : null;
   const hub = ensureHubSave();
   const button = target
-    ? `<button class="vsButton blue" data-action="stabilizeTowerCheckpoint">Stabilize Floor ${target}<br><small>${cost.supplies} supplies · ${cost.hope} hope</small></button>`
+    ? `<button class="vsButton blue" data-action="stabilizeTowerCheckpoint">Stabilize Floor ${target}<br><small>${cost.hope} hope</small></button>`
     : `<button class="vsButton" data-action="noop">Checkpoint stable</button>`;
   return `
     <div class="vsDetailBar">
       <div class="powerIcon big">F</div>
       <div>
         <b>Floor checkpoint</b>
-        <p>Start floor ${stable}. Unlocked floor ${unlocked}. ${target ? `Spend supplies and hope to lock floor ${target}. You have ${hub.supplies || 0} supplies and ${hub.hope || 0} hope.` : "Clear more floors to unlock a higher checkpoint."}</p>
+        <p>Start floor ${stable}. Unlocked floor ${unlocked}. ${target ? `Spend ${cost.hope} hope to lock floor ${target}. You have ${hub.hope || 0} hope.` : "Clear more floors to unlock a higher checkpoint."}</p>
       </div>
       ${button}
     </div>
@@ -4065,10 +4352,13 @@ function maybeSpawnVillageMess(force = false) {
   if (villageMesses.length === 1) setVillageMessage("Village", "Hairball on the road. Clean it with E for hope.", 3.2);
 }
 
-function ensureHairballsForBoardTask(task = activeBoardTask()) {
-  if (!task || task.done || task.type !== "hairball") return;
-  const remaining = Math.max(1, (task.need || 1) - (Number(task.progress) || 0));
-  const wantedVisible = Math.min(remaining, 3);
+function ensureHairballsForBoardTask(task = null) {
+  const hub = ensureHubSave();
+  const hairballTasks = (hub.boardTasks || []).filter(item => item && !item.done && item.type === "hairball");
+  if (task && task.type === "hairball" && !task.done && !hairballTasks.some(item => item.id === task.id)) hairballTasks.push(task);
+  if (!hairballTasks.length) return;
+  const remaining = hairballTasks.reduce((sum, item) => sum + Math.max(0, (item.need || 1) - (Number(item.progress) || 0)), 0);
+  const wantedVisible = Math.min(Math.max(1, remaining), 4);
   let safety = VILLAGE_MESS_SPOTS.length;
   while (villageMesses.length < wantedVisible && safety-- > 0) {
     const before = villageMesses.length;
@@ -4104,13 +4394,15 @@ function cleanVillageMess(id) {
 
 function renderVillageShrine() {
   const hub = ensureHubSave();
+  const activeShrinePrep = hub.prep?.shrine ? VILLAGE_PREP_DEFS[hub.prep.shrine]?.name || "shrine vow" : "";
+  const shrineBlockedText = activeShrinePrep ? `Slot filled: ${activeShrinePrep}` : "Shrine slot filled";
   const offers = [
-    { id: "retry", title: "Mira's Ward", cost: 3, desc: "Bank +1 boss retry. Max 2.", blocked: hub.retries >= 2 },
-    { id: "energy", title: "Catch Breath", cost: 2, desc: "Restore 2 town energy now.", blocked: villageEnergy() >= villageMaxEnergy() },
-    { id: "ward", title: "Light Shrine", cost: 2, desc: "+1 retry next run.", blocked: Boolean(hub.prep?.shrine) },
-    { id: "endure", title: "Vow: Endure", cost: 3, desc: "+20 HP next run.", blocked: Boolean(hub.prep?.shrine) },
-    { id: "smoke", title: "Vow: Smoke", cost: 4, desc: "+1 smoke next run.", blocked: Boolean(hub.prep?.shrine) },
-    { id: "lantern", title: "Grave Lantern", cost: 4, desc: "+120 pulse next run.", blocked: Boolean(hub.prep?.shrine) }
+    { id: "retry", title: "Mira's Ward", cost: 3, desc: "Bank +1 boss retry. Max 2.", blocked: hub.retries >= 2, blockedText: "Retry cap 2/2" },
+    { id: "energy", title: "Catch Breath", cost: 2, desc: "Restore 2 town energy now.", blocked: villageEnergy() >= villageMaxEnergy(), blockedText: "Energy full" },
+    { id: "ward", title: "Light Shrine", cost: 2, desc: "+1 retry next run.", blocked: Boolean(hub.prep?.shrine), blockedText: shrineBlockedText },
+    { id: "endure", title: "Vow: Endure", cost: 3, desc: "+20 HP next run.", blocked: Boolean(hub.prep?.shrine), blockedText: shrineBlockedText },
+    { id: "smoke", title: "Vow: Smoke", cost: 4, desc: "+1 smoke next run.", blocked: Boolean(hub.prep?.shrine), blockedText: shrineBlockedText },
+    { id: "lantern", title: "Grave Lantern", cost: 4, desc: "+120 pulse next run.", blocked: Boolean(hub.prep?.shrine), blockedText: shrineBlockedText }
   ];
   openOverlay(`
     <div class="vsScreen framedScreen routeChoiceScreen shrineScreen">
@@ -4128,7 +4420,7 @@ function renderVillageShrine() {
               <span class="routeTag">COST ${offer.cost}</span>
               <b>${offer.title}</b>
               <p>${offer.desc}</p>
-              <small>${offer.blocked ? "Unavailable right now" : "Spend hope"}</small>
+              <small>${offer.blocked ? (offer.blockedText || "Unavailable") : "Spend hope"}</small>
             </button>
           `).join("")}
         </div>
@@ -4931,6 +5223,60 @@ function drawVillageFishingGame() {
   ctx.restore();
 }
 
+function spawnVillageSeedDrop(x, y, amount = 1) {
+  villageSeedDrops.push({
+    id: `seed_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
+    x: x + rand(-18, 18),
+    y: y + rand(-18, 18),
+    amount,
+    wobble: rand(0, Math.PI * 2),
+    age: 0
+  });
+}
+
+function collectVillageSeedDrops() {
+  if (!villageSeedDrops.length) return;
+  const hub = ensureHubSave();
+  let collected = 0;
+  villageSeedDrops = villageSeedDrops.filter(drop => {
+    drop.age += 1 / 60;
+    if (Math.hypot(villagePlayer.x - drop.x, villagePlayer.y - drop.y) > 30) return true;
+    collected += Math.max(1, Number(drop.amount) || 1);
+    addParticles("reward", drop.x, drop.y - 8, -Math.PI / 2, 12);
+    floatText.push({ x: drop.x - 25, y: drop.y - 38, text: "+seed", t: 1.0 });
+    return false;
+  });
+  if (!collected) return;
+  hub.seeds = (Number(hub.seeds) || 0) + collected;
+  hub.lastGain = `Picked up ${collected} seed${collected === 1 ? "" : "s"}.`;
+  saveGame();
+  villagePulse = 1;
+  playAssetSfx("reward", 0.34);
+  playAssetSfx("town_leaves", 0.22);
+}
+
+function drawVillageSeedDrops() {
+  for (const drop of villageSeedDrops) {
+    const bob = Math.sin(nowSec() * 5 + drop.wobble) * 2;
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.24)";
+    ctx.beginPath();
+    ctx.ellipse(drop.x + 1, drop.y + 12, 16, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(125,255,178,0.54)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(drop.x, drop.y + bob, 20 + Math.sin(nowSec() * 4 + drop.wobble) * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    drawTownAsset("tiny_flower", drop.x, drop.y + bob, 22, 0, 0.95) || drawTownAsset("town_flower", drop.x, drop.y + bob, 18, 0, 0.95);
+    ctx.fillStyle = "#7dffb2";
+    ctx.font = "900 8px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("SEED", drop.x, drop.y - 22 + bob);
+    ctx.restore();
+  }
+}
+
 function villageFarmActionText(id) {
   const plot = villageFarmPlot(id);
   const day = ensureHubSave().towerDay;
@@ -4953,15 +5299,17 @@ function workVillageFarmPlot(id) {
     addHubResource("crops", 1);
     hub.farmHarvests = (Number(hub.farmHarvests) || 0) + 1;
     const supplyBonus = Math.random() < 0.25 ? 1 : 0;
+    const seedDrop = Math.random() < 0.45;
     if (supplyBonus) hub.supplies += 1;
-    hub.lastGain = `+1 crop${supplyBonus ? ", +1 supply" : ""}.`;
+    if (seedDrop) spawnVillageSeedDrop(plotDef.x, plotDef.y, 1);
+    hub.lastGain = `+1 crop${supplyBonus ? ", +1 supply" : ""}${seedDrop ? ", seed dropped" : ""}.`;
     saveGame();
     villagePulse = 1;
     playAssetSfx("town_leaves", 0.28);
     playAssetSfx("bonus_chime", 0.28);
     addParticles("reward", plotDef.x, plotDef.y, -Math.PI / 2, 24);
-    floatText.push({ x: plotDef.x - 36, y: plotDef.y - 40, text: supplyBonus ? "+crop +supply" : "+crop", t: 1.1 });
-    setVillageMessage("Harvest", supplyBonus ? "Crop stored. Found one usable supply." : "Crop stored.", 2.8);
+    floatText.push({ x: plotDef.x - 36, y: plotDef.y - 40, text: `${supplyBonus ? "+crop +supply" : "+crop"}${seedDrop ? " +seed" : ""}`, t: 1.1 });
+    setVillageMessage("Harvest", seedDrop ? "Crop stored. A seed dropped nearby." : supplyBonus ? "Crop stored. Found one usable supply." : "Crop stored.", 2.8);
     advanceVillageTask("farm");
     return;
   }
@@ -5551,6 +5899,7 @@ function updateVillage(dt) {
   villageEnergyFlash = Math.max(0, villageEnergyFlash - dt * 2.8);
   maybeSpawnVillageMess();
   collectVillageStumpDrops();
+  collectVillageSeedDrops();
   villageInteractTarget = findVillageInteractTarget();
   const camTarget = villageBridgeCutscene ? VILLAGE_BRIDGE : p;
   camera.x = clamp(camTarget.x - W / 2, 0, Math.max(0, VILLAGE_WORLD.w - W));
@@ -5578,6 +5927,7 @@ function drawVillage() {
   drawVillageRubble();
   drawVillageStumps();
   drawVillageStumpDrops();
+  drawVillageSeedDrops();
   drawVillageActivitySites();
   drawVillageStations();
   drawVillageTaskMarkers();
@@ -6158,6 +6508,15 @@ function drawVillageTowerGate() {
   drawDoor(72);
 
   for (const x of [-118, -86, 86, 118]) drawTownAsset("town_lamp", x, 36, 34, 0, 0.90);
+  for (const x of [-72, 72]) {
+    const doorGlow = ctx.createRadialGradient(x, 34, 4, x, 34, 68);
+    doorGlow.addColorStop(0, `rgba(${glow},${0.22 + pulse * 0.10})`);
+    doorGlow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = doorGlow;
+    ctx.beginPath();
+    ctx.ellipse(x, 34, 52, 70, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
   if (omen?.id === "red_lights") {
     ctx.fillStyle = "rgba(255,92,122,0.34)";
     ctx.fillRect(-154, -34, 308, 74);
@@ -6504,40 +6863,27 @@ function drawVillageProjectLabel(project, rank) {
 
 function drawVillageGarden(project, rank) {
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.24)";
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
   ctx.beginPath();
-  ctx.ellipse(project.x, project.y + 28, 150, 48, 0, 0, Math.PI * 2);
+  ctx.ellipse(project.x, project.y + 35, 104, 34, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  for (let i = -4; i <= 4; i++) {
-    drawTownAsset("town_fence_h", project.x + i * 31, project.y - 58, 34, 0, 0.9);
-    drawTownAsset("town_fence_h", project.x + i * 31, project.y + 62, 34, 0, 0.88);
-  }
-  for (let i = -1; i <= 1; i++) {
-    drawTownAsset("town_fence_v", project.x - 142, project.y - 30 + i * 34, 34, 0, 0.86);
-    drawTownAsset("town_fence_v", project.x + 142, project.y - 30 + i * 34, 34, 0, 0.86);
-  }
-
-  for (let row = 0; row < 4; row++) {
-    const x = project.x - 78 + row * 52;
-    const restored = row < rank;
-    for (let j = -1; j <= 1; j++) drawTownAsset("town_dirt_b", x, project.y + j * 24, 34, 0, restored ? 0.96 : 0.55);
-    if (restored) {
-      for (let y = project.y - 28; y <= project.y + 34; y += 20) {
-        drawGrassTuft(x - 8, y, 0.8, 0);
-        drawTownAsset("town_flower", x + 8, y - 3, 14, 0, 0.86);
+  const rows = Math.max(1, Math.min(5, 1 + Math.floor(rank / 2)));
+  for (let row = 0; row < rows; row++) {
+    const x = project.x - 70 + row * 35;
+    for (let j = -1; j <= 1; j++) drawTownAsset("town_dirt_b", x, project.y + j * 23, 30, 0, 0.86);
+    if (rank > row) {
+      for (let y = project.y - 24; y <= project.y + 30; y += 22) {
+        drawGrassTuft(x - 6, y, 0.72, 0);
+        drawTownAsset("town_flower", x + 7, y - 2, 12, 0, 0.78);
       }
-    } else {
-      drawTownAsset("town_stump", x, project.y + 4, 24, 0, 0.7);
-      drawTownAsset("town_stone_dark", x + 14, project.y + 18, 18, 0, 0.42);
     }
   }
 
-  drawTownAsset("town_barrel_c", project.x + 118, project.y + 34, 28, 0, 0.95);
-  drawTownAsset("town_crate_small", project.x - 118, project.y + 34, 26, 0, 0.85);
-  drawTownAsset("tiny_tool_shovel", project.x - 122, project.y - 28, 24, -0.4, 0.92);
-  drawTownAsset("tiny_flower", project.x + 122, project.y - 25, 24, 0, 0.92);
-  if (rank > 0) drawTownAsset("tiny_grass_detail", project.x, project.y - 58, 30, 0, 0.82);
+  drawTownAsset("town_crate_small", project.x - 102, project.y + 30, 22, 0, 0.78);
+  drawTownAsset("tiny_tool_shovel", project.x + 104, project.y + 28, 22, -0.45, 0.82);
+  ctx.fillStyle = "rgba(255,211,90,0.36)";
+  ctx.fillRect(project.x - 86, project.y + 57, 172, 4);
   drawVillageProjectLabel(project, rank);
   ctx.restore();
 }
@@ -6881,7 +7227,10 @@ function villageTaskMarkerTargets(task = activeBoardTask()) {
 
 function drawVillageTaskMarkers() {
   if (villageBuildMode || villageMapOpen || villageBridgeCutscene) return;
-  const targets = villageTaskMarkerTargets();
+  const hub = ensureHubSave();
+  const targets = (hub.boardTasks || [])
+    .filter(task => task && !task.done)
+    .flatMap(task => villageTaskMarkerTargets(task).slice(0, task.type === "farm" ? 8 : 3));
   if (!targets.length) return;
   ctx.save();
   ctx.textAlign = "center";
@@ -7012,6 +7361,23 @@ function drawVillageInventoryHotbar() {
   ctx.restore();
 }
 
+
+function villageNextGoalText() {
+  const hub = ensureHubSave();
+  const checkpointTarget = towerStabilizeTarget();
+  if (checkpointTarget) {
+    const cost = towerStabilizeCost(checkpointTarget);
+    return `Next: stabilize Floor ${checkpointTarget} stairs (${cost.hope} Hope).`;
+  }
+  const bridge = VILLAGE_PROJECTS?.find(project => project.id === "bridge") || null;
+  if (bridge && hubProjectRank("bridge") < bridge.max) return "Next: repair the bridge to reach the darker district.";
+  if ((hub.homeRank || 0) < 3) return `Next: upgrade your house to Rank ${(hub.homeRank || 0) + 1} for safer town recovery.`;
+  const task = activeBoardTask();
+  if (task && !task.done) return `Next: finish board job ${villageTaskText(task)}`;
+  if (villageEnergy() > 0) return "Next: spend town energy on wood, fish, ore, crops, or trade before the next tower run.";
+  return "Next: enter the tower to refill the town day and bring Hope home.";
+}
+
 function drawVillageScreenUi() {
   const hub = ensureHubSave();
   const restored = villageRestoredCount();
@@ -7115,6 +7481,22 @@ function drawVillageScreenUi() {
   ctx.font = "900 9px ui-monospace, monospace";
   const taskText = task ? villageTaskText(task) : "Board has jobs";
   ctx.fillText((linesFor(taskText, todayW - 20)[0] || "").slice(0, 36), todayX + 10, todayY + 27);
+
+  const nextGoal = villageNextGoalText();
+  ctx.globalAlpha = 0.42;
+  ctx.fillStyle = "rgba(3,5,12,0.18)";
+  ctx.fillRect(todayX, todayY + 42, todayW, 42);
+  ctx.strokeStyle = "rgba(255,211,90,0.16)";
+  ctx.strokeRect(todayX, todayY + 42, todayW, 42);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "rgba(255,211,90,0.76)";
+  ctx.font = "900 8px ui-monospace, monospace";
+  ctx.fillText("NEXT", todayX + 10, todayY + 56);
+  ctx.fillStyle = "rgba(245,241,255,0.78)";
+  ctx.font = "900 9px ui-monospace, monospace";
+  const nextLines = linesFor(nextGoal, todayW - 20).slice(0, 2);
+  ctx.fillText((nextLines[0] || "").slice(0, 40), todayX + 10, todayY + 70);
+  if (nextLines[1]) ctx.fillText(nextLines[1].slice(0, 40), todayX + 10, todayY + 81);
 
   const returnCard = hub.lastReturnCard;
   const returnAge = returnCard?.ts ? Math.max(0, (Date.now() - returnCard.ts) / 1000) : 99;
@@ -7601,9 +7983,19 @@ function renderStorySelect() {
     const done = completedStoryChapterSet().has(chapter.id);
     const locked = !storyChapterAvailable(chapter);
     const art = ASSET_PATHS.images[chapter.art];
+    if (done) {
+      return `
+        <button class="storyChapterCard contractCard completed compactChapterCard" data-action="startStoryChapter" data-id="${chapter.id}" style="--accent:${chapter.accent}; --storyBg:url('${art}')">
+          <span class="contractStatus">CLEARED</span>
+          <small>CHAPTER ${chapter.contractNo}</small>
+          <b>${chapter.name}</b>
+          <p>Cleared. Select to replay this chapter.</p>
+        </button>
+      `;
+    }
     return `
-      <button class="storyChapterCard contractCard ${locked ? "locked" : ""} ${done ? "completed" : ""}" data-action="${locked ? "noop" : "startStoryChapter"}" data-id="${chapter.id}" style="--accent:${chapter.accent}; --storyBg:url('${art}')">
-        <span class="contractStatus">${done ? "CLEARED" : locked ? `REACH FLOOR ${chapter.unlockAt}` : "AVAILABLE"}</span>
+      <button class="storyChapterCard contractCard ${locked ? "locked" : ""}" data-action="${locked ? "noop" : "startStoryChapter"}" data-id="${chapter.id}" style="--accent:${chapter.accent}; --storyBg:url('${art}')">
+        <span class="contractStatus">${locked ? `REACH FLOOR ${chapter.unlockAt}` : "AVAILABLE"}</span>
         <small>CHAPTER ${chapter.contractNo} · ${chapter.subtitle}</small>
         <b>${chapter.name}</b>
         <p>${chapter.summary}</p>
@@ -7624,7 +8016,7 @@ function renderStorySelect() {
       ${renderTopStrip("Tower Chapters", "openHub")}
       <div class="vsPanel storyPanel campaignPanel">
         <h2>Tower Chapters</h2>
-        <p class="campaignLead">Only the current chapter is shown. Clear it to open the next lead.</p>
+        <p class="campaignLead">Cleared chapters shrink into replay cards. The newest available lead stays full size.</p>
         <div class="storyChapterGrid campaignChapterGrid">${cards}</div>
         <h3>Story Notes</h3>
         <div class="archiveGrid">${archives}</div>
@@ -7908,6 +8300,7 @@ function renderOptions(backAction = "backMenu", livePauseMode = "options") {
           ${slider("footsteps", "Footsteps")}
           ${slider("voice", "Voice")}
           ${slider("music", "Music")}
+          ${slider("ambient", "Ambience")}
         </div>
         <div class="toggleRow">
           <span>Mute when unfocused</span>
@@ -8805,26 +9198,28 @@ function isBossAmbushRoom(floor = currentFloor, room = currentRoom) {
 }
 
 function roomObjectiveFor(floor = currentFloor, room = currentRoom) {
-  if (isBossFloor(floor, room) || isFinalTowerRoom(floor, room)) return { type: "clear", label: "Clear the room", detail: "Eliminate every enemy." };
+  const withCopy = (type, data = {}) => ({ type, ...floorObjectiveCopy(type, floor), ...data });
+  if (isBossFloor(floor, room) || isFinalTowerRoom(floor, room)) return withCopy("clear");
   const pick = (floor + room) % 5;
   if (floor >= 4 && pick === 0) {
-    return { type: "survive", label: "Survive", detail: "Stay alive until the door opens.", duration: clamp(24 + floor * 3, 28, 45), elapsed: 0 };
+    return withCopy("survive", { duration: clamp(18 + floor * 1.5, 22, 32), elapsed: 0, nextSpawnAt: 4.0, spawnCount: 0 });
   }
   if (floor >= 3 && pick === 1) {
-    return { type: "crystals", label: "Break the wards", detail: "Destroy 3 ward crystals.", needed: 3 };
+    return withCopy("crystals", { needed: 3, nextSpawnAt: 3.0, spawnCount: 0 });
   }
   if (floor >= 2 && pick === 2) {
-    return { type: "hold", label: "Hold the circle", detail: "Stand in the marked circle.", needed: clamp(9 + floor * 1.4, 11, 22), held: 0, x: 0, y: 0, r: 74 };
+    return withCopy("hold", { needed: clamp(7 + floor * 0.8, 9, 14), held: 0, x: 0, y: 0, r: 82, nextSpawnAt: 4.2, spawnCount: 0 });
   }
-  return { type: "clear", label: "Clear the room", detail: "Eliminate every enemy." };
+  return withCopy("clear");
 }
 
 function objectiveText(objective = activeRoomObjective) {
-  if (!objective) return "Clear the room";
+  if (!objective) return "Kill all enemies";
   if (objective.type === "survive") return `Survive ${Math.max(0, Math.ceil((objective.duration || 0) - (objective.elapsed || 0)))}s`;
-  if (objective.type === "hold") return `Hold circle ${Math.floor(objective.held || 0)}/${Math.ceil(objective.needed || 1)}s`;
-  if (objective.type === "crystals") return `Break wards ${objectiveCrystalsBroken()}/${objective.needed || 3}`;
-  return bots.filter(bot => bot.alive).length > 0 ? `Clear enemies ${bots.filter(bot => bot.alive).length}` : "Room clear";
+  if (objective.type === "hold") return `Hold the ritual ${Math.floor(objective.held || 0)}/${Math.ceil(objective.needed || 1)}s`;
+  if (objective.type === "crystals") return `Destroy the cores ${objectiveCrystalsBroken()}/${objective.needed || 3}`;
+  const alive = bots.filter(bot => bot.alive).length;
+  return alive > 0 ? `Kill all enemies ${alive}` : "Room clear";
 }
 
 function objectiveCrystalsBroken() {
@@ -8833,30 +9228,80 @@ function objectiveCrystalsBroken() {
   return crystals.filter(item => !item.alive).length;
 }
 
+function middleFreeObjectivePoint() {
+  const tries = [
+    { x: worldW * 0.50, y: worldH * 0.50 },
+    { x: worldW * 0.45, y: worldH * 0.50 },
+    { x: worldW * 0.55, y: worldH * 0.50 },
+    { x: worldW * 0.50, y: worldH * 0.43 },
+    { x: worldW * 0.50, y: worldH * 0.57 }
+  ];
+  for (const pt of tries) {
+    const p = nearestFreePoint(pt.x, pt.y, 42);
+    if (p && p.x > 120 && p.y > 120 && p.x < worldW - 120 && p.y < worldH - 120) return p;
+  }
+  return randomFreePoint(190);
+}
+
 function placeRoomObjective() {
   const objective = activeRoomObjective;
   if (!objective) return;
   if (objective.type === "hold") {
-    const p = randomFreePoint(190);
+    const p = middleFreeObjectivePoint();
     objective.x = p.x;
     objective.y = p.y;
-    objective.r = 78;
+    objective.r = 82;
     return;
   }
   if (objective.type === "crystals") {
-    for (let i = 0; i < (objective.needed || 3); i++) {
-      const p = randomFreePoint(170);
+    const needed = objective.needed || 3;
+    const center = middleFreeObjectivePoint();
+    for (let i = 0; i < needed; i++) {
+      const angle = -Math.PI / 2 + i * Math.PI * 2 / needed;
+      const base = nearestFreePoint(center.x + Math.cos(angle) * 118, center.y + Math.sin(angle) * 82, 42);
+      const path = objectiveCorePatrolPath(base, i, needed);
       breakables.push({
-        x: p.x,
-        y: p.y,
+        x: base.x,
+        y: base.y,
         r: 17,
         hp: 46 + currentFloor * 5,
         maxHp: 46 + currentFloor * 5,
         type: "objective_crystal",
         alive: true,
-        wobble: rand(0, Math.PI * 2)
+        wobble: rand(0, Math.PI * 2),
+        patrolPath: path,
+        patrolIndex: Math.min(1, path.length - 1),
+        patrolSpeed: 26 + currentFloor * 2 + i * 3
       });
     }
+  }
+}
+
+function objectiveCorePatrolPath(base, index = 0, total = 3) {
+  const radiusX = 38 + index * 8;
+  const radiusY = 26 + index * 6;
+  const points = [];
+  for (let j = 0; j < 4; j++) {
+    const a = -Math.PI / 2 + (j + index / Math.max(1, total)) * Math.PI * 2 / 4;
+    points.push(nearestFreePoint(base.x + Math.cos(a) * radiusX, base.y + Math.sin(a) * radiusY, 32));
+  }
+  return points.length ? points : [base];
+}
+
+function updateObjectiveCorePatrols(dt) {
+  for (const item of breakables) {
+    if (item.type !== "objective_crystal" || !item.alive || !Array.isArray(item.patrolPath) || item.patrolPath.length < 2) continue;
+    const target = item.patrolPath[item.patrolIndex % item.patrolPath.length];
+    const dx = target.x - item.x;
+    const dy = target.y - item.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 8) {
+      item.patrolIndex = (item.patrolIndex + 1) % item.patrolPath.length;
+      continue;
+    }
+    const speed = item.patrolSpeed || 30;
+    moveEntity(item, dx / d * speed * dt, dy / d * speed * dt);
+    item.wobble += dt * 1.2;
   }
 }
 
@@ -8870,9 +9315,54 @@ function maybeCompleteRoomFromEnemyClear(bot, angle, weapon, hitPoint) {
   if (objectiveCanClearAfterAllBotsDead()) startFinalKillReplay(bot, angle, weapon, hitPoint);
 }
 
+function roomObjectivePressurePoint() {
+  const o = activeRoomObjective;
+  if (!o) return null;
+  if (o.type === "hold" && o.x && o.y) return { x: o.x, y: o.y };
+  if (o.type === "crystals") {
+    const alive = breakables.filter(item => item.type === "objective_crystal" && item.alive);
+    if (alive.length) return alive.sort((a, b) => dist(player, a) - dist(player, b))[0];
+  }
+  if (o.type === "survive") return player;
+  return null;
+}
+
+function spawnObjectiveReinforcement(reason = "objective") {
+  if (!activeRoomObjective || isBossFloor(currentFloor, currentRoom)) return false;
+  const alive = bots.filter(bot => bot.alive).length;
+  const cap = activeRoomObjective.type === "hold" ? 4 : activeRoomObjective.type === "survive" ? 3 : 4;
+  if (alive >= cap) return false;
+  const spawn = activeStage.botSpawns[Math.floor(Math.random() * Math.max(1, activeStage.botSpawns.length))] || randomFreePoint(160);
+  const p = nearestFreePoint(spawn.x + rand(-80, 80), spawn.y + rand(-80, 80), 32);
+  const profile = currentFloor >= 7 && Math.random() < 0.35 ? WITCH_PROFILE : BOT_PROFILES[(currentFloor + currentRoom + alive) % BOT_PROFILES.length];
+  const role = profile.witch ? "witch" : (activeRoomObjective.type === "hold" ? "duelist" : activeRoomObjective.type === "crystals" ? "hunter" : "baiter");
+  const bot = makeBot(profile.name, p.x, p.y, role, profile.color, currentFloor, profile);
+  const pressure = roomObjectivePressurePoint();
+  if (pressure) {
+    bot.state = "search";
+    bot.suspicion = Math.max(bot.suspicion, 62);
+    bot.pressureHint = { x: pressure.x, y: pressure.y, t: nowSec() };
+    bot.target = pressure;
+  }
+  bots.push(bot);
+  addParticles("spark", bot.x, bot.y, -Math.PI / 2, 6);
+  return true;
+}
+
+function updateObjectiveReinforcements(objective, dt) {
+  if (!objective || !["hold", "survive", "crystals"].includes(objective.type)) return;
+  objective.nextSpawnAt = Math.max(0, (objective.nextSpawnAt ?? 2.0) - dt);
+  const maxSpawns = objective.type === "hold" ? 4 : objective.type === "survive" ? 4 : 4;
+  if (objective.nextSpawnAt > 0 || (objective.spawnCount || 0) >= maxSpawns) return;
+  if (spawnObjectiveReinforcement(objective.type)) objective.spawnCount = (objective.spawnCount || 0) + 1;
+  objective.nextSpawnAt = objective.type === "hold" ? rand(5.0, 7.0) : objective.type === "survive" ? rand(5.2, 7.2) : rand(5.0, 7.5);
+}
+
 function updateRoomObjective(dt) {
   if (mode !== "running" || gameOver || !activeRoomObjective || roomObjectiveClearQueued) return;
   const objective = activeRoomObjective;
+  updateObjectiveReinforcements(objective, dt);
+  if (objective.type === "crystals") updateObjectiveCorePatrols(dt);
   if (objective.type === "survive") {
     objective.elapsed = (objective.elapsed || 0) + dt;
     if (objective.elapsed >= objective.duration) objective.done = true;
@@ -8887,6 +9377,7 @@ function updateRoomObjective(dt) {
   if (!objective.done) return;
   roomObjectiveClearQueued = true;
   addLog(`${objective.label} complete.`);
+  playAssetSfx("polish_quest_complete", 0.11);
   floatText.push({ x: player.x - 32, y: player.y - 38, text: "door open", t: 1.2 });
   clearFloor();
 }
@@ -8928,7 +9419,8 @@ function towerStabilizeTarget(key = towerCheckpointKey()) {
 
 function towerStabilizeCost(floor) {
   const target = clamp(Number(floor) || 1, 1, 8);
-  return { supplies: 6 + target * 5, hope: Math.max(1, Math.ceil(target / 2)) };
+  // Cheaper on supplies so locking in progress feels like a reward, not a tax.
+  return { supplies: 0, hope: Math.max(1, Math.ceil(target / 2)) };
 }
 
 function stabilizeTowerCheckpoint() {
@@ -8940,18 +9432,18 @@ function stabilizeTowerCheckpoint() {
   }
   const cost = towerStabilizeCost(target);
   const hub = ensureHubSave();
-  if ((hub.supplies || 0) < cost.supplies || (hub.hope || 0) < cost.hope) {
-    setVillageMessage("Checkpoint", `Need ${cost.supplies} supplies and ${cost.hope} hope to stabilize floor ${target}.`, 3.0);
+  if ((hub.hope || 0) < cost.hope) {
+    setVillageMessage("Checkpoint", `Need ${cost.hope} hope to stabilize floor ${target}.`, 3.0);
     renderVillagePrepTray();
     return;
   }
-  hub.supplies -= cost.supplies;
   hub.hope -= cost.hope;
   save.towerStableFloors = save.towerStableFloors || {};
   save.towerStableFloors[key] = Math.max(Number(save.towerStableFloors[key]) || 1, target);
   if (key === "tower") save.towerStableFloor = save.towerStableFloors[key];
   saveGame();
-  playAssetSfx("cache_upgrade", 0.28);
+  playAssetSfx("cache_upgrade", 0.22);
+  playAssetSfx("polish_powerup", 0.12);
   setVillageMessage("Checkpoint", `Floor ${target} stabilized. Future climbs can start there.`, 3.0);
   renderVillagePrepTray();
 }
@@ -9011,7 +9503,8 @@ function startTower(options = {}) {
   if (hubProjectRank("kitchen")) addLog(`Kitchen meal: +${hubProjectSmokeBonus()} smoke per floor.`);
   if (hubProjectRank("watchpost")) addLog(`Watch Post: +${hubProjectPulseRangeBonus()} Pulse range.`);
   const startAt = options.floor ? clamp(Number(options.floor) || 1, 1, 8) : towerCheckpointFloor();
-  startFloor(startAt, 1);
+  const startRoom = options.room ? clamp(Number(options.room) || 1, 1, towerRoomsForFloor(startAt)) : 1;
+  startFloor(startAt, startRoom);
 }
 
 function defaultRouteForFloor(floor) {
@@ -9166,6 +9659,8 @@ function startFloor(floor, room = 1) {
   }
 
   activeStage = expandStageForFloor(stageForFloor(currentFloor, activeRouteType), currentFloor, activeRouteType);
+  activeStage.floorTheme = floorTheme(currentFloor);
+  activeStage.name = activeStage.floorTheme.stageName || activeStage.name;
   worldW = activeStage.worldW || W;
   worldH = activeStage.worldH || H;
   NAV_COLS = Math.ceil(worldW / NAV_CELL);
@@ -9220,10 +9715,12 @@ function startFloor(floor, room = 1) {
   spawnSmokeCanisters(currentFloor);
   placeRoomObjective();
 
+  saveTowerProgress("room start");
   floorStartTime = nowSec();
   running = false;
   gameOver = false;
   startMusic(isBossFloor(currentFloor, currentRoom) ? "music_boss" : "music_run");
+  updateFloorAmbience();
 
   roundOpponentLabel = bots.length === 1
     ? botIntroName(bots[0])
@@ -9238,7 +9735,8 @@ function startFloor(floor, room = 1) {
   lastCountdownCue = "";
 
   addLog(`${towerRoomLabel()}: ${activeStage.name}.`);
-  addLog(`Goal: ${objectiveText(activeRoomObjective)}.`);
+  if (activeStage.floorTheme?.clue && currentRoom === 1) addLog(activeStage.floorTheme.clue);
+  addLog(`Goal: ${activeRoomObjective?.detail || objectiveText(activeRoomObjective)}.`);
   addLog(`${roundMatchLabel}: ${roundOpponentLabel}.`) ;
   if (currentFloor >= 2 && !isBossFloor(currentFloor, currentRoom)) addLog("Next door locked.");
   if (isBossFloor(currentFloor, currentRoom)) addLog("Boss room.");
@@ -9307,6 +9805,8 @@ function showBossIntro(bot) {
   const stageName = activeStage?.name || "Arena";
 
   maybePlayBossTauntAudio(bot, true);
+  playAssetSfx("polish_boss_roar", 0.12, "voice");
+  if (currentFloor >= 6) playAssetSfx("polish_chains", 0.08);
   openOverlay(`
     <div class="vsScreen bossIntroScreen">
       <div class="bossIntroBackdrop"></div>
@@ -9501,6 +10001,43 @@ function canPlaceCover(rect) {
   return !walls.some(wall => rectsOverlap(wall, rect));
 }
 
+function bossArenaCoverPattern(floor) {
+  if (floor >= 8) {
+    return [
+      { x: 110, y: 155, w: 36, h: 150 }, { x: 814, y: 155, w: 36, h: 150 },
+      { x: 110, y: 335, w: 36, h: 150 }, { x: 814, y: 335, w: 36, h: 150 },
+      { x: 302, y: 158, w: 94, h: 24 }, { x: 564, y: 458, w: 94, h: 24 },
+      { x: 438, y: 286, w: 84, h: 32 }
+    ];
+  }
+  if (floor >= 7) {
+    return [
+      { x: 438, y: 104, w: 84, h: 26 }, { x: 438, y: 492, w: 84, h: 26 },
+      { x: 184, y: 288, w: 104, h: 26 }, { x: 672, y: 288, w: 104, h: 26 },
+      { x: 436, y: 248, w: 88, h: 88 }
+    ];
+  }
+  if (floor >= 6) {
+    return [
+      { x: 250, y: 120, w: 34, h: 150 }, { x: 676, y: 350, w: 34, h: 150 },
+      { x: 405, y: 284, w: 150, h: 28 },
+      { x: 110, y: 430, w: 110, h: 24 }, { x: 740, y: 165, w: 110, h: 24 }
+    ];
+  }
+  if (floor >= 4) {
+    return [
+      { x: 224, y: 178, w: 120, h: 26 }, { x: 616, y: 178, w: 120, h: 26 },
+      { x: 224, y: 430, w: 120, h: 26 }, { x: 616, y: 430, w: 120, h: 26 },
+      { x: 454, y: 142, w: 52, h: 118 }, { x: 454, y: 368, w: 52, h: 118 }
+    ];
+  }
+  return [
+    { x: 164, y: 214, w: 94, h: 26 }, { x: 702, y: 214, w: 94, h: 26 },
+    { x: 164, y: 410, w: 94, h: 26 }, { x: 702, y: 410, w: 94, h: 26 },
+    { x: 428, y: 310, w: 104, h: 24 }
+  ];
+}
+
 function addTacticalCover(floor) {
   const patterns = [
     [
@@ -9528,12 +10065,7 @@ function addTacticalCover(floor) {
   }
 
   if (isBossFloor(floor)) {
-    const duelCover = [
-      { x: 160, y: 275, w: 86, h: 26 },
-      { x: 714, y: 340, w: 86, h: 26 },
-      { x: 428, y: 150, w: 104, h: 24 },
-      { x: 428, y: 468, w: 104, h: 24 }
-    ];
+    const duelCover = bossArenaCoverPattern(floor);
     for (const rect of duelCover) {
       const cover = { ...worldRect(rect), cover: true, softGlow: true };
       if (canPlaceCover(cover)) walls.push(cover);
@@ -10115,6 +10647,7 @@ function damageBreakable(item, dmg, hitPoint = item, angle = 0, weapon = current
   item.alive = false;
 
   if (item.type === "objective_crystal") {
+    playAssetSfx("polish_crystal_break", 0.12);
     addParticles("spark", item.x, item.y, angle, 24);
     addParticles("reward", item.x, item.y - 6, -Math.PI / 2, 16);
     floatText.push({ x: item.x - 20, y: item.y - 26, text: "ward", t: 0.8 });
@@ -10156,7 +10689,7 @@ function stealthVisibilityAlpha(bot) {
   if (!isStealthBoss(bot)) return 1;
   if (showDebug) return 1;
 
-  const pulseReveal = player.pulseActive > 0 && dist(player, bot) < runStats.pulseRange;
+  const pulseReveal = player.pulseActive > 0 && dist(player, bot) < runStats.pulseRange && hasVisualLineOfSight(player, bot);
   if (pulseReveal) return 0.95;
 
   if ((bot.stealthReveal || 0) > 0) {
@@ -10172,7 +10705,7 @@ function stealthVisibilityAlpha(bot) {
 function botFullyRevealed(bot) {
   if (!isStealthBoss(bot)) return true;
   if (showDebug) return true;
-  if (player.pulseActive > 0 && dist(player, bot) < runStats.pulseRange) return true;
+  if (player.pulseActive > 0 && dist(player, bot) < runStats.pulseRange && hasVisualLineOfSight(player, bot)) return true;
   return (bot.stealthReveal || 0) > 0.18;
 }
 
@@ -10346,7 +10879,7 @@ function drawMovementTraces() {
 function botVisibleToPlayer(bot) {
   if (showDebug) return true;
   if (isStealthBoss(bot)) return stealthVisibilityAlpha(bot) > 0.05;
-  const pulseReveal = player.pulseActive > 0 && dist(player, bot) < runStats.pulseRange;
+  const pulseReveal = player.pulseActive > 0 && dist(player, bot) < runStats.pulseRange && hasVisualLineOfSight(player, bot);
   return hasVisualLineOfSight(player, bot) || pulseReveal;
 }
 
@@ -10694,6 +11227,7 @@ function damageBot(bot, dmg, angle = angleTo(player, bot), weapon = currentWeapo
   addParticles("blood", hitPoint.x, hitPoint.y, angle, weapon.id === "shotgun" || weapon.id === "breacher" ? 10 : 5);
   if (dmg > 45 || weapon.id === "shotgun" || weapon.id === "dmr") addDecal("blood", hitPoint.x, hitPoint.y, angle, 10);
   playSfx("hit", Math.min(2, dmg / 35));
+  if (dmg > 42) playAssetSfx("polish_bullet_impact", 0.06);
   if (weapon.dot) applyDamageOverTime(bot, weapon.dot);
   if (bossAbilityActive("venom_rounds")) applyDamageOverTime(bot, { damage: 4, ticks: 2, interval: 0.45 });
   floatText.push({ x: bot.x, y: bot.y - 20, text: Math.round(dmg).toString(), t: 0.65 });
@@ -10706,6 +11240,9 @@ function damageBot(bot, dmg, angle = angleTo(player, bot), weapon = currentWeapo
     addParticles("spark", bot.x, bot.y, angle, weapon.id === "dmr" || weapon.id === "revolver" ? 14 : 6);
     addDecal("blood", bot.x, bot.y, angle, weapon.id === "shotgun" || weapon.id === "breacher" ? 30 : 18);
     addDecal("blood", bot.x + rand(-10, 10), bot.y + rand(-10, 10), angle, weapon.id === "dmr" ? 22 : 14);
+    if (bot.role === "boss") playAssetSfx("polish_death_collapse", 0.14);
+    else if (bot.role === "witch") playAssetSfx("polish_demonic_whisper", 0.08, "voice");
+    else playAssetSfx("polish_monster_death", 0.07);
     addLog(`${bot.name} down.`);
     maybeCompleteRoomFromEnemyClear(bot, angle, weapon, hitPoint);
   }
@@ -10723,6 +11260,7 @@ function applyDamageOverTime(bot, dot) {
       if (bot.hp <= 0) {
         bot.alive = false;
         player.kills += 1;
+        playAssetSfx(bot.role === "boss" ? "polish_death_collapse" : "polish_monster_death", 0.07);
         addLog(`${bot.name} down.`);
         maybeCompleteRoomFromEnemyClear(bot, rand(-Math.PI, Math.PI), currentWeapon(), bot);
       }
@@ -10919,6 +11457,7 @@ function clearFloor() {
     hub.lastHelp = `+1 hope for clearing floor ${currentFloor}.`;
     if (suppliesFound) addVillageSupplies(suppliesFound, "found on this floor");
   }
+  save.lastTowerProgress = { floor: currentFloor, room: floorComplete ? 1 : currentRoom + 1, roomTotal, mode: "running", reason: "room clear", ts: Date.now() };
   saveGame();
   if (floorComplete) checkVillageAchievements("floor");
 
@@ -11278,6 +11817,13 @@ function chooseRoute(kind) {
 }
 
 
+function retryCurrentTowerRoom() {
+  const progress = save.lastTowerProgress || {};
+  const floor = clamp(Number(progress.floor) || currentFloor || 1, 1, 8);
+  const room = clamp(Number(progress.room) || currentRoom || 1, 1, towerRoomsForFloor(floor));
+  startTower({ story: activeStoryMode, chapterId: activeStoryChapterId, floor, room });
+}
+
 function endTower(won, killer = "") {
   running = false;
   gameOver = true;
@@ -11301,9 +11847,9 @@ function endTower(won, killer = "") {
   } else {
     save.bestFloor = Math.max(Number(save.bestFloor) || 0, Number(currentFloor) || 1);
     saveGame();
-    playAssetSfx("defeat_outro", 0.42);
-    playAssetSfx("game_over_balanced", 0.24);
-    playAssetSfx("voice_game_over", 0.18);
+    playAssetSfx("defeat_outro", 0.10);
+    playAssetSfx("game_over_balanced", 0.07);
+    playAssetSfx("voice_game_over", 0.06);
   }
 
   if (activeStoryMode) restoreVillageAfterTowerReturn(won ? "chapter clear" : "run failed", true);
@@ -11315,8 +11861,8 @@ function endTower(won, killer = "") {
     ? `Chapter cleared. The village has proof Mira is alive. Next clue: ${nextChapter.name}.`
     : "Chapter cleared. Mira's door is open, and the village is waiting.";
   const topBackAction = activeStoryMode ? "backVillage" : "backMenu";
-  const primaryAction = won && activeStoryMode ? "backVillage" : "retryTower";
-  const primaryText = won && activeStoryMode ? "RETURN TO VILLAGE" : "RETRY TOWER";
+  const primaryAction = won && activeStoryMode ? "backVillage" : "retryCurrentRoom";
+  const primaryText = won && activeStoryMode ? "RETURN TO VILLAGE" : "RETRY ROOM";
   const secondaryAction = activeStoryMode ? "backVillage" : "backMenu";
   const secondaryText = activeStoryMode ? "VILLAGE" : "MAIN MENU";
   const jackpot = won && activeStoryMode ? `<div class="slotHeader">CHAPTER COMPLETE</div><div class="chapterCliffhanger">${nextChapter ? `Someone in the village says ${nextChapter.handler} found the next lead.` : "Mira is close enough to hear footsteps outside her door."}</div>` : "";
@@ -11673,6 +12219,18 @@ function chooseBotTarget(bot) {
     bot.maskDelay = Math.max(bot.maskDelay, bot.role === "boss" ? 0.06 : 0.16);
     bot.panic = Math.max(bot.panic, 0.35);
     return;
+  }
+
+  const objectivePoint = roomObjectivePressurePoint();
+  if (objectivePoint && activeRoomObjective && activeRoomObjective.type !== "clear" && !isBossFloor(currentFloor, currentRoom)) {
+    const objectiveUrgency = activeRoomObjective.type === "hold" ? 0.45 : activeRoomObjective.type === "crystals" ? 0.52 : 0.36;
+    if (bot.state !== "attack" || Math.random() < objectiveUrgency) {
+      bot.state = "search";
+      bot.target = safePointNear(objectivePoint.x, objectivePoint.y, activeRoomObjective.type === "hold" ? rand(88, 138) : 54);
+      bot.pressureHint = { x: objectivePoint.x, y: objectivePoint.y, t: nowSec() };
+      bot.suspicion = Math.max(bot.suspicion, 58);
+      return;
+    }
   }
 
   if (bot.state === "attack" && bot.lastSeen) {
@@ -12074,6 +12632,7 @@ function draw() {
   drawDecals("floor");
   drawGrid(palette);
   drawStageThemeProps(palette);
+  drawCuratedFloorProps();
   drawPulse(palette);
   drawEchoes();
   drawMovementTraces();
@@ -12247,6 +12806,48 @@ function drawWalls(palette) {
   }
 }
 
+function objectiveCoreAssetKey() {
+  const propSet = activeStage?.floorTheme?.propSet || floorTheme().propSet;
+  if (propSet === "workshop" || propSet === "furnace") return "prop_factory_cog_a";
+  if (propSet === "surveillance") return "prop_factory_button_round";
+  if (propSet === "prison") return "prop_mod_gate_bars";
+  if (propSet === "witch" || propSet === "blackout") return "prop_dungeon_trap";
+  return "prop_dungeon_column";
+}
+
+function drawObjectiveCore(item, palette, hpPct) {
+  const theme = activeStage?.floorTheme || floorTheme();
+  const img = imageAsset(objectiveCoreAssetKey());
+  const pulse = 1 + Math.sin(nowSec() * 4 + item.wobble) * 0.055;
+  drawThemedLight("light_ring_streaks", 0, 0, 88, theme.tint || "#c77dff", 0.12, nowSec() * 0.06 + item.wobble);
+  ctx.save();
+  ctx.scale(pulse, pulse);
+  if (img) {
+    ctx.shadowColor = theme.tint || "#c77dff";
+    ctx.shadowBlur = 14;
+    ctx.drawImage(img, -23, -23, 46, 46);
+    ctx.shadowBlur = 0;
+  } else {
+    ctx.fillStyle = hexToRgba(theme.tint || "#c77dff", 0.34);
+    ctx.strokeStyle = theme.tint || "#c77dff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / 3;
+      const r = i % 2 ? item.r + 4 : item.r + 10;
+      const x = Math.cos(a) * r;
+      const y = Math.sin(a) * r;
+      if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
+  ctx.fillStyle = hpPct < 0.45 ? "#ff5c7a" : "#ffd166";
+  ctx.fillRect(-18, 28, 36 * hpPct, 4);
+}
+
 function drawBreakables(palette) {
   for (const item of breakables) {
     if (!item.alive) continue;
@@ -12257,23 +12858,17 @@ function drawBreakables(palette) {
     ctx.rotate(Math.sin(nowSec() * 1.3 + item.wobble) * 0.04);
     const smoke = item.type === "smoke";
     const crystal = item.type === "objective_crystal";
-    ctx.fillStyle = crystal ? "rgba(199,125,255,0.18)" : smoke ? "rgba(160,172,190,0.16)" : "rgba(255, 211, 90, 0.14)";
+    const crystalTint = (activeStage?.floorTheme || floorTheme()).tint || "#c77dff";
+    ctx.fillStyle = crystal ? hexToRgba(crystalTint, 0.14) : smoke ? "rgba(160,172,190,0.16)" : "rgba(255, 211, 90, 0.14)";
     ctx.beginPath();
     ctx.arc(0, 0, item.r + 8, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = crystal ? "#4b2c72" : smoke ? "#394253" : "#253047";
-    ctx.strokeStyle = crystal ? "#c77dff" : smoke ? "#9aa6bb" : palette.wallLine;
+    ctx.fillStyle = crystal ? hexToRgba(crystalTint, 0.26) : smoke ? "#394253" : "#253047";
+    ctx.strokeStyle = crystal ? hexToRgba(crystalTint, 0.76) : smoke ? "#9aa6bb" : palette.wallLine;
     ctx.lineWidth = 2;
     if (crystal) {
-      ctx.beginPath();
-      ctx.moveTo(0, -item.r - 4);
-      ctx.lineTo(item.r + 5, 0);
-      ctx.lineTo(0, item.r + 4);
-      ctx.lineTo(-item.r - 5, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      drawObjectiveCore(item, palette, hpPct);
     } else {
       ctx.fillRect(-item.r, -item.r, item.r * 2, item.r * 2);
       ctx.strokeRect(-item.r + 0.5, -item.r + 0.5, item.r * 2 - 1, item.r * 2 - 1);
@@ -12288,8 +12883,10 @@ function drawBreakables(palette) {
       ctx.fill();
     }
 
-    ctx.fillStyle = hpPct < 0.45 ? "#ff5c7a" : smoke ? "#aab2c9" : "#ffd166";
-    ctx.fillRect(-item.r, item.r + 4, item.r * 2 * hpPct, 4);
+    if (!crystal) {
+      ctx.fillStyle = hpPct < 0.45 ? "#ff5c7a" : smoke ? "#aab2c9" : "#ffd166";
+      ctx.fillRect(-item.r, item.r + 4, item.r * 2 * hpPct, 4);
+    }
     ctx.restore();
   }
 }
@@ -12389,7 +12986,157 @@ function drawStageThemeProps(palette) {
     drawTownAsset("platformer_bridge", pts[0].x, pts[0].y, 64, 0, 0.42) || drawTownAsset("town_bridge", pts[0].x, pts[0].y, 54, 0, 0.42);
     drawTownAsset("platformer_block_warning", pts[1].x, pts[1].y, 52, 0, 0.52) || drawTownAsset("town_stone_b", pts[1].x, pts[1].y, 52, 0, 0.52);
   }
+  drawFloorThemeProps(floorTheme(currentFloor), pts, palette);
   ctx.restore();
+}
+
+function drawFloorThemeProps(theme, pts, palette) {
+  if (!theme) return;
+  const t = nowSec();
+  const propSet = theme.propSet || "entry";
+  ctx.save();
+  ctx.globalAlpha = 0.58;
+  ctx.strokeStyle = hexToRgba(theme.tint || palette.pulse, 0.42);
+  ctx.fillStyle = hexToRgba(theme.tint || palette.pulse, 0.12);
+
+  if (propSet === "furnace" || propSet === "workshop") {
+    for (const p of pts.slice(0, 4)) {
+      ctx.fillStyle = "rgba(20, 20, 24, 0.48)";
+      ctx.fillRect(p.x - 30, p.y - 18, 60, 36);
+      ctx.strokeStyle = hexToRgba(theme.tint, 0.36);
+      ctx.strokeRect(p.x - 30.5, p.y - 18.5, 61, 37);
+      ctx.fillStyle = hexToRgba(theme.tint, 0.16 + Math.sin(t * 3 + p.x) * 0.04);
+      ctx.fillRect(p.x - 21, p.y - 8, 42, 6);
+      if (propSet === "furnace") drawThemedLight("light_circle_soft", p.x, p.y, 118, theme.tint, 0.08);
+    }
+  } else if (propSet === "surveillance") {
+    for (const p of pts.slice(0, 4)) {
+      ctx.strokeStyle = hexToRgba(theme.tint, 0.34);
+      ctx.strokeRect(p.x - 26.5, p.y - 16.5, 53, 33);
+      ctx.fillStyle = "rgba(5,10,18,0.55)";
+      ctx.fillRect(p.x - 26, p.y - 16, 52, 32);
+      ctx.fillStyle = hexToRgba(theme.tint, 0.22);
+      ctx.fillRect(p.x - 18, p.y - 5, 36, 3);
+      ctx.fillRect(p.x - 18, p.y + 5, 26, 3);
+    }
+  } else if (propSet === "blackout" || propSet === "witch") {
+    for (const p of pts.slice(0, 4)) {
+      drawThemedLight("light_ring_streaks", p.x, p.y, propSet === "witch" ? 130 : 105, theme.tint, propSet === "witch" ? 0.13 : 0.08, t * 0.08 + p.x);
+      ctx.strokeStyle = hexToRgba(theme.tint, 0.34);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 18, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  } else if (propSet === "prison") {
+    for (const p of pts.slice(0, 4)) {
+      ctx.strokeStyle = "rgba(190,205,225,0.22)";
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo(p.x + i * 9, p.y - 24);
+        ctx.lineTo(p.x + i * 9, p.y + 24);
+        ctx.stroke();
+      }
+      ctx.strokeRect(p.x - 28.5, p.y - 24.5, 57, 49);
+    }
+  }
+
+  ctx.restore();
+}
+
+function floorPropPoints() {
+  const seed = currentFloor * 101 + currentRoom * 17;
+  const pts = [
+    { x: worldW * 0.20 + Math.sin(seed) * 22, y: worldH * 0.26 },
+    { x: worldW * 0.78, y: worldH * 0.24 + Math.cos(seed) * 18 },
+    { x: worldW * 0.22, y: worldH * 0.76 + Math.cos(seed * 0.7) * 18 },
+    { x: worldW * 0.72 + Math.sin(seed * 0.4) * 24, y: worldH * 0.72 },
+    { x: worldW * 0.50, y: worldH * 0.18 },
+    { x: worldW * 0.50, y: worldH * 0.82 }
+  ];
+  return pts.map(p => nearestFreePoint(p.x, p.y, 46));
+}
+
+function drawFloorPropImage(key, x, y, size = 42, rot = 0, alpha = 0.86) {
+  const img = imageAsset(key);
+  if (!img) return false;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(img, -size / 2, -size / 2, size, size);
+  ctx.restore();
+  return true;
+}
+
+function drawCuratedFloorProps() {
+  if (!activeStage?.floorTheme) return;
+  const theme = activeStage.floorTheme;
+  const propSet = theme.propSet || "entry";
+  const pts = floorPropPoints();
+  ctx.save();
+  if (propSet === "workshop" || propSet === "furnace") {
+    drawFloorPropImage("prop_factory_catwalk", pts[0].x, pts[0].y, 70, 0.05, 0.62);
+    drawFloorPropImage("prop_factory_cog_a", pts[1].x, pts[1].y, 48, nowSec() * 0.12, 0.82);
+    drawFloorPropImage("prop_factory_cog_b", pts[2].x, pts[2].y, 42, -nowSec() * 0.10, 0.78);
+    drawFloorPropImage("prop_factory_button_round", pts[3].x, pts[3].y, 38, 0, 0.80);
+    if (propSet === "furnace") drawThemedLight("light_circle_soft", pts[1].x, pts[1].y, 140, theme.tint, 0.10);
+  } else if (propSet === "prison") {
+    drawFloorPropImage("prop_mod_gate_bars", pts[0].x, pts[0].y, 58, 0, 0.84);
+    drawFloorPropImage("prop_mod_gate_door", pts[1].x, pts[1].y, 58, 0.02, 0.82);
+    drawFloorPropImage("prop_dungeon_stones", pts[2].x, pts[2].y, 44, 0, 0.76);
+    drawFloorPropImage("prop_dungeon_banner", pts[3].x, pts[3].y, 42, 0, 0.70);
+  } else if (propSet === "surveillance") {
+    drawFloorPropImage("prop_mod_room_small", pts[0].x, pts[0].y, 54, 0, 0.70);
+    drawFloorPropImage("prop_factory_button_round", pts[1].x, pts[1].y, 42, 0, 0.86);
+    drawFloorPropImage("prop_mod_corridor", pts[2].x, pts[2].y, 58, 0, 0.62);
+    drawThemedLight("light_cone_noise", pts[3].x, pts[3].y, 150, theme.tint, 0.09, -0.8);
+  } else if (propSet === "witch" || propSet === "blackout") {
+    drawFloorPropImage("prop_dungeon_trap", pts[0].x, pts[0].y, 48, nowSec() * 0.03, 0.82);
+    drawFloorPropImage("prop_dungeon_column", pts[1].x, pts[1].y, 46, 0, 0.78);
+    drawFloorPropImage("prop_dungeon_stones", pts[2].x, pts[2].y, 42, 0, 0.74);
+    drawThemedLight("light_ring_streaks", pts[3].x, pts[3].y, 130, theme.tint, 0.11, nowSec() * 0.06);
+  } else {
+    drawFloorPropImage("prop_dungeon_column", pts[0].x, pts[0].y, 44, 0, 0.78);
+    drawFloorPropImage("prop_dungeon_gate", pts[1].x, pts[1].y, 48, 0, 0.72);
+    drawFloorPropImage("prop_dungeon_chest", pts[2].x, pts[2].y, 38, 0, 0.76);
+  }
+  if (isBossFloor(currentFloor, currentRoom)) drawBossArenaLandmarks(theme);
+  ctx.restore();
+}
+
+function drawBossArenaLandmarks(theme) {
+  const cx = worldW * 0.5;
+  const cy = worldH * 0.5;
+  const floor = currentFloor;
+  if (floor >= 8) {
+    drawFloorPropImage("prop_mod_gate_bars", worldW * 0.18, cy, 86, 0, 0.82);
+    drawFloorPropImage("prop_mod_gate_bars", worldW * 0.82, cy, 86, 0, 0.82);
+    drawFloorPropImage("prop_dungeon_gate", cx, worldH * 0.18, 68, 0, 0.78);
+    drawThemedLight("light_ring_streaks", cx, cy, 180, theme.tint, 0.10, nowSec() * 0.04);
+    return;
+  }
+  if (floor >= 7) {
+    drawFloorPropImage("prop_dungeon_trap", cx, cy, 74, nowSec() * 0.025, 0.86);
+    drawFloorPropImage("prop_dungeon_column", worldW * 0.28, cy, 56, 0, 0.78);
+    drawFloorPropImage("prop_dungeon_column", worldW * 0.72, cy, 56, 0, 0.78);
+    drawThemedLight("light_ring_streaks", cx, cy, 210, theme.tint, 0.12, nowSec() * 0.05);
+    return;
+  }
+  if (floor >= 6) {
+    drawFloorPropImage("prop_mod_corridor", cx, worldH * 0.24, 76, 0, 0.62);
+    drawFloorPropImage("prop_mod_corridor", cx, worldH * 0.76, 76, 0, 0.62);
+    drawThemedLight("light_cone_noise", cx, cy, 230, theme.tint, 0.06, Math.sin(nowSec()) * 0.4);
+    return;
+  }
+  if ((theme.propSet || "") === "workshop" || (theme.propSet || "") === "furnace") {
+    drawFloorPropImage("prop_factory_cog_a", cx - 52, cy, 58, nowSec() * 0.10, 0.84);
+    drawFloorPropImage("prop_factory_cog_b", cx + 52, cy, 52, -nowSec() * 0.08, 0.80);
+    drawFloorPropImage("prop_factory_catwalk", cx, cy + 72, 96, 0, 0.56);
+    return;
+  }
+  drawFloorPropImage("prop_dungeon_gate", cx, worldH * 0.18, 66, 0, 0.74);
+  drawFloorPropImage("prop_dungeon_column", cx - 78, cy, 54, 0, 0.74);
+  drawFloorPropImage("prop_dungeon_column", cx + 78, cy, 54, 0, 0.74);
 }
 
 function drawPulse(palette) {
@@ -12413,7 +13160,7 @@ function drawEchoes() {
       ctx.fill();
     }
 
-    if (e.kind === "bot" && player.pulseActive > 0 && age < runStats.echoDuration) {
+    if (e.kind === "bot" && player.pulseActive > 0 && age < runStats.echoDuration && hasVisualLineOfSight(player, e)) {
       ctx.strokeStyle = `rgba(124,199,255,${0.38 * (1 - age / runStats.echoDuration)})`;
       ctx.beginPath();
       ctx.arc(e.x, e.y, 14 + age * 6, 0, Math.PI * 2);
@@ -12938,10 +13685,33 @@ function drawFloatText() {
 }
 
 
+
+function drawThemedLight(key, x, y, size, color = "#7cc7ff", alpha = 0.22, angle = 0) {
+  const img = imageAsset(key);
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.globalAlpha = alpha;
+  if (img) {
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+  } else {
+    const g = ctx.createRadialGradient(x, y, 4, x, y, size / 2);
+    g.addColorStop(0, hexToRgba(color, alpha));
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function drawLightingOverlay() {
   if (!(mode === "running" || mode === "countdown" || mode === "killReplay")) return;
 
   const bossAlive = bots.some(bot => bot.alive && bot.role === "boss");
+  const theme = floorTheme(currentFloor);
 
   ctx.save();
 
@@ -12972,6 +13742,13 @@ function drawLightingOverlay() {
     ctx.fill();
   }
 
+  const darkness = clamp(theme.darkness || 0, 0, 0.42);
+  if (darkness > 0) {
+    ctx.fillStyle = `rgba(0,0,0,${darkness})`;
+    ctx.fillRect(camera.x, camera.y, W, H);
+  }
+
+  drawThemedLight("light_circle_soft", player.x, player.y, currentFloor >= 6 ? 260 : 210, theme.tint, currentFloor >= 6 ? 0.18 : 0.12);
   if (bossAlive) {
     ctx.fillStyle = "rgba(255,30,80,0.045)";
     ctx.fillRect(camera.x, camera.y, W, H);
@@ -13008,19 +13785,44 @@ function drawRoomObjectiveWorld() {
   const o = activeRoomObjective;
   if (o.type !== "hold") return;
   const pct = clamp((o.held || 0) / Math.max(1, o.needed || 1), 0, 1);
+  const r = o.r || 78;
+  const theme = activeStage?.floorTheme || floorTheme();
   ctx.save();
-  ctx.globalAlpha = 0.72;
-  ctx.fillStyle = "rgba(199,125,255,0.08)";
-  ctx.strokeStyle = "rgba(199,125,255,0.54)";
-  ctx.lineWidth = 3;
+  drawThemedLight("light_ring_streaks", o.x, o.y, r * 2.4, theme.tint || "#c77dff", 0.13, nowSec() * 0.05);
+  ctx.globalAlpha = 0.76;
+  ctx.fillStyle = hexToRgba(theme.tint || "#c77dff", 0.07);
+  ctx.strokeStyle = hexToRgba(theme.tint || "#c77dff", 0.52);
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.arc(o.x, o.y, o.r || 78, 0, Math.PI * 2);
+  ctx.arc(o.x, o.y, r, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
+
+  const points = [];
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + i * Math.PI * 2 / 5;
+    points.push({ x: o.x + Math.cos(a) * (r - 18), y: o.y + Math.sin(a) * (r - 18) });
+  }
+  ctx.strokeStyle = hexToRgba(theme.tint || "#c77dff", 0.50 + pct * 0.30);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  const order = [0, 2, 4, 1, 3, 0];
+  for (let i = 0; i < order.length; i++) {
+    const p = points[order[i]];
+    if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+  }
+  ctx.stroke();
+  for (const p of points) {
+    ctx.fillStyle = hexToRgba("#ffd35a", 0.28 + pct * 0.44);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4 + pct * 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   ctx.strokeStyle = "rgba(255,211,90,0.88)";
   ctx.lineWidth = 5;
   ctx.beginPath();
-  ctx.arc(o.x, o.y, (o.r || 78) - 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
+  ctx.arc(o.x, o.y, r - 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
   ctx.stroke();
   ctx.restore();
 }
@@ -13028,22 +13830,22 @@ function drawRoomObjectiveWorld() {
 function drawRoomObjectiveHud() {
   if (!activeRoomObjective || !activeStage) return;
   if (!(mode === "running" || mode === "countdown" || mode === "pauseRequest" || mode === "paused" || mode === "killReplay")) return;
-  const x = W / 2 - 155;
-  const y = 58;
+  const x = W / 2 - 124;
+  const y = 56;
   ctx.save();
-  ctx.globalAlpha = 0.72;
-  ctx.fillStyle = "rgba(0,0,0,0.56)";
-  ctx.fillRect(x, y, 310, 42);
-  ctx.strokeStyle = "rgba(255,211,90,0.22)";
-  ctx.strokeRect(x + 0.5, y + 0.5, 309, 41);
+  ctx.globalAlpha = 0.48;
+  ctx.fillStyle = "rgba(0,0,0,0.38)";
+  ctx.fillRect(x, y, 248, 34);
+  ctx.strokeStyle = "rgba(255,211,90,0.12)";
+  ctx.strokeRect(x + 0.5, y + 0.5, 247, 33);
   ctx.globalAlpha = 1;
   ctx.textAlign = "left";
   ctx.fillStyle = "rgba(255,211,90,0.86)";
   ctx.font = "900 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
-  ctx.fillText("GOAL", x + 12, y + 13);
+  ctx.fillText("GOAL", x + 10, y + 12);
   ctx.fillStyle = "rgba(246,248,255,0.88)";
-  ctx.font = "800 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
-  ctx.fillText(objectiveText(activeRoomObjective), x + 12, y + 31);
+  ctx.font = "800 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillText(objectiveText(activeRoomObjective), x + 10, y + 28);
   ctx.restore();
 }
 
@@ -13212,7 +14014,7 @@ function drawUtilityHud() {
   drawUtilityBox(baseX, baseY - 44, "E", "SMOKE", String(player.smokeCharges || 0), "#d8dbe8");
   drawUtilityBox(baseX, baseY, "Q", "PULSE", String(pulseCount), pulseReady ? "#7cc7ff" : "#ffd166", pulseLabel);
   drawBossAbilityHud(baseX, baseY - 132);
-  drawRunRetryHud(W - 120, H - 72);
+  drawRunRetryHud(W - 132, H - 154);
 
   ctx.restore();
 }
@@ -13592,7 +14394,8 @@ overlay.addEventListener("click", e => {
     resumeVillage: () => resumeVillage(),
     confirmEndRun: () => showEndRunConfirm(),
     abandonRun: () => abandonRun(),
-    retryTower: () => startTower(activeStoryMode ? { story: true, chapterId: activeStoryChapterId } : {})
+    retryTower: () => startTower(activeStoryMode ? { story: true, chapterId: activeStoryChapterId } : {}),
+    retryCurrentRoom: () => retryCurrentTowerRoom()
   };
 
   if (actions[action]) actions[action]();
