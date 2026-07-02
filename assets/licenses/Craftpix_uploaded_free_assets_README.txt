@@ -1,0 +1,1 @@
+Craftpix free asset packs uploaded by the user in this chat and used for the Veyr Arena village visual pass. Keep the original Craftpix license files from the downloaded packs with the project if distributing builds.

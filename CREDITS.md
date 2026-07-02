@@ -199,3 +199,27 @@ User supplied audio copied into `/assets/sfx`:
 - kenney_interface-sounds.zip -> assets/sfx/ui_confirm_001.ogg and assets/sfx/ui_error_001.ogg
 
 Licenses and public release rights should be checked again before shipping outside the prototype.
+
+## v5.2 Craftpix village visual pass
+
+The following user supplied Craftpix packs were imported for local prototype use in the village redraw:
+
+- craftpix-net-381103-free-simple-summer-top-down-vector-tileset.zip: grass, village buildings, trees, fences, bridge, well, camp props, banners, rocks, and storage props.
+- craftpix-net-453698-free-shinobi-sprites-pixel-art.zip: cropped idle sprites used for the village player and NPC visual pass.
+
+Imported files are under:
+
+```text
+assets/craftpix/village/
+assets/craftpix/characters/
+```
+
+Prototype license reminders were added at:
+
+```text
+assets/licenses/Craftpix_uploaded_free_assets_README.txt
+assets/licenses/Craftpix_simple_summer_LICENSE.txt
+assets/licenses/Craftpix_shinobi_LICENSE.txt
+```
+
+Recheck the original Craftpix license terms before distributing public builds.

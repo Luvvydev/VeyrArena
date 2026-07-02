@@ -115,6 +115,48 @@ const ASSET_PATHS = {
     town_arch: "./assets/town/town_arch.png",
     town_lamp: "./assets/town/town_lamp.png",
     town_bridge: "./assets/town/town_bridge.png",
+    cp_village_grass: "./assets/craftpix/village/summer_grass.png",
+    cp_village_dirt: "./assets/craftpix/village/summer_dirt.png",
+    cp_village_house: "./assets/craftpix/village/summer_house.png",
+    cp_village_windmill: "./assets/craftpix/village/summer_windmill.png",
+    cp_village_well: "./assets/craftpix/village/summer_well.png",
+    cp_village_tent: "./assets/craftpix/village/summer_tent.png",
+    cp_village_campfire: "./assets/craftpix/village/summer_campfire.png",
+    cp_village_chest: "./assets/craftpix/village/summer_chest.png",
+    cp_village_barrel: "./assets/craftpix/village/summer_barrel.png",
+    cp_village_cart: "./assets/craftpix/village/summer_cart.png",
+    cp_village_fence_h: "./assets/craftpix/village/summer_fence_h.png",
+    cp_village_fence_v: "./assets/craftpix/village/summer_fence_v.png",
+    cp_village_bridge_h: "./assets/craftpix/village/summer_bridge_h.png",
+    cp_village_bridge_v: "./assets/craftpix/village/summer_bridge_v.png",
+    cp_village_tree_large: "./assets/craftpix/village/summer_tree_large.png",
+    cp_village_tree_medium: "./assets/craftpix/village/summer_tree_medium.png",
+    cp_village_tree_small: "./assets/craftpix/village/summer_tree_small.png",
+    cp_village_bush_large: "./assets/craftpix/village/summer_bush_large.png",
+    cp_village_bush_medium: "./assets/craftpix/village/summer_bush_medium.png",
+    cp_village_bush_small: "./assets/craftpix/village/summer_bush_small.png",
+    cp_village_rock_01: "./assets/craftpix/village/summer_rock_01.png",
+    cp_village_rock_02: "./assets/craftpix/village/summer_rock_02.png",
+    cp_village_stump_short: "./assets/craftpix/village/summer_stump_short.png",
+    cp_village_stump_tall: "./assets/craftpix/village/summer_stump_tall.png",
+    cp_village_red_banner: "./assets/craftpix/village/summer_red_banner.png",
+    cp_village_blue_banner: "./assets/craftpix/village/summer_blue_banner.png",
+    cp_village_flag: "./assets/craftpix/village/summer_flag.png",
+    cp_village_watchtower_short: "./assets/craftpix/village/summer_watchtower_short.png",
+    cp_village_watchtower_tall: "./assets/craftpix/village/summer_watchtower_tall.png",
+    cp_village_magic_tower: "./assets/craftpix/village/summer_magic_tower.png",
+    cp_village_castle_round: "./assets/craftpix/village/summer_castle_round.png",
+    cp_village_castle_square: "./assets/craftpix/village/summer_castle_square.png",
+    cp_shinobi_idle: "./assets/craftpix/characters/shinobi_idle.png",
+    cp_samurai_idle: "./assets/craftpix/characters/samurai_idle.png",
+    cp_fighter_idle: "./assets/craftpix/characters/fighter_idle.png",
+    cp_wraith_green_idle: "./assets/craftpix/characters/wraith_green_idle.png",
+    cp_wraith_blue_idle: "./assets/craftpix/characters/wraith_blue_idle.png",
+    cp_wraith_red_idle: "./assets/craftpix/characters/wraith_red_idle.png",
+    arena_bg_dry: "./assets/craftpix/arena/arena_bg_dry.png",
+    arena_bg_sky: "./assets/craftpix/arena/arena_bg_sky.png",
+    arena_bg_terrace: "./assets/craftpix/arena/arena_bg_terrace.png",
+    arena_bg_castle: "./assets/craftpix/arena/arena_bg_castle.png",
     tiny_flower: "./assets/town/tiny_flower.png",
     tiny_grass_detail: "./assets/town/tiny_grass_detail.png",
     tiny_path_stone: "./assets/town/tiny_path_stone.png",
@@ -354,12 +396,31 @@ function drawImageAsset(key, x, y, w, h, angle = 0, alpha = 1) {
 }
 
 function isHumanTownSprite(key) {
-  return typeof key === "string" && (key.startsWith("town_") || key.startsWith("player_human_"));
+  return typeof key === "string" && (key.startsWith("town_") || key.startsWith("player_human_") || key.startsWith("cp_"));
+}
+
+function isCraftpixOperativeSprite(key) {
+  return typeof key === "string" && key.startsWith("cp_");
+}
+
+function operativeSpriteKey(id = save.selectedShape) {
+  return shapeById(id).sprite || "cp_shinobi_idle";
+}
+
+function normalizeShapeUnlocks() {
+  const valid = new Set(SHAPES.map(item => item.id));
+  const fallback = SHAPES[0].id;
+  save.unlockedShapes = Array.isArray(save.unlockedShapes) ? save.unlockedShapes.filter(id => valid.has(id)) : [];
+  if (!save.unlockedShapes.includes(fallback)) save.unlockedShapes.unshift(fallback);
+  if (!valid.has(save.selectedShape)) save.selectedShape = fallback;
+  if (!save.unlockedShapes.includes(save.selectedShape)) save.unlockedShapes.push(save.selectedShape);
 }
 
 function drawCharacterAsset(key, x, y, height = 58, angle = 0, alpha = 1) {
   if (!isHumanTownSprite(key)) return drawImageAsset(key, x, y, height, height, angle, alpha);
-  return drawImageAsset(key, x, y - height * 0.08, Math.round(height * 0.74), height, angle, alpha);
+  const width = isCraftpixOperativeSprite(key) ? Math.round(height * 0.58) : Math.round(height * 0.74);
+  const yOffset = isCraftpixOperativeSprite(key) ? height * 0.02 : height * 0.08;
+  return drawImageAsset(key, x, y - yOffset, width, height, angle, alpha);
 }
 
 function audioCategoryForKey(key, fallback = "sfx") {
@@ -613,6 +674,41 @@ function stageAssetKey(kind) {
     undercrypt: { floor: "floor_dungeon", wall: "wall_dungeon" }
   };
   return (map[id] || map.graybox)[kind];
+}
+
+function arenaBackdropProfile() {
+  const id = activeStage?.id || "graybox";
+  if (id === "whiteout") return { key: "arena_bg_sky", style: "sky" };
+  if (["blue_halls", "forest_wire"].includes(id)) return { key: "arena_bg_terrace", style: "terrace" };
+  if (["amber_cross", "violet_split"].includes(id)) return { key: "arena_bg_dry", style: "dry" };
+  return { key: "arena_bg_castle", style: "castle" };
+}
+
+function wallDecorationSeed(wall) {
+  return Math.abs(Math.floor(wall.x * 7 + wall.y * 11 + wall.w * 13 + wall.h * 17));
+}
+
+function stageBackdropKey() {
+  const id = activeStage?.id || "graybox";
+  const map = {
+    graybox: "arena_bg_castle",
+    blue_halls: "arena_bg_sky",
+    amber_cross: "arena_bg_dry",
+    violet_split: "arena_bg_castle",
+    red_lock: "arena_bg_terrace",
+    whiteout: "arena_bg_sky",
+    forest_wire: "arena_bg_terrace",
+    undercrypt: "arena_bg_dry"
+  };
+  return map[id] || "arena_bg_castle";
+}
+
+function stageWallTheme() {
+  const id = activeStage?.id || "graybox";
+  if (["amber_cross", "undercrypt"].includes(id)) return "dry";
+  if (["blue_halls", "whiteout"].includes(id)) return "sky";
+  if (["forest_wire", "red_lock"].includes(id)) return "terrace";
+  return "castle";
 }
 
 
@@ -1025,9 +1121,9 @@ const DEFAULT_SAVE = {
   totalWeaponFinds: 0,
   storyClears: 0,
   completedChapters: [],
-  selectedShape: "circle",
+  selectedShape: "shinobi",
   selectedColor: "pale",
-  unlockedShapes: ["circle"],
+  unlockedShapes: ["shinobi"],
   unlockedColors: ["pale"],
   powerups: {
     might: 0,
@@ -1062,29 +1158,15 @@ const DEFAULT_SAVE = {
 let save = loadSave();
 
 const SHAPES = [
-  { id: "circle", name: "Rift Runner", cost: 0, req: 0, sprite: "player_marine" },
-  { id: "diamond", name: "Vanguard", cost: 8, req: 2, sprite: "player_vanguard" },
-  { id: "triangle", name: "Outrider", cost: 12, req: 3, sprite: "player_alt" },
-  { id: "hex", name: "Phantom", cost: 16, req: 4, sprite: "player_phantom" },
-  { id: "medic", name: "Field Medic", cost: 20, req: 3, sprite: "player_alt" },
-  { id: "breaker", name: "Breaker", cost: 24, req: 4, sprite: "player_vanguard" },
-  { id: "rook", name: "Rook Guard", cost: 28, req: 4, sprite: "enemy_rook" },
-  { id: "mire", name: "Mire Scout", cost: 32, req: 5, sprite: "enemy_mire" },
-  { id: "sable", name: "Sable Knife", cost: 36, req: 5, sprite: "enemy_sable" },
-  { id: "vampire", name: "Night Glass", cost: 42, req: 6, sprite: "enemy_vampire" },
-  { id: "nullSuit", name: "Null Frame", cost: 55, req: 7, sprite: "enemy_null" },
-  { id: "bossVanta", name: "Vanta Shell", cost: 70, req: 8, sprite: "boss_vanta" },
-  { id: "bossNull", name: "Null Crown", cost: 90, req: 8, sprite: "boss_null" },
+  { id: "shinobi", name: "Shinobi", cost: 0, req: 0, sprite: "cp_shinobi_idle" },
+  { id: "samurai", name: "Iron Samurai", cost: 8, req: 2, sprite: "cp_samurai_idle" },
+  { id: "fighter", name: "Pit Fighter", cost: 12, req: 3, sprite: "cp_fighter_idle" },
   { id: "greenRunner", name: "Green Hopper", cost: 18, req: 3, sprite: "player_platform_green" },
   { id: "pinkRunner", name: "Pink Lantern", cost: 22, req: 4, sprite: "player_platform_pink" },
   { id: "purpleRunner", name: "Purple Jumper", cost: 28, req: 5, sprite: "player_platform_purple" },
-  { id: "beigeRunner", name: "Dust Walker", cost: 34, req: 6, sprite: "player_platform_beige" },
-  { id: "humanGreen", name: "Village Runner", cost: 18, req: 2, sprite: "player_human_green" },
-  { id: "humanRed", name: "Red Jacket", cost: 24, req: 3, sprite: "player_human_red" },
-  { id: "humanBlue", name: "Street Scout", cost: 30, req: 4, sprite: "player_human_blue" },
-  { id: "humanYellow", name: "Workhand", cost: 36, req: 5, sprite: "player_human_yellow" },
-  { id: "humanGrey", name: "Quiet Traveler", cost: 44, req: 6, sprite: "player_human_grey" },
-  { id: "humanPine", name: "Old Roadhand", cost: 52, req: 7, sprite: "player_human_pine" }
+  { id: "wraithGreen", name: "Hollow Wraith", cost: 34, req: 6, sprite: "cp_wraith_green_idle" },
+  { id: "wraithBlue", name: "Moon Wraith", cost: 42, req: 7, sprite: "cp_wraith_blue_idle" },
+  { id: "wraithRed", name: "Ash Wraith", cost: 52, req: 8, sprite: "cp_wraith_red_idle" }
 ];
 
 const COLORS = [
@@ -1098,6 +1180,8 @@ const COLORS = [
   { id: "toxin", name: "Toxin", value: "#9dff63", cost: 32, req: 7 },
   { id: "gold", name: "Gold", value: "#ffd35a", cost: 46, req: 8 }
 ];
+
+normalizeShapeUnlocks();
 
 
 
@@ -2577,7 +2661,7 @@ function loadSave() {
     return {
       ...structuredClone(DEFAULT_SAVE),
       ...parsed,
-      unlockedShapes: parsed.unlockedShapes?.length ? parsed.unlockedShapes : ["circle"],
+      unlockedShapes: parsed.unlockedShapes?.length ? parsed.unlockedShapes : ["shinobi"],
       unlockedColors: parsed.unlockedColors?.length ? parsed.unlockedColors : ["pale"],
       completedChapters: Array.isArray(parsed.completedChapters) ? parsed.completedChapters : [],
       storyFlags: {
@@ -5976,6 +6060,60 @@ function drawTownAssetRect(key, x, y, w, h, alpha = 1) {
   return true;
 }
 
+function drawTownAssetRectSmooth(key, x, y, w, h, alpha = 1) {
+  const img = imageAsset(key);
+  if (!img) return false;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(img, x, y, w, h);
+  ctx.restore();
+  return true;
+}
+
+function drawTownAssetBottom(key, cx, bottomY, w, h, alpha = 1) {
+  const img = imageAsset(key);
+  if (!img) return false;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(img, cx - w / 2, bottomY - h, w, h);
+  ctx.restore();
+  return true;
+}
+
+function drawVillageCraftpixProp(key, cx, bottomY, w, h, alpha = 1) {
+  ctx.save();
+  ctx.fillStyle = `rgba(0,0,0,${0.12 * alpha})`;
+  ctx.beginPath();
+  ctx.ellipse(cx + 6, bottomY - 10, Math.max(18, w * 0.34), Math.max(7, h * 0.045), 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  return drawTownAssetBottom(key, cx, bottomY, w, h, alpha);
+}
+
+function drawVillageCraftpixFence(x, y, count, vertical = false, alpha = 0.95) {
+  const key = vertical ? "cp_village_fence_v" : "cp_village_fence_h";
+  const step = vertical ? 44 : 58;
+  for (let i = 0; i < count; i++) {
+    const px = x + (vertical ? 0 : i * step);
+    const py = y + (vertical ? i * step : 0);
+    drawTownAssetRectSmooth(key, px - (vertical ? 12 : 29), py - (vertical ? 30 : 11), vertical ? 24 : 58, vertical ? 66 : 22, alpha);
+  }
+}
+
+function drawVillageSpriteStand(key, x, y, h = 58, alpha = 1) {
+  const img = imageAsset(key);
+  if (!img) return false;
+  const ratio = img.naturalWidth / Math.max(1, img.naturalHeight);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, x - (h * ratio) / 2, y - h + 18, h * ratio, h);
+  ctx.restore();
+  return true;
+}
+
 function villageHash(x, y) {
   const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
   return n - Math.floor(n);
@@ -6005,44 +6143,40 @@ function drawGrassTuft(x, y, s = 1, angle = 0) {
 }
 
 function drawVillageGround() {
-  ctx.fillStyle = "#4d8e3f";
+  ctx.fillStyle = "#6aa846";
   ctx.fillRect(0, 0, VILLAGE_WORLD.w, VILLAGE_WORLD.h);
 
-  for (let y = 0; y < VILLAGE_WORLD.h; y += 32) {
-    for (let x = 0; x < VILLAGE_WORLD.w; x += 32) {
-      const h = villageHash(x, y);
-      const key = h > 0.58 ? "town_grass_b" : "town_grass_a";
-      if (!drawTownAssetRect(key, x, y, 34, 34, 0.92)) {
-        ctx.fillStyle = h > 0.58 ? "#5d9d45" : "#559540";
-        ctx.fillRect(x, y, 32, 32);
+  const tile = 128;
+  for (let y = -16; y < VILLAGE_WORLD.h + tile; y += tile) {
+    for (let x = -16; x < VILLAGE_WORLD.w + tile; x += tile) {
+      if (!drawTownAssetRectSmooth("cp_village_grass", x, y, tile + 2, tile + 2, 0.96)) {
+        ctx.fillStyle = villageHash(x, y) > 0.5 ? "#6dae45" : "#65a741";
+        ctx.fillRect(x, y, tile, tile);
       }
     }
   }
 
-  const g = ctx.createRadialGradient(VILLAGE_TOWER_GATE.x, VILLAGE_SHRINE.y, 80, VILLAGE_TOWER_GATE.x, VILLAGE_SHRINE.y, 900);
-  g.addColorStop(0, "rgba(228,218,131,0.13)");
-  g.addColorStop(0.55, "rgba(31,52,43,0.08)");
-  g.addColorStop(1, "rgba(3,5,12,0.48)");
-  ctx.fillStyle = g;
+  ctx.fillStyle = "rgba(255,241,176,0.06)";
   ctx.fillRect(0, 0, VILLAGE_WORLD.w, VILLAGE_WORLD.h);
 
-  ctx.fillStyle = "rgba(72,26,70,0.25)";
-  ctx.beginPath();
-  ctx.ellipse(62, 768, 210, 78, -0.18, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(1190, 52, 210, 74, 0.25, 0, Math.PI * 2);
-  ctx.fill();
-
+  // Sparse detail only. The old village was noisy because every patch tried to be decoration.
   for (const item of VILLAGE_DECOR) {
-    if (item.kind === "flower") {
-      drawTownAsset("town_flower", item.x, item.y, 18 * item.s, item.a, 0.9);
-    } else if (item.kind === "bush") {
-      drawTownAsset("town_bush", item.x, item.y, 24 * item.s, item.a, 0.8) || drawGrassTuft(item.x, item.y, item.s, item.a);
-    } else {
-      drawGrassTuft(item.x, item.y, item.s, item.a);
+    if (item.x > VILLAGE_DARK_DISTRICT.x - 40) continue;
+    if (item.kind === "flower" && villageHash(item.x, item.y) > 0.74) {
+      drawTownAsset("tiny_flower", item.x, item.y, 14 * item.s, item.a, 0.55);
+    } else if (item.kind === "bush" && villageHash(item.y, item.x) > 0.70) {
+      drawTownAssetBottom("cp_village_bush_small", item.x, item.y + 14, 28 * item.s, 24 * item.s, 0.46) || drawGrassTuft(item.x, item.y, item.s * 0.75, item.a);
+    } else if (villageHash(item.x * 0.5, item.y * 0.5) > 0.86) {
+      drawGrassTuft(item.x, item.y, item.s * 0.75, item.a);
     }
   }
+
+  const vignette = ctx.createRadialGradient(VILLAGE_TOWER_GATE.x, VILLAGE_SHRINE.y, 280, VILLAGE_TOWER_GATE.x, VILLAGE_SHRINE.y, 1450);
+  vignette.addColorStop(0, "rgba(255,236,158,0.06)");
+  vignette.addColorStop(0.72, "rgba(22,35,24,0.03)");
+  vignette.addColorStop(1, "rgba(3,5,12,0.28)");
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, VILLAGE_WORLD.w, VILLAGE_WORLD.h);
 }
 
 function drawVillageDarkCrypt(x, y, scale = 1, variant = "large") {
@@ -6070,30 +6204,46 @@ function drawVillageDarkCrypt(x, y, scale = 1, variant = "large") {
 
 function drawVillageDarkBuildings() {
   ctx.save();
-  ctx.globalAlpha = villageBridgeFixed() ? 1 : 0.48;
-  drawVillageDarkCrypt(2580, 420, 1.05, "large");
-  drawVillageDarkCrypt(2840, 780, 0.86, "small");
-  drawTownAsset("grave_altar_stone", 2670, 620, 62, 0, 0.88);
-  drawTownAsset("grave_coffin", 2900, 1030, 58, -0.12, 0.78);
-  for (const [x, y] of [[2480, 560], [2520, 560], [2560, 560], [2800, 930], [2840, 930], [2880, 930]]) {
-    drawTownAsset("grave_fence", x, y, 34, 0, 0.72) || drawTownAsset("grave_iron_fence", x, y, 34, 0, 0.72);
+  ctx.globalAlpha = villageBridgeFixed() ? 0.96 : 0.42;
+  drawVillageCraftpixProp("cp_village_watchtower_short", 2486, 642, 118, 154, 0.86);
+  drawVillageCraftpixHouse(2606, 520, 154, 188, 0.86, "#9e78ff");
+  drawVillageCraftpixProp("cp_village_magic_tower", 2792, 598, 136, 178, 0.86);
+  drawVillageCraftpixProp("cp_village_castle_round", 2906, 860, 176, 194, 0.88);
+  drawVillageCraftpixHouse(2804, 1172, 148, 180, 0.80, "#c77dff");
+  drawVillageCraftpixProp("cp_village_watchtower_tall", 2960, 736, 108, 166, 0.84);
+  for (const [x, y] of [[2504, 720], [2608, 702], [2790, 744], [2924, 954]]) {
+    drawVillageCraftpixFence(x, y, 1, false, 0.70);
   }
-  for (const [x, y] of [[2470, 690], [2620, 820], [2740, 545], [2925, 850], [2840, 1160]]) {
-    drawTownAsset("grave_cross", x, y, 38, 0, 0.75) || drawTownAsset("grave_rocks_tall", x, y, 34, 0, 0.58);
+  for (const [x, y] of [[2506, 716], [2794, 716], [2940, 742]]) {
+    drawVillageCraftpixProp("cp_village_blue_banner", x, y, 24, 42, 0.70);
+    drawVillageCraftpixProp("cp_village_red_banner", x + 22, y, 24, 42, 0.50);
   }
-  for (const [x, y] of [[2540, 700], [2730, 700], [2910, 740]]) drawTownAsset("grave_lightpost", x, y, 46, 0, 0.82);
+  ctx.fillStyle = "rgba(66, 35, 88, 0.15)";
+  ctx.fillRect(VILLAGE_DARK_DISTRICT.x, 0, VILLAGE_DARK_DISTRICT.w, VILLAGE_WORLD.h);
   ctx.restore();
 }
 
 function drawVillageRiverAndBridge() {
   const river = VILLAGE_RIVER;
   ctx.save();
-  ctx.fillStyle = "rgba(7, 19, 18, 0.22)";
-  ctx.fillRect(river.x - 8, 0, river.w + 16, VILLAGE_WORLD.h);
-  for (let y = -16; y < VILLAGE_WORLD.h + 32; y += 32) {
-    for (let x = river.x; x < river.x + river.w; x += 32) {
-      drawTownAssetRect(villageHash(x, y) > 0.5 ? "town_water_a" : "town_water_b", x, y, 34, 34, 0.95);
-    }
+  const g = ctx.createLinearGradient(river.x - 12, 0, river.x + river.w + 12, 0);
+  g.addColorStop(0, "rgba(60,94,45,0.78)");
+  g.addColorStop(0.10, "#62cde2");
+  g.addColorStop(0.50, "#47aeca");
+  g.addColorStop(0.90, "#62cde2");
+  g.addColorStop(1, "rgba(60,94,45,0.78)");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.roundRect(river.x - 8, -20, river.w + 16, VILLAGE_WORLD.h + 40, 42);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(52,92,54,0.72)";
+  ctx.lineWidth = 8;
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.18)";
+  for (let y = 90; y < VILLAGE_WORLD.h; y += 170) {
+    ctx.beginPath();
+    ctx.ellipse(river.x + 46 + Math.sin(y) * 16, y, 34, 5, -0.1, 0, Math.PI * 2);
+    ctx.fill();
   }
   ctx.fillStyle = "rgba(4, 12, 20, 0.20)";
   ctx.fillRect(VILLAGE_DARK_DISTRICT.x, 0, VILLAGE_DARK_DISTRICT.w, VILLAGE_WORLD.h);
@@ -6101,32 +6251,23 @@ function drawVillageRiverAndBridge() {
   ctx.fillRect(VILLAGE_DARK_DISTRICT.x, 0, VILLAGE_DARK_DISTRICT.w, VILLAGE_WORLD.h);
   const b = VILLAGE_BRIDGE;
   if (villageBridgeFixed()) {
-    for (let x = b.x - b.w / 2; x <= b.x + b.w / 2; x += 34) drawTownAsset("platformer_bridge", x, b.y, 44, 0, 0.95) || drawTownAsset("town_bridge", x, b.y, 42, 0, 0.95);
-    drawTownAsset("platformer_bridge_logs", b.x - 58, b.y + 16, 54, 0, 0.95);
-    drawTownAsset("platformer_bridge_logs", b.x + 58, b.y + 16, 54, 0, 0.95);
+    drawVillageCraftpixProp("cp_village_bridge_h", b.x, b.y + 52, 220, 146, 0.98);
   } else {
-    drawTownAsset("platformer_bridge_logs", b.x - 56, b.y + 18, 68, -0.42, 0.85) || drawTownAsset("town_bridge", b.x - 56, b.y + 18, 64, -0.42, 0.85);
-    drawTownAsset("platformer_bridge_logs", b.x + 56, b.y - 12, 64, 0.38, 0.75) || drawTownAsset("town_bridge", b.x + 56, b.y - 12, 58, 0.38, 0.75);
+    drawVillageCraftpixProp("cp_village_bridge_h", b.x - 62, b.y + 56, 116, 76, 0.55);
+    drawVillageCraftpixProp("cp_village_bridge_h", b.x + 62, b.y - 4, 108, 70, 0.45);
     if (villageBridgeNearPlayer().distance < 150) {
-      ctx.fillStyle = "rgba(3,5,12,0.58)";
+      ctx.fillStyle = "rgba(3,5,12,0.62)";
       ctx.beginPath();
-      ctx.roundRect(b.x - 92, b.y - 60, 184, 24, 5);
+      ctx.roundRect(b.x - 96, b.y - 68, 192, 26, 5);
       ctx.fill();
       ctx.fillStyle = villageBridgeCanRepair() ? "#ffd35a" : "#ff6b7d";
       ctx.font = "900 8px ui-monospace, monospace";
       ctx.textAlign = "center";
-      ctx.fillText((villageBridgeCanRepair() ? villageBridgeCostText() : villageRequirementText(VILLAGE_BRIDGE.req)).toUpperCase(), b.x, b.y - 44);
+      ctx.fillText((villageBridgeCanRepair() ? villageBridgeCostText() : villageRequirementText(VILLAGE_BRIDGE.req)).toUpperCase(), b.x, b.y - 51);
     }
   }
-  const gravestones = [
-    [2460, 520], [2550, 560], [2760, 530], [2920, 700], [2500, 970], [2675, 1140], [2860, 1220]
-  ];
-  for (const [x, y] of gravestones) {
-    drawTownAsset("grave_cross", x, y, 32, 0, 0.65) || drawTownAsset("platformer_brick_grey", x, y, 26, 0, 0.42);
-  }
-  drawTownAsset("platformer_bush", 2860, 990, 44, 0, 0.55) || drawTownAsset("town_bush", 2860, 990, 44, 0, 0.55);
-  drawTownAsset("tiny_sign", 2528, 720, 38, 0, 0.82);
-  drawTownAsset("town_lamp", 2720, 705, 34, 0, villageBridgeFixed() ? 0.85 : 0.30);
+  drawVillageCraftpixProp("cp_village_rock_01", river.x - 38, 705, 44, 36, 0.62);
+  drawVillageCraftpixProp("cp_village_rock_02", river.x + river.w + 28, 940, 38, 28, 0.62);
   ctx.restore();
   drawVillageDarkBuildings();
 }
@@ -6200,94 +6341,75 @@ function drawVillageFishingDock() {
 }
 
 function drawVillagePaths() {
-  const cx = VILLAGE_TOWER_GATE.x;
-  const drawCurve = (points, width, color) => {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = width;
+  const pad = (x, y, rx, ry, alpha = 0.12, rot = 0) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.fillStyle = `rgba(210,184,118,${alpha})`;
     ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i += 2) {
-      const c = points[i];
-      const e = points[i + 1] || c;
-      ctx.quadraticCurveTo(c.x, c.y, e.x, e.y);
-    }
-    ctx.stroke();
-  };
-  const branch = points => {
-    drawCurve(points, 88, "rgba(88,60,38,0.34)");
-    drawCurve(points, 62, "rgba(137,96,58,0.72)");
+    ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   };
 
   ctx.save();
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  branch([
-    { x: cx, y: VILLAGE_WORLD.h - 110 },
-    { x: cx - 12, y: 1110 }, { x: cx, y: 790 },
-    { x: cx + 10, y: 520 }, { x: cx, y: 220 }
-  ]);
-  branch([{ x: cx, y: 430 }, { x: 930, y: 385 }, { x: VILLAGE_POND.x + 160, y: VILLAGE_POND.y + 30 }]);
-  branch([{ x: cx, y: 470 }, { x: 860, y: 510 }, { x: VILLAGE_PROJECTS[0].x, y: VILLAGE_PROJECTS[0].y }]);
-  branch([{ x: cx, y: 500 }, { x: 1225, y: 470 }, { x: VILLAGE_HOME.x, y: VILLAGE_HOME.y + 72 }]);
-  branch([{ x: cx, y: 690 }, { x: 1240, y: 760 }, { x: VILLAGE_PROJECTS[1].x, y: VILLAGE_PROJECTS[1].y }]);
-  branch([{ x: cx, y: 640 }, { x: 1500, y: 620 }, { x: VILLAGE_PROJECTS[2].x, y: VILLAGE_PROJECTS[2].y }]);
-  branch([{ x: cx, y: 820 }, { x: 870, y: 925 }, { x: VILLAGE_SERVICE_BUILDINGS.power.x + 96, y: VILLAGE_SERVICE_BUILDINGS.power.y + 116 }]);
-  branch([{ x: cx, y: 910 }, { x: 1380, y: 970 }, { x: VILLAGE_SERVICE_BUILDINGS.collection.x + 96, y: VILLAGE_SERVICE_BUILDINGS.collection.y + 114 }]);
-  branch([{ x: cx, y: 1060 }, { x: 1080, y: 1190 }, { x: VILLAGE_SERVICE_BUILDINGS.road.x + 82, y: VILLAGE_SERVICE_BUILDINGS.road.y + 110 }]);
-  branch([{ x: VILLAGE_VILLAGER_SPOTS[0].x, y: VILLAGE_VILLAGER_SPOTS[0].y + 70 }, { x: 640, y: 740 }, { x: cx, y: 680 }]);
-  branch([{ x: VILLAGE_VILLAGER_SPOTS[1].x, y: VILLAGE_VILLAGER_SPOTS[1].y + 70 }, { x: 1020, y: 860 }, { x: cx, y: 780 }]);
-  branch([{ x: VILLAGE_VILLAGER_SPOTS[2].x, y: VILLAGE_VILLAGER_SPOTS[2].y + 70 }, { x: 1510, y: 780 }, { x: cx, y: 690 }]);
+  pad(VILLAGE_TOWER_GATE.x, 668, 96, 26, 0.15, -0.08);
+  pad(420, 658, 70, 22, 0.13, 0.02);
+  pad(910, 758, 62, 18, 0.10, 0.06);
+  pad(VILLAGE_SERVICE_BUILDINGS.collection.x + 20, VILLAGE_SERVICE_BUILDINGS.collection.y + 136, 62, 18, 0.10, 0.04);
+  pad(VILLAGE_BRIDGE.x - 92, VILLAGE_BRIDGE.y + 6, 84, 20, 0.14, 0.02);
+  pad(VILLAGE_BRIDGE.x + 92, VILLAGE_BRIDGE.y + 6, 84, 20, 0.14, -0.02);
 
-  ctx.globalAlpha = 0.20;
-  for (let y = 190; y < VILLAGE_WORLD.h - 80; y += 34) {
-    drawTownAsset("town_dirt_a", cx - 18 + Math.sin(y * 0.04) * 8, y, 34, 0, 0.9);
-    drawTownAsset("town_dirt_b", cx + 18 + Math.cos(y * 0.035) * 8, y + 8, 34, 0, 0.8);
-  }
-  ctx.globalAlpha = 1;
+  const stones = [
+    [VILLAGE_TOWER_GATE.x - 42, 666], [VILLAGE_TOWER_GATE.x + 24, 668],
+    [VILLAGE_BRIDGE.x - 128, VILLAGE_BRIDGE.y + 4], [VILLAGE_BRIDGE.x + 128, VILLAGE_BRIDGE.y + 8],
+    [430, 652], [462, 668], [892, 754], [924, 766]
+  ];
+  for (const [x, y] of stones) drawTownAssetRect("tiny_path_stone", x, y, 18, 18, 0.22);
   ctx.restore();
 }
 
 function drawVillageWell() {
-  ctx.save();
   const x = VILLAGE_WELL.x;
   const y = VILLAGE_WELL.y;
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
-  ctx.beginPath();
-  ctx.ellipse(x + 3, y + 28, 48, 13, 0, 0, Math.PI * 2);
-  ctx.fill();
-  for (let i = -1; i <= 1; i++) drawTownAsset("town_stone_b", x + i * 22, y + 14, 28, 0, 0.9);
-  ctx.fillStyle = "#0b111c";
-  ctx.beginPath();
-  ctx.ellipse(x, y + 12, 34, 13, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(124,199,255,0.45)";
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(255,211,90,0.45)";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(x - 34, y + 4);
-  ctx.quadraticCurveTo(x, y - 36, x + 34, y + 4);
-  ctx.stroke();
-  drawTownAsset("town_barrel_c", x + 58, y + 30, 28, 0, 0.9);
-  ctx.restore();
+  drawVillageCraftpixProp("cp_village_well", x, y + 52, 104, 104, 0.98);
+  drawVillageCraftpixProp("cp_village_barrel", x + 78, y + 58, 30, 35, 0.88);
+  drawVillageCraftpixProp("cp_village_bush_small", x - 74, y + 54, 52, 44, 0.74);
 }
 
 function drawVillageExtraAreas() {
   ctx.save();
-  const marketX = VILLAGE_VISITOR_SPOT.x;
-  const marketY = VILLAGE_VISITOR_SPOT.y + 16;
-  ctx.fillStyle = "rgba(0,0,0,0.18)";
-  ctx.beginPath();
-  ctx.ellipse(marketX, marketY + 18, 112, 24, 0, 0, Math.PI * 2);
-  ctx.fill();
-  drawTownAsset("town_crate_big", marketX - 58, marketY + 12, 30, 0, 0.82);
-  drawTownAsset("town_barrel_a", marketX + 54, marketY + 14, 26, 0, 0.82);
-  drawTownAsset("tiny_sign", marketX, marketY - 18, 34, 0, 0.85);
 
-  const groveX = VILLAGE_WELL.x;
-  const groveY = VILLAGE_WELL.y + 92;
-  drawTownAsset("town_lamp", groveX - 52, groveY, 30, 0, 0.72);
-  drawTownAsset("tiny_flower", groveX + 38, groveY + 18, 20, 0, 0.78);
+  // Clean village anchors: one prop family per area, with breathing room between clusters.
+  drawVillageCraftpixFence(285, 360, 5, false, 0.84);
+  drawVillageCraftpixFence(285, 440, 3, true, 0.84);
+  drawVillageCraftpixProp("cp_village_windmill", 410, 468, 230, 230, 0.96);
+  drawVillageCraftpixProp("cp_village_cart", 535, 610, 92, 46, 0.90);
+  drawVillageCraftpixProp("cp_village_barrel", 302, 636, 30, 35, 0.86);
+
+  drawVillageCraftpixFence(1280, 394, 6, false, 0.86);
+  drawVillageCraftpixFence(1280, 492, 3, true, 0.86);
+  drawVillageCraftpixProp("cp_village_tent", 1540, 546, 108, 100, 0.95);
+  drawVillageCraftpixProp("cp_village_tent", 1644, 554, 96, 90, 0.92);
+  drawVillageCraftpixProp("cp_village_campfire", 1594, 625, 72, 58, 0.92);
+  drawVillageCraftpixProp("cp_village_barrel", 1718, 616, 30, 35, 0.82);
+  drawVillageCraftpixProp("cp_village_red_banner", 1260, 548, 44, 66, 0.86);
+
+  const marketX = VILLAGE_VISITOR_SPOT.x;
+  const marketY = VILLAGE_VISITOR_SPOT.y + 24;
+  drawVillageCraftpixProp("cp_village_chest", marketX - 70, marketY + 34, 66, 54, 0.90);
+  drawVillageCraftpixProp("cp_village_barrel", marketX + 18, marketY + 34, 30, 35, 0.88);
+  drawVillageCraftpixProp("cp_village_flag", marketX + 72, marketY + 16, 34, 54, 0.82);
+
+  for (const [x, y, key, w, h] of [
+    [745, 396, "cp_village_rock_01", 48, 40],
+    [973, 742, "cp_village_bush_medium", 66, 50],
+    [1535, 805, "cp_village_bush_small", 42, 36],
+    [1790, 820, "cp_village_rock_02", 38, 28],
+    [825, 1136, "cp_village_bush_large", 82, 52],
+    [1320, 1128, "cp_village_rock_01", 44, 36]
+  ]) drawVillageCraftpixProp(key, x, y, w, h, 0.68);
+
   ctx.restore();
 }
 
@@ -6297,70 +6419,67 @@ function drawVillageHomeAndChest() {
   const h = VILLAGE_HOME;
   ctx.save();
   if (rank <= 0) {
-    ctx.fillStyle = "rgba(0,0,0,0.25)";
-    ctx.beginPath();
-    ctx.ellipse(h.x, h.y + 30, 78, 22, 0, 0, Math.PI * 2);
-    ctx.fill();
-    drawTownAsset("town_crate_big", h.x - 34, h.y + 18, 32, 0, 0.86);
-    drawTownAsset("town_stump", h.x + 34, h.y + 20, 28, 0, 0.75);
-    ctx.fillStyle = "rgba(3,5,12,0.62)";
-    ctx.fillRect(h.x - 58, h.y - 22, 116, 34);
-    ctx.strokeStyle = "rgba(255,211,90,0.58)";
-    ctx.strokeRect(h.x - 58, h.y - 22, 116, 34);
-    ctx.fillStyle = "#ffd35a";
-    ctx.font = "900 9px ui-monospace, monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("BUILD YOUR HOUSE", h.x, h.y - 2);
+    drawVillageCraftpixProp("cp_village_cart", h.x - 20, h.y + 46, 98, 50, 0.82);
+    drawVillageCraftpixProp("cp_village_stump_tall", h.x + 72, h.y + 52, 42, 36, 0.80);
+    drawVillageNamePlate(h.x, h.y + 58, "Build house", "#ffd35a");
   } else {
-    drawVillageCottage({ x: h.x - h.w / 2, y: h.y - h.h / 2, w: h.w, h: h.h }, "#c77dff", "Home", Math.min(5, rank), 5);
+    drawVillageCraftpixHouse(h.x, h.y + 108, 230, 306, 1, rank >= 5 ? "#ffd35a" : "#c77dff");
     ctx.fillStyle = "#f5f1ff";
     ctx.font = "900 11px ui-monospace, monospace";
     ctx.textAlign = "center";
-    ctx.fillText(`YOUR HOUSE R${rank}`, h.x, h.y + 78);
+    ctx.fillText(`YOUR HOUSE R${rank}`, h.x, h.y + 84);
   }
-  drawTownAsset("tiny_chest", VILLAGE_CHEST.x, VILLAGE_CHEST.y, 44, 0, 1) || drawTownAsset("town_crate_big", VILLAGE_CHEST.x, VILLAGE_CHEST.y, 44, 0, 1);
+  drawVillageCraftpixProp("cp_village_chest", VILLAGE_CHEST.x, VILLAGE_CHEST.y + 34, 66, 54, 1);
   ctx.fillStyle = "#ffd35a";
   ctx.font = "900 9px ui-monospace, monospace";
   ctx.textAlign = "center";
-  ctx.fillText("STORAGE", VILLAGE_CHEST.x, VILLAGE_CHEST.y + 38);
+  ctx.fillText("STORAGE", VILLAGE_CHEST.x, VILLAGE_CHEST.y + 42);
   ctx.restore();
 }
 
 function drawVillageFences() {
   ctx.save();
-  // Small path fences only, deliberately away from water and building footprints.
-  for (const [x, y, count] of [[930, 570, 5], [1240, 760, 5], [1500, 840, 4]]) {
-    for (let i = 0; i < count; i++) drawTownAsset("town_fence_h", x + i * 30, y, 32, 0, 0.56);
-  }
+  const fenceRuns = [
+    [310, 710, 5, false], [310, 710, 3, true], [598, 710, 3, true],
+    [1328, 760, 5, false], [1328, 760, 3, true], [1616, 760, 3, true],
+    [538, 910, 5, false], [1188, 1086, 5, false], [1520, 1010, 4, false],
+    [1830, 590, 4, true], [1780, 1090, 5, false]
+  ];
+  for (const [x, y, count, vertical] of fenceRuns) drawVillageCraftpixFence(x, y, count, vertical, 0.76);
   ctx.restore();
 }
 
 function drawVillageWallsAndTrees() {
   ctx.save();
-  ctx.fillStyle = "rgba(4,8,12,0.46)";
-  ctx.fillRect(0, 0, VILLAGE_WORLD.w, 48);
-  ctx.fillRect(0, 0, 38, VILLAGE_WORLD.h);
-  ctx.fillRect(VILLAGE_WORLD.w - 38, 0, 38, VILLAGE_WORLD.h);
-  ctx.fillRect(0, VILLAGE_WORLD.h - 38, VILLAGE_WORLD.w, 38);
-
-  for (let x = 44; x < VILLAGE_WORLD.w - 40; x += 46) {
+  // Tree walls frame zones without filling the middle with random noise.
+  for (let x = 54; x < VILLAGE_WORLD.w - 40; x += 92) {
     if (x > VILLAGE_TOWER_GATE.x - 150 && x < VILLAGE_TOWER_GATE.x + 150) continue;
-    drawTownAsset("town_tree_small", x, 36 + (x % 3) * 5, 42, 0, 0.84);
+    drawVillageTree(x, 74 + (x % 4) * 4, "town_tree_small");
+  }
+  for (let x = 70; x < VILLAGE_WORLD.w - 40; x += 104) drawVillageTree(x, VILLAGE_WORLD.h - 64 - (x % 3) * 8, "town_tree_small");
+  for (let y = 160; y < VILLAGE_WORLD.h - 80; y += 118) {
+    drawVillageTree(56, y, "town_tree_small");
+    drawVillageTree(VILLAGE_WORLD.w - 56, y + 24, "town_tree_small");
   }
   for (const [x, y, key] of VILLAGE_TREE_LINES) drawVillageTree(x, y, key);
-  for (let i = 0; i < 12; i++) {
-    drawTownAsset("town_bush", 58 + i * 82, VILLAGE_WORLD.h - 62 + (i % 2) * 7, 28, 0, 0.75);
-    drawTownAsset("town_bush", VILLAGE_WORLD.w - 64 - i * 82, VILLAGE_WORLD.h - 64 + (i % 2) * 7, 28, 0, 0.75);
-  }
+  for (const [x, y, key] of [
+    [360, 245, "town_tree_green"], [520, 250, "town_tree_green"], [680, 185, "town_tree_small"],
+    [1490, 260, "town_tree_green"], [1660, 250, "town_tree_green"], [1900, 250, "town_tree_small"],
+    [380, 1140, "town_tree_green"], [520, 1210, "town_tree_green"], [700, 1310, "town_tree_small"],
+    [1640, 1150, "town_tree_green"], [1820, 1180, "town_tree_green"], [1980, 1060, "town_tree_small"]
+  ]) drawVillageTree(x, y, key);
   ctx.restore();
 }
 
 function drawVillageTree(x, y, key = "town_tree_green") {
-  ctx.fillStyle = "rgba(5,8,11,0.34)";
-  ctx.beginPath();
-  ctx.ellipse(x + 4, y + 28, 34, 11, 0, 0, Math.PI * 2);
-  ctx.fill();
-  if (!drawTownAsset(key, x, y, 72, 0, 0.98)) {
+  const h = key === "town_tree_small" ? 104 : key === "town_tree_blue" ? 132 : 122;
+  const w = h * 0.88;
+  const asset = key === "town_tree_small" ? "cp_village_tree_small" : villageHash(x, y) > 0.58 ? "cp_village_tree_medium" : "cp_village_tree_large";
+  if (!drawVillageCraftpixProp(asset, x, y + 42, w, h, 0.96)) {
+    ctx.fillStyle = "rgba(5,8,11,0.34)";
+    ctx.beginPath();
+    ctx.ellipse(x + 4, y + 28, 34, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = "#28301f";
     ctx.fillRect(x - 7, y + 8, 14, 34);
     ctx.fillStyle = "#235033";
@@ -6380,47 +6499,39 @@ function drawVillageShrine() {
   const near = Math.hypot(villagePlayer.x - VILLAGE_SHRINE.x, villagePlayer.y - VILLAGE_SHRINE.y) < 150;
   ctx.save();
   ctx.translate(VILLAGE_SHRINE.x, VILLAGE_SHRINE.y);
-  ctx.fillStyle = "rgba(0,0,0,0.24)";
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
   ctx.beginPath();
-  ctx.ellipse(0, 44, 104, 26, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 52, 92, 24, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "rgba(91,88,82,0.88)";
-  ctx.beginPath();
-  ctx.arc(0, 0, 72, 0, Math.PI * 2);
-  ctx.fill();
-  for (let i = 0; i < 10; i++) {
-    const a = i * Math.PI / 5;
-    drawTownAsset("town_stone_a", Math.cos(a) * 64, Math.sin(a) * 64, 24, a, 0.70);
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4;
+    drawVillageCraftpixProp("cp_village_rock_02", Math.cos(a) * 66, Math.sin(a) * 38 + 40, 28, 20, 0.56);
   }
+  drawVillageCraftpixProp("cp_village_magic_tower", 0, 70, 98, 164, 0.94);
   if (near || villagePulse > 0.05) {
-    const glow = ctx.createRadialGradient(0, -10, 5, 0, -10, 90 + villagePulse * 18);
+    const glow = ctx.createRadialGradient(0, -8, 5, 0, -8, 88 + villagePulse * 18);
     glow.addColorStop(0, `rgba(124,199,255,${0.10 + pct * 0.16})`);
     glow.addColorStop(1, "rgba(124,199,255,0)");
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(0, -10, 90, 0, Math.PI * 2);
+    ctx.arc(0, -8, 90, 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.strokeStyle = "rgba(255,211,90,0.74)";
-  ctx.lineWidth = 4;
+  ctx.strokeStyle = "rgba(255,211,90,0.72)";
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.arc(0, 0, 78 + villagePulse * 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
+  ctx.arc(0, 32, 62 + villagePulse * 3, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
   ctx.stroke();
-  ctx.fillStyle = "#0b111c";
-  ctx.fillRect(-24, -38, 48, 78);
-  ctx.strokeStyle = "rgba(124,199,255,0.44)";
-  ctx.strokeRect(-24, -38, 48, 78);
-  drawTownAsset("town_arch", 0, 4, 62, 0, 0.72);
-  drawVillageCandle(-42, 34, pct);
-  drawVillageCandle(42, 34, pct);
+  drawVillageCandle(-44, 50, pct);
+  drawVillageCandle(44, 50, pct);
   ctx.fillStyle = "#d9deea";
   ctx.textAlign = "center";
   ctx.font = "900 11px ui-monospace, monospace";
-  ctx.fillText("MIRA", 0, 62);
+  ctx.fillText("MIRA", 0, 82);
   if (near) {
-    ctx.fillStyle = "rgba(217,222,234,0.64)";
+    ctx.fillStyle = "rgba(217,222,234,0.72)";
     ctx.font = "700 9px ui-monospace, monospace";
-    ctx.fillText(`${restored}/${max} RESTORED`, 0, 77);
+    ctx.fillText(`${restored}/${max} RESTORED`, 0, 97);
   }
   ctx.restore();
 }
@@ -6443,83 +6554,39 @@ function drawVillageCandle(x, y, power = 1) {
 function drawVillageTowerGate() {
   ctx.save();
   ctx.translate(VILLAGE_TOWER_GATE.x, VILLAGE_TOWER_GATE.y);
-  ctx.fillStyle = "rgba(0,0,0,0.34)";
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath();
-  ctx.ellipse(0, 62, 172, 34, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 70, 162, 32, 0, 0, Math.PI * 2);
   ctx.fill();
 
   const omen = activeVillageOmen();
   const glow = omen?.id === "red_lights" ? "255,92,122" : omen?.id === "quiet_tower" ? "124,199,255" : "255,211,90";
-  const pulse = 0.65 + Math.sin(nowSec() * 2.1) * 0.18;
-  const g = ctx.createRadialGradient(0, 34, 18, 0, 34, 130);
-  g.addColorStop(0, `rgba(${glow},${0.16 + pulse * 0.08})`);
-  g.addColorStop(0.65, "rgba(48,69,98,0.18)");
+  const pulse = 0.58 + Math.sin(nowSec() * 2.1) * 0.14;
+  const g = ctx.createRadialGradient(0, 34, 18, 0, 34, 150);
+  g.addColorStop(0, `rgba(${glow},${0.12 + pulse * 0.08})`);
+  g.addColorStop(0.7, "rgba(48,69,98,0.12)");
   g.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.ellipse(0, 34, 132, 54, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 34, 134, 54, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  const drawStoneWall = (x, y, w, h, color = "#5f6d76") => {
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = "rgba(13,17,24,0.38)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-    ctx.globalAlpha = 0.42;
-    ctx.strokeStyle = "rgba(245,241,255,0.22)";
-    for (let yy = y + 18; yy < y + h; yy += 18) {
-      ctx.beginPath();
-      ctx.moveTo(x + 4, yy);
-      ctx.lineTo(x + w - 4, yy);
-      ctx.stroke();
-    }
-    for (let xx = x + 24; xx < x + w; xx += 32) {
-      ctx.beginPath();
-      ctx.moveTo(xx, y + 2);
-      ctx.lineTo(xx, y + h - 2);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-  };
+  drawVillageCraftpixProp("cp_village_castle_square", 0, 82, 188, 210, 0.94);
+  drawVillageCraftpixProp("cp_village_castle_round", -118, 82, 112, 168, 0.86);
+  drawVillageCraftpixProp("cp_village_castle_round", 118, 82, 112, 168, 0.86);
+  drawVillageCraftpixProp("cp_village_red_banner", -74, 64, 38, 58, 0.86);
+  drawVillageCraftpixProp("cp_village_blue_banner", 74, 64, 38, 58, 0.86);
 
-  drawStoneWall(-154, -32, 308, 72, "#626f78");
-  drawStoneWall(-132, -58, 58, 98, "#6d7a83");
-  drawStoneWall(74, -58, 58, 98, "#6d7a83");
-  for (const x of [-132, -108, -84, 74, 98, 122, -36, -12, 12, 36]) {
-    ctx.fillStyle = "#87949c";
-    ctx.fillRect(x, x < -70 || x > 70 ? -72 : -46, 16, 14);
-    ctx.strokeStyle = "rgba(13,17,24,0.28)";
-    ctx.strokeRect(x, x < -70 || x > 70 ? -72 : -46, 16, 14);
-  }
-
-  const drawDoor = x => {
-    ctx.fillStyle = "#252833";
-    ctx.beginPath();
-    ctx.roundRect(x - 25, 2, 50, 62, 20);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(124,199,255,0.42)";
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.fillStyle = "rgba(0,0,0,0.28)";
-    ctx.fillRect(x - 18, 22, 36, 42);
-  };
-  drawDoor(-72);
-  drawDoor(72);
-
-  for (const x of [-118, -86, 86, 118]) drawTownAsset("town_lamp", x, 36, 34, 0, 0.90);
-  for (const x of [-72, 72]) {
-    const doorGlow = ctx.createRadialGradient(x, 34, 4, x, 34, 68);
-    doorGlow.addColorStop(0, `rgba(${glow},${0.22 + pulse * 0.10})`);
-    doorGlow.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = doorGlow;
-    ctx.beginPath();
-    ctx.ellipse(x, 34, 52, 70, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  ctx.fillStyle = "rgba(3,5,12,0.42)";
+  ctx.beginPath();
+  ctx.roundRect(-48, 10, 96, 74, 20);
+  ctx.fill();
+  ctx.strokeStyle = `rgba(${glow},0.42)`;
+  ctx.lineWidth = 3;
+  ctx.stroke();
   if (omen?.id === "red_lights") {
-    ctx.fillStyle = "rgba(255,92,122,0.34)";
-    ctx.fillRect(-154, -34, 308, 74);
+    ctx.fillStyle = "rgba(255,92,122,0.20)";
+    ctx.fillRect(-112, -24, 224, 88);
   }
   ctx.restore();
 }
@@ -6588,42 +6655,45 @@ function drawVillageHuts() {
   }
 }
 
+function drawVillageCraftpixHouse(cx, bottomY, w = 210, h = 280, alpha = 1, labelColor = "#ffd35a") {
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.beginPath();
+  ctx.ellipse(cx + 8, bottomY - 8, w * 0.36, 11, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  const ok = drawTownAssetBottom("cp_village_house", cx, bottomY, w, h, alpha);
+  if (!ok) drawCleanCottageBase(cx - w / 2, bottomY - h + 60, w, h - 70, { trim: hexToRgba(labelColor, 0.42) });
+}
+
 function drawVillageCottage(h, color, role, rank, max) {
   const cx = h.x + h.w / 2;
   const buildStage = clamp(rank, 0, 5);
   const roleKey = String(role || "").toLowerCase();
-  const roofColor = roleKey.includes("smith") ? "#7d5638" : roleKey.includes("lookout") ? "#5f7084" : roleKey.includes("home") ? "#9b6739" : "#8f6138";
-  const wallColor = roleKey.includes("smith") ? "#b9aa86" : roleKey.includes("lookout") ? "#c4baa0" : roleKey.includes("home") ? "#d0b883" : "#c9b27f";
   ctx.save();
   if (buildStage <= 0) {
-    ctx.fillStyle = "rgba(0,0,0,0.23)";
-    ctx.beginPath();
-    ctx.ellipse(cx + 4, h.y + h.h + 2, h.w * 0.36, 12, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "rgba(128,90,50,0.72)";
-    ctx.fillRect(cx - 42, h.y + h.h - 40, 84, 16);
-    drawTownAsset(roleKey.includes("smith") ? "tiny_tool_pickaxe" : roleKey.includes("lookout") ? "tiny_target" : "tiny_chest", cx + 48, h.y + h.h - 46, 24, 0, 0.95);
-    drawTownAsset("town_crate_small", cx - 42, h.y + h.h - 34, 24, 0, 0.85);
+    drawVillageCraftpixProp("cp_village_tent", cx - 16, h.y + h.h - 8, 86, 78, 0.84);
+    drawVillageCraftpixProp("cp_village_chest", cx + 46, h.y + h.h - 2, 28, 24, 0.65);
     ctx.fillStyle = "#f5f1ff";
     ctx.font = "900 10px ui-monospace, monospace";
     ctx.textAlign = "center";
     ctx.fillText("CAMP", cx, h.y + h.h - 48);
   } else {
-    drawCleanCottageBase(h.x, h.y, h.w, h.h, { wallColor, roofColor, trim: hexToRgba(color, 0.48), chimney: roleKey.includes("home") || roleKey.includes("smith") });
-    drawTownAsset(roleKey.includes("smith") ? "town_door_b" : "town_door_a", cx, h.y + h.h - 24, 40, 0, 0.98);
-    const winY = villageCottageWindowY(h.y, h.h);
-    if (buildStage >= 2) drawTownAsset("town_window_a", h.x + 58, winY, 28, 0, 0.95);
-    if (buildStage >= 3) drawTownAsset("town_window_b", h.x + h.w - 58, winY, 28, 0, 0.95);
-    if (roleKey.includes("smith")) drawTownAsset("tiny_tool_pickaxe", h.x + h.w - 38, h.y + 62, 24, -0.55, 0.95);
-    if (roleKey.includes("lookout")) drawTownAsset("tiny_target", h.x + h.w - 38, h.y + 62, 24, 0, 0.95);
+    const w = roleKey.includes("lookout") ? 176 : 206;
+    const houseH = roleKey.includes("lookout") ? 228 : 274;
+    const asset = roleKey.includes("lookout") ? "cp_village_watchtower_short" : "cp_village_house";
+    if (roleKey.includes("lookout")) drawVillageCraftpixProp(asset, cx, h.y + h.h + 16, w, houseH, 0.96);
+    else drawVillageCraftpixHouse(cx, h.y + h.h + 18, w, houseH, 0.98, color);
+    if (roleKey.includes("smith")) drawVillageCraftpixProp("cp_village_barrel", h.x + h.w - 38, h.y + h.h + 18, 30, 35, 0.88);
+    if (roleKey.includes("home")) drawVillageCraftpixProp("cp_village_bush_small", h.x + 28, h.y + h.h + 18, 44, 36, 0.70);
   }
-  ctx.fillStyle = "rgba(3,5,12,0.42)";
+  ctx.fillStyle = "rgba(3,5,12,0.46)";
   ctx.beginPath();
-  ctx.roundRect(cx - 34, h.y + h.h - 20, 68, 13, 4);
+  ctx.roundRect(cx - 34, h.y + h.h - 18, 68, 13, 4);
   ctx.fill();
   for (let i = 0; i < max; i++) {
     ctx.fillStyle = i < rank ? color : "rgba(255,255,255,0.18)";
-    ctx.fillRect(cx - 26 + i * 11, h.y + h.h - 16, 8, 6);
+    ctx.fillRect(cx - 26 + i * 11, h.y + h.h - 14, 8, 6);
   }
   ctx.restore();
 }
@@ -6776,24 +6846,28 @@ function drawVillageDailyBoard() {
   const done = (hub.boardTasks || []).filter(item => item.done).length;
   const near = Math.hypot(villagePlayer.x - x, villagePlayer.y - y) < 110;
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();
-  ctx.ellipse(x + 2, y + 24, 48, 12, 0, 0, Math.PI * 2);
+  ctx.ellipse(x + 2, y + 32, 70, 14, 0, 0, Math.PI * 2);
   ctx.fill();
-  drawTownAsset("tiny_sign", x, y, 64, 0, 1);
-  ctx.fillStyle = "rgba(3,5,12,0.64)";
-  ctx.beginPath();
-  ctx.roundRect(x - 56, y + 27, 112, 32, 5);
-  ctx.fill();
-  ctx.strokeStyle = near ? "rgba(125,255,178,0.72)" : "rgba(255,211,90,0.36)";
-  ctx.stroke();
-  ctx.fillStyle = "#ffd35a";
-  ctx.font = "900 9px ui-monospace, monospace";
-  ctx.textAlign = "center";
-  ctx.fillText("DAILY BOARD", x, y + 42);
-  ctx.fillStyle = "rgba(245,241,255,0.86)";
+  ctx.fillStyle = "#8a5b32";
+  ctx.fillRect(x - 62, y - 26, 124, 54);
+  ctx.fillStyle = "#c28a47";
+  ctx.fillRect(x - 56, y - 20, 112, 42);
+  ctx.fillStyle = "rgba(79,49,27,0.42)";
+  for (let i = 0; i < 3; i++) ctx.fillRect(x - 44 + i * 34, y - 11, 24, 28);
+  ctx.strokeStyle = near ? "rgba(125,255,178,0.72)" : "rgba(255,211,90,0.38)";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(x - 62, y - 26, 124, 54);
+  ctx.fillStyle = "#5f3b24";
+  ctx.fillRect(x - 50, y + 28, 9, 34);
+  ctx.fillRect(x + 42, y + 28, 9, 34);
+  ctx.fillStyle = "#f5f1ff";
   ctx.font = "900 8px ui-monospace, monospace";
-  ctx.fillText(`${done}/${Math.max(1, hub.boardTasks?.length || 3)} DONE`, x, y + 55);
+  ctx.textAlign = "center";
+  ctx.fillText("DAILY BOARD", x, y + 45);
+  ctx.fillStyle = near ? "#7dffb2" : "rgba(245,241,255,0.78)";
+  ctx.fillText(`${done}/${Math.max(1, hub.boardTasks?.length || 3)} DONE`, x, y + 57);
   ctx.restore();
 }
 
@@ -6801,37 +6875,25 @@ function drawVillageServiceBuildings() {
   const collection = VILLAGE_SERVICE_BUILDINGS.collection;
   const power = VILLAGE_SERVICE_BUILDINGS.power;
   const road = VILLAGE_SERVICE_BUILDINGS.road;
-  drawVillageSmallBuilding(collection.x, collection.y, collection.w, collection.h, collection.color, "GEAR", "Collection", "town_crate_big");
-  drawVillageSmallBuilding(power.x, power.y, power.w, power.h, power.color, "TRAINING", "Power Up", "town_barrel_b");
-  drawVillageSmallBuilding(road.x, road.y, road.w, road.h, road.color, "ROAD", "Main Menu", "town_fence_h2");
+  drawVillageSmallBuilding(collection.x, collection.y, collection.w, collection.h, collection.color, "GEAR", "Collection", "cp_village_chest");
+  drawVillageSmallBuilding(power.x, power.y, power.w, power.h, power.color, "TRAINING", "Power Up", "cp_village_red_banner");
+  drawVillageSmallBuilding(road.x, road.y, road.w, road.h, road.color, "ROAD", "Main Menu", "cp_village_flag");
 }
 
 function drawVillageSmallBuilding(x, y, w, h, color, top, bottom, iconKey) {
   const cx = x + w / 2;
   const type = String(bottom || "").toLowerCase();
-  const roofColor = type.includes("collection") ? "#6d4f86" : type.includes("power") ? "#5a7188" : type.includes("menu") ? "#8a633d" : "#8f6138";
-  const wallColor = type.includes("collection") ? "#c7b9d2" : type.includes("power") ? "#bcc8cf" : type.includes("menu") ? "#d2bb88" : "#c9b27f";
-  const winY = villageCottageWindowY(y, h);
-  const wallIconY = y + h - 52;
   ctx.save();
-  drawCleanCottageBase(x, y, w, h, { wallColor, roofColor, trim: hexToRgba(color, 0.48), chimney: type.includes("power") });
-  drawTownAsset(type.includes("menu") ? "town_door_a" : "town_door_b", cx, y + h - 24, 40, 0, 0.98);
-  drawTownAsset("town_window_a", x + 52, winY, 28, 0, 0.92);
-  drawTownAsset("town_window_b", x + w - 52, winY, 28, 0, 0.92);
-  drawTownAsset(iconKey, cx, wallIconY, 24, 0, 0.88);
-  if (type.includes("collection")) {
-    drawTownAsset("tiny_sword", cx - 34, wallIconY + 1, 18, -0.7, 0.9);
-    drawTownAsset("tiny_chest", cx + 34, wallIconY + 2, 20, 0, 0.9);
-  } else if (type.includes("power")) {
-    drawTownAsset("tiny_target", cx - 34, wallIconY + 1, 20, 0, 0.9);
-    drawTownAsset("tiny_axe", cx + 34, wallIconY + 1, 20, -0.5, 0.9);
-  } else if (type.includes("menu")) {
-    drawTownAsset("tiny_sign", cx, wallIconY, 24, 0, 0.9);
-  }
-  drawVillageNamePlate(cx, y + h + 4, bottom, color);
+  const houseW = type.includes("power") ? 206 : type.includes("collection") ? 218 : 184;
+  const houseH = Math.round(houseW * 1.32);
+  drawVillageCraftpixHouse(cx, y + h + 36, houseW, houseH, 0.96, color);
+  if (iconKey?.startsWith("cp_")) drawVillageCraftpixProp(iconKey, cx + 70, y + h + 10, 36, 44, 0.78);
+  else drawTownAsset(iconKey, cx + 66, y + h - 6, 24, 0, 0.88);
+  if (type.includes("collection")) drawVillageCraftpixProp("cp_village_barrel", cx - 72, y + h + 18, 30, 35, 0.88);
+  if (type.includes("power")) drawVillageCraftpixProp("cp_village_stump_short", cx - 78, y + h + 16, 38, 32, 0.82);
+  drawVillageNamePlate(cx, y + h + 42, bottom, color);
   ctx.restore();
 }
-
 
 function drawVillageProjects() {
   for (const project of VILLAGE_PROJECTS) {
@@ -6863,27 +6925,28 @@ function drawVillageProjectLabel(project, rank) {
 
 function drawVillageGarden(project, rank) {
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  const cx = project.x;
+  const rows = Math.min(4, 2 + Math.floor(rank / 2));
+  ctx.fillStyle = "rgba(0,0,0,0.12)";
   ctx.beginPath();
-  ctx.ellipse(project.x, project.y + 35, 104, 34, 0, 0, Math.PI * 2);
+  ctx.roundRect(cx - 132, project.y - 72, 264, 148, 18);
   ctx.fill();
-
-  const rows = Math.max(1, Math.min(5, 1 + Math.floor(rank / 2)));
-  for (let row = 0; row < rows; row++) {
-    const x = project.x - 70 + row * 35;
-    for (let j = -1; j <= 1; j++) drawTownAsset("town_dirt_b", x, project.y + j * 23, 30, 0, 0.86);
-    if (rank > row) {
-      for (let y = project.y - 24; y <= project.y + 30; y += 22) {
-        drawGrassTuft(x - 6, y, 0.72, 0);
-        drawTownAsset("town_flower", x + 7, y - 2, 12, 0, 0.78);
-      }
+  drawVillageCraftpixFence(cx - 140, project.y - 78, 5, false, 0.72);
+  drawVillageCraftpixFence(cx - 140, project.y + 74, 5, false, 0.72);
+  drawVillageCraftpixFence(cx - 148, project.y - 50, 3, true, 0.72);
+  drawVillageCraftpixFence(cx + 140, project.y - 50, 3, true, 0.72);
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < 5; x++) {
+      const px = cx - 88 + x * 44;
+      const py = project.y - 36 + y * 32;
+      ctx.fillStyle = "#9b6d3d";
+      ctx.beginPath();
+      ctx.roundRect(px - 18, py - 11, 36, 22, 5);
+      ctx.fill();
+      if (rank > y) drawGrassTuft(px, py + 4, 0.82, 0.1 * x);
     }
   }
-
-  drawTownAsset("town_crate_small", project.x - 102, project.y + 30, 22, 0, 0.78);
-  drawTownAsset("tiny_tool_shovel", project.x + 104, project.y + 28, 22, -0.45, 0.82);
-  ctx.fillStyle = "rgba(255,211,90,0.36)";
-  ctx.fillRect(project.x - 86, project.y + 57, 172, 4);
+  drawVillageCraftpixProp("cp_village_barrel", cx + 122, project.y + 66, 30, 35, 0.82);
   drawVillageProjectLabel(project, rank);
   ctx.restore();
 }
@@ -6891,25 +6954,11 @@ function drawVillageGarden(project, rank) {
 function drawVillageKitchen(project, rank) {
   ctx.save();
   const cx = project.x;
-  drawCleanCottageBase(cx - 88, project.y - 72, 176, 116, { wallColor: "#ccb67f", roofColor: "#9b5e34", trim: hexToRgba(project.color, 0.44), chimney: true });
-  drawTownAsset("town_door_b", cx, project.y + 18, 40, 0, 0.95);
-  const winY = villageCottageWindowY(project.y - 72, 116);
-  drawTownAsset("town_window_a", cx - 52, winY, 26, 0, 0.9);
-  drawTownAsset("town_window_b", cx + 52, winY, 26, 0, 0.9);
-  ctx.fillStyle = `rgba(255,116,66,${0.10 + Math.min(rank, 6) * 0.045})`;
-  ctx.beginPath();
-  ctx.arc(cx, project.y + 62, 20 + Math.min(rank, 5) * 2, 0, Math.PI * 2);
-  ctx.fill();
-  if (rank > 0) {
-    ctx.fillStyle = "#ffb35a";
-    ctx.beginPath();
-    ctx.moveTo(cx, project.y + 39 - Math.sin(nowSec() * 5) * 3);
-    ctx.quadraticCurveTo(cx - 12, project.y + 58, cx, project.y + 78);
-    ctx.quadraticCurveTo(cx + 12, project.y + 58, cx, project.y + 39 - Math.sin(nowSec() * 5) * 3);
-    ctx.fill();
-  }
-  drawTownAsset("town_crate_small", cx - 112, project.y + 54, 26, 0, 0.76);
-  drawTownAsset("town_barrel_a", cx + 112, project.y + 54, 26, 0, 0.76);
+  drawVillageCraftpixProp("cp_village_tent", cx - 54, project.y + 22, 96, 90, 0.92);
+  drawVillageCraftpixProp("cp_village_campfire", cx + 42, project.y + 50, 78, 62, 0.94);
+  drawVillageCraftpixProp("cp_village_barrel", cx + 114, project.y + 56, 30, 35, 0.84);
+  drawVillageCraftpixProp("cp_village_cart", cx - 118, project.y + 60, 84, 42, 0.78);
+  if (rank > 2) drawVillageCraftpixProp("cp_village_flag", cx + 8, project.y - 8, 32, 54, 0.78);
   drawVillageProjectLabel(project, rank);
   ctx.restore();
 }
@@ -6917,34 +6966,13 @@ function drawVillageKitchen(project, rank) {
 function drawVillageWatchPost(project, rank) {
   ctx.save();
   const cx = project.x;
-  ctx.fillStyle = "rgba(0,0,0,0.23)";
-  ctx.beginPath();
-  ctx.ellipse(cx, project.y + 48, 100, 24, 0, 0, Math.PI * 2);
-  ctx.fill();
-  for (let i = -1; i <= 1; i++) {
-    const px = cx + i * 42;
-    ctx.fillStyle = "#7d5638";
-    ctx.fillRect(px - 5, project.y - 20, 10, 76);
-  }
-  ctx.fillStyle = "#b78b55";
-  ctx.fillRect(cx - 72, project.y - 46, 144, 34);
-  ctx.strokeStyle = hexToRgba(project.color, 0.42 + Math.min(rank, 5) * 0.06);
-  ctx.lineWidth = 3;
-  ctx.strokeRect(cx - 72, project.y - 46, 144, 34);
-  ctx.fillStyle = "#6a5945";
-  ctx.beginPath();
-  ctx.moveTo(cx - 84, project.y - 46);
-  ctx.lineTo(cx, project.y - 94);
-  ctx.lineTo(cx + 84, project.y - 46);
-  ctx.closePath();
-  ctx.fill();
-  drawTownAsset("town_roof_peak", cx, project.y - 52, 56, 0, 0.78);
-  for (let i = 0; i < Math.min(rank, 4); i++) drawTownAsset("town_lamp", cx - 54 + i * 36, project.y - 14 - (i % 2) * 8, 30, 0, 0.9);
-  drawTownAsset("tiny_target", cx + 86, project.y - 18, 28, 0, 0.9);
+  const h = rank >= 3 ? 190 : 156;
+  drawVillageCraftpixProp(rank >= 3 ? "cp_village_watchtower_tall" : "cp_village_watchtower_short", cx, project.y + 70, 126, h, 0.95);
+  drawVillageCraftpixProp("cp_village_blue_banner", cx + 82, project.y + 50, 42, 62, 0.78);
+  if (rank > 1) drawVillageCraftpixProp("cp_village_barrel", cx - 82, project.y + 76, 30, 35, 0.82);
   drawVillageProjectLabel(project, rank);
   ctx.restore();
 }
-
 
 function drawVillageActivitySites() {
   drawVillageFarmPlots();
@@ -6956,22 +6984,25 @@ function drawVillageFarmPlots() {
   ctx.save();
   for (const plot of villageAllFarmPlots()) {
     const state = villageFarmPlot(plot.id);
-    drawTownAsset("town_dirt_b", plot.x, plot.y, 42, 0, 0.94);
-    ctx.strokeStyle = "rgba(64,42,20,0.35)";
-    ctx.strokeRect(plot.x - 18, plot.y - 18, 36, 36);
+    ctx.fillStyle = "#9a6a37";
+    ctx.beginPath();
+    ctx.roundRect(plot.x - 18, plot.y - 13, 36, 26, 5);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(64,42,20,0.36)";
+    ctx.strokeRect(plot.x - 18, plot.y - 13, 36, 26);
     if (state.state === "planted") {
       const grown = state.watered ? 0.9 : 0.5;
       drawGrassTuft(plot.x - 5, plot.y + 4, grown, 0);
       drawGrassTuft(plot.x + 7, plot.y + 5, grown, 0.2);
       if (state.watered) {
         ctx.fillStyle = "rgba(124,199,255,0.18)";
-        ctx.fillRect(plot.x - 16, plot.y - 16, 32, 32);
+        ctx.fillRect(plot.x - 16, plot.y - 12, 32, 24);
       }
     } else if (state.state === "ready") {
       drawTownAsset("tiny_flower", plot.x - 6, plot.y, 24, 0, 0.98);
       drawTownAsset("tiny_flower", plot.x + 9, plot.y + 2, 20, 0, 0.98);
       ctx.strokeStyle = "rgba(255,211,90,0.78)";
-      ctx.strokeRect(plot.x - 20, plot.y - 20, 40, 40);
+      ctx.strokeRect(plot.x - 20, plot.y - 15, 40, 30);
     }
   }
   ctx.restore();
@@ -7061,19 +7092,17 @@ function drawVillageMesses() {
 
 function drawVillageTownfolk() {
   ctx.save();
+  const spriteFor = id => id === "pella" ? "cp_fighter_idle" : id === "orin" ? "cp_samurai_idle" : "cp_shinobi_idle";
   for (const npc of VILLAGE_TOWNSFOLK) {
     const point = villageTownfolkPoint(npc);
     ctx.fillStyle = "rgba(0,0,0,0.30)";
     ctx.beginPath();
     ctx.ellipse(point.x + 2, point.y + 18, 25, 8, 0, 0, Math.PI * 2);
     ctx.fill();
-    drawTownAsset("town_crate_small", point.x - 38, point.y + 14, 24, 0, 0.82);
+    drawVillageCraftpixProp("cp_village_barrel", point.x - 38, point.y + 28, 24, 28, 0.72);
     drawTownAsset(npc.icon || "tiny_sign", point.x - 38, point.y - 8, 22, 0, 0.9);
-    if (!drawCharacterAsset(npc.sprite || "player_alt", point.x, point.y, 58)) {
-      ctx.fillStyle = "#ffd35a";
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, 15, 0, Math.PI * 2);
-      ctx.fill();
+    if (!drawVillageSpriteStand(spriteFor(npc.id), point.x, point.y + 20, 60)) {
+      drawCharacterAsset(npc.sprite || "player_alt", point.x, point.y, 58);
     }
     const nearNpc = Math.hypot(villagePlayer.x - point.x, villagePlayer.y - point.y) < 88;
     if (nearNpc) {
@@ -7099,18 +7128,15 @@ function drawVillageVisitor() {
   const x = VILLAGE_VISITOR_SPOT.x;
   const y = VILLAGE_VISITOR_SPOT.y;
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.34)";
+  ctx.fillStyle = "rgba(0,0,0,0.30)";
   ctx.beginPath();
   ctx.ellipse(x + 2, y + 18, 26, 8, 0, 0, Math.PI * 2);
   ctx.fill();
-  drawTownAsset("town_crate_big", x - 54, y + 14, 34, 0, 0.9);
-  drawTownAsset("town_barrel_a", x - 22, y + 12, 28, 0, 0.88);
+  drawVillageCraftpixProp("cp_village_chest", x - 54, y + 28, 40, 32, 0.85);
+  drawVillageCraftpixProp("cp_village_barrel", x - 14, y + 28, 24, 28, 0.78);
   drawTownAsset(visitor.type === "seed" ? "tiny_flower" : visitor.type === "miner" ? "tiny_tool_pickaxe" : visitor.type === "fisher" ? "tiny_key" : "tiny_coin", x - 54, y - 12, 24, 0, 0.95);
-  if (!drawCharacterAsset(visitor.sprite || "rpg_soldier", x, y, 56)) {
-    ctx.fillStyle = "#ffd35a";
-    ctx.beginPath();
-    ctx.arc(x, y, 14, 0, Math.PI * 2);
-    ctx.fill();
+  if (!drawVillageSpriteStand(visitor.type === "miner" ? "cp_samurai_idle" : "cp_fighter_idle", x, y + 20, 58)) {
+    drawCharacterAsset(visitor.sprite || "rpg_soldier", x, y, 56);
   }
   if (Math.hypot(villagePlayer.x - x, villagePlayer.y - y) < 92) {
     ctx.strokeStyle = "rgba(255,211,90,0.50)";
@@ -7132,10 +7158,10 @@ function drawVillageVillagers() {
   for (const spot of VILLAGE_VILLAGER_SPOTS) {
     const villager = hubVillagerById(spot.id);
     const rank = hubVillagerRank(spot.id);
-    const size = 48 + Math.min(rank, 5) * 2;
+    const size = 54 + Math.min(rank, 5) * 2;
     const point = villageVillagerPoint(spot);
     ctx.save();
-    ctx.fillStyle = "rgba(0,0,0,0.34)";
+    ctx.fillStyle = "rgba(0,0,0,0.32)";
     ctx.beginPath();
     ctx.ellipse(point.x + 2, point.y + 18, 26, 8, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -7146,11 +7172,9 @@ function drawVillageVillagers() {
       ctx.arc(point.x, point.y, 28, 0, Math.PI * 2);
       ctx.stroke();
     }
-    if (!drawCharacterAsset(villager.sprite, point.x, point.y, Math.max(56, size + 8))) {
-      ctx.fillStyle = spot.color;
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, 18, 0, Math.PI * 2);
-      ctx.fill();
+    const sprite = spot.id === "rowan" ? "cp_samurai_idle" : spot.id === "maren" ? "cp_fighter_idle" : "cp_shinobi_idle";
+    if (!drawVillageSpriteStand(sprite, point.x, point.y + 20, Math.max(58, size + 6))) {
+      drawCharacterAsset(villager.sprite, point.x, point.y, Math.max(56, size + 8));
     }
     ctx.fillStyle = "#f5f1ff";
     ctx.font = "900 13px ui-monospace, monospace";
@@ -7162,27 +7186,26 @@ function drawVillageVillagers() {
 
 function drawVillagePlayer() {
   const p = villagePlayer;
+  const sprite = operativeSpriteKey();
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.36)";
   ctx.beginPath();
   ctx.ellipse(p.x + 2, p.y + 16, 20, 7, 0, 0, Math.PI * 2);
   ctx.fill();
   const bob = Math.sin(p.bob) * 3;
-  const sprite = shapeById(save.selectedShape).sprite;
   if (p.dashTime > 0) {
     const pct = clamp(p.dashTime / Math.max(0.01, p.dashMax || 0.18), 0, 1);
     for (let i = 1; i <= 2; i++) {
       const back = i * 20 * pct;
       const gx = p.x - Math.cos(p.dashAngle) * back;
       const gy = p.y - Math.sin(p.dashAngle) * back + bob;
-      drawCharacterAsset(sprite, gx, gy, 54, 0, 0.12 * pct * (3 - i));
+      if (!drawVillageSpriteStand(sprite, gx, gy + 20, 58, 0.12 * pct * (3 - i))) {
+        drawCharacterAsset(sprite, gx, gy, 50, 0, 0.10 * pct * (3 - i));
+      }
     }
   }
-  if (!drawCharacterAsset(sprite, p.x, p.y + bob, 54)) {
-    ctx.fillStyle = colorById(save.selectedColor).value;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y + bob, 14, 0, Math.PI * 2);
-    ctx.fill();
+  if (!drawVillageSpriteStand(sprite, p.x, p.y + bob + 20, 60)) {
+    drawCharacterAsset(sprite, p.x, p.y + bob, 54);
   }
   ctx.restore();
 }
@@ -8195,7 +8218,7 @@ function renderCollection(backAction) {
         </div>
         <div class="vsDetailBar collectionDetailBar">
           <div class="selectedSpriteBox">${sprite ? `<img src="${sprite}" alt="">` : ""}</div>
-          <div><b>${operative.name}</b><small>Trace tint removed from this page until it has a real gameplay purpose.</small></div>
+          <div><b>${operative.name}</b><small>Selected operative now stays synced between town and arena.</small></div>
           <button class="vsButton green" data-action="${resolvedBackAction}">CONFIRM</button>
         </div>
       </div>
@@ -8348,16 +8371,14 @@ function unlockRows() {
   const completed = save.completedChapters || [];
   return [
     { done: save.bestFloor >= 1, text: "Clear floor 1.", reward: "+ shards" },
-    { done: save.bestFloor >= 2, text: "Reach floor 2.", reward: "Vanguard suit" },
-    { done: save.bestFloor >= 3, text: "Reach floor 3.", reward: "Outrider suit" },
-    { done: save.bestFloor >= 4, text: "Reach floor 4.", reward: "Phantom suit" },
-    { done: save.bestFloor >= 5, text: "Reach floor 5.", reward: "Field Medic suit" },
-    { done: save.bestFloor >= 6, text: "Reach floor 6.", reward: "Breaker suit" },
-    { done: save.bestFloor >= 7, text: "Reach floor 7.", reward: "Night Glass suit" },
-    { done: save.bestFloor >= 8, text: "Clear the tower.", reward: "Null Frame suit" },
-    { done: save.bestFloor >= 3, text: "Reach floor 3.", reward: "Green Hopper suit" },
-    { done: save.bestFloor >= 4, text: "Reach floor 4.", reward: "Pink Lantern suit" },
-    { done: save.bestFloor >= 5, text: "Reach floor 5.", reward: "Purple Jumper suit" },
+    { done: save.bestFloor >= 2, text: "Reach floor 2.", reward: "Iron Samurai operative" },
+    { done: save.bestFloor >= 3, text: "Reach floor 3.", reward: "Pit Fighter operative" },
+    { done: save.bestFloor >= 3, text: "Reach floor 3.", reward: "Green Hopper operative" },
+    { done: save.bestFloor >= 4, text: "Reach floor 4.", reward: "Pink Lantern operative" },
+    { done: save.bestFloor >= 5, text: "Reach floor 5.", reward: "Purple Jumper operative" },
+    { done: save.bestFloor >= 6, text: "Reach floor 6.", reward: "Hollow Wraith operative" },
+    { done: save.bestFloor >= 7, text: "Reach floor 7.", reward: "Moon Wraith operative" },
+    { done: save.bestFloor >= 8, text: "Clear the tower.", reward: "Ash Wraith operative" },
     { done: save.bestFloor >= 5, text: "Open Broadcast Layer.", reward: "Bloodline trace" },
     { done: save.bestFloor >= 6, text: "Open Cold Floor.", reward: "Whiteout trace" },
     { done: save.bestFloor >= 7, text: "Open Core route.", reward: "Toxin trace" },
@@ -12728,6 +12749,14 @@ function drawCountdownOverlay() {
 }
 
 function drawFloorBase(palette) {
+  const bg = imageAsset(stageBackdropKey());
+  if (bg) {
+    ctx.drawImage(bg, 0, 0, worldW, worldH);
+    ctx.fillStyle = hexToRgba(palette.floor, 0.14);
+    ctx.fillRect(0, 0, worldW, worldH);
+    return;
+  }
+
   const img = imageAsset(stageAssetKey("floor"));
   if (img) {
     const pattern = ctx.createPattern(img, "repeat");
@@ -12763,25 +12792,26 @@ function fillWallRectWithTexture(wall, palette) {
 }
 
 function drawStageGlow(palette) {
-  ctx.fillStyle = hexToRgba(palette.pulse, 0.035);
+  const vignette = ctx.createRadialGradient(worldW * 0.5, worldH * 0.45, 120, worldW * 0.5, worldH * 0.45, Math.max(worldW, worldH) * 0.72);
+  vignette.addColorStop(0, "rgba(255,255,255,0.02)");
+  vignette.addColorStop(0.68, "rgba(12,18,26,0.08)");
+  vignette.addColorStop(1, "rgba(3,6,12,0.24)");
+  ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, worldW, worldH);
-
-  ctx.fillStyle = "rgba(255,255,255,0.018)";
-  for (let y = 0; y < worldH; y += 96) {
-    ctx.fillRect(0, y, worldW, 1);
-  }
+  ctx.fillStyle = hexToRgba(palette.pulse, 0.03);
+  ctx.fillRect(0, 0, worldW, worldH);
 }
 
 function drawGrid(palette) {
-  ctx.strokeStyle = palette.grid;
+  ctx.strokeStyle = imageAsset(stageBackdropKey()) ? "rgba(255,255,255,0.03)" : palette.grid;
   ctx.lineWidth = 1;
-  for (let x = 0; x <= worldW; x += 32) {
+  for (let x = 0; x <= worldW; x += 64) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, worldH);
     ctx.stroke();
   }
-  for (let y = 0; y <= worldH; y += 32) {
+  for (let y = 0; y <= worldH; y += 64) {
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(worldW, y);
@@ -12789,20 +12819,84 @@ function drawGrid(palette) {
   }
 }
 
+function drawWallDetailPanel(wall, horizontal, theme, palette) {
+  const accentMap = {
+    dry: { fill: "rgba(120,78,44,0.44)", stroke: "rgba(241,208,142,0.30)", inset: "rgba(64,34,16,0.28)" },
+    sky: { fill: "rgba(212,219,204,0.42)", stroke: "rgba(255,255,255,0.36)", inset: "rgba(102,118,103,0.24)" },
+    terrace: { fill: "rgba(198,204,176,0.38)", stroke: "rgba(255,255,255,0.28)", inset: "rgba(88,98,70,0.24)" },
+    castle: { fill: "rgba(170,158,124,0.36)", stroke: "rgba(255,255,255,0.24)", inset: "rgba(80,62,44,0.28)" }
+  };
+  const colors = accentMap[theme] || accentMap.castle;
+  const cx = wall.x + wall.w / 2;
+  const cy = wall.y + wall.h / 2;
+  ctx.save();
+  ctx.fillStyle = colors.fill;
+  ctx.strokeStyle = colors.stroke;
+  ctx.lineWidth = 1.5;
+  if (horizontal) {
+    const doorW = Math.min(58, wall.w * 0.32);
+    const doorH = Math.max(18, Math.min(36, wall.h - 8));
+    ctx.beginPath();
+    ctx.roundRect(cx - doorW / 2, cy - doorH / 2, doorW, doorH, 9);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = colors.inset;
+    ctx.fillRect(cx - doorW * 0.26, cy - doorH * 0.2, doorW * 0.52, doorH * 0.62);
+  } else {
+    const panelW = Math.max(14, Math.min(28, wall.w - 8));
+    const panelH = Math.min(58, wall.h * 0.30);
+    ctx.beginPath();
+    ctx.roundRect(cx - panelW / 2, cy - panelH / 2, panelW, panelH, 7);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = colors.inset;
+    ctx.fillRect(cx - panelW * 0.24, cy - panelH * 0.2, panelW * 0.48, panelH * 0.62);
+  }
+  ctx.restore();
+}
+
+function drawStyledWall(wall, palette) {
+  const theme = stageWallTheme();
+  const horizontal = wall.w >= wall.h;
+  fillWallRectWithTexture(wall, palette);
+  ctx.save();
+  ctx.fillStyle = wall.cover ? "rgba(0,0,0,0.10)" : "rgba(0,0,0,0.06)";
+  ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  if (horizontal) ctx.fillRect(wall.x + 3, wall.y + 3, Math.max(0, wall.w - 6), 4);
+  else ctx.fillRect(wall.x + 3, wall.y + 3, 4, Math.max(0, wall.h - 6));
+
+  ctx.fillStyle = "rgba(0,0,0,0.12)";
+  if (horizontal) ctx.fillRect(wall.x + 3, wall.y + wall.h - 6, Math.max(0, wall.w - 6), 3);
+  else ctx.fillRect(wall.x + wall.w - 6, wall.y + 3, 3, Math.max(0, wall.h - 6));
+
+  ctx.strokeStyle = palette.wallLine;
+  ctx.lineWidth = wall.cover ? 2 : 1.5;
+  ctx.strokeRect(wall.x + 0.5, wall.y + 0.5, wall.w - 1, wall.h - 1);
+
+  if (Math.max(wall.w, wall.h) >= 90) {
+    drawWallDetailPanel(wall, horizontal, theme, palette);
+  }
+
+  const pillarSize = Math.max(6, Math.min(14, Math.min(wall.w, wall.h) * 0.22));
+  ctx.fillStyle = "rgba(0,0,0,0.16)";
+  for (const [px, py] of [[wall.x + 5, wall.y + 5], [wall.x + wall.w - pillarSize - 5, wall.y + 5], [wall.x + 5, wall.y + wall.h - pillarSize - 5], [wall.x + wall.w - pillarSize - 5, wall.y + wall.h - pillarSize - 5]]) {
+    ctx.fillRect(px, py, pillarSize, pillarSize);
+  }
+
+  if (wall.cover) {
+    ctx.strokeStyle = "rgba(255, 211, 90, 0.22)";
+    ctx.setLineDash([6, 6]);
+    ctx.strokeRect(wall.x - 4.5, wall.y - 4.5, wall.w + 9, wall.h + 9);
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+
 function drawWalls(palette) {
   for (const wall of walls) {
-    fillWallRectWithTexture(wall, palette);
-    ctx.strokeStyle = palette.wallLine;
-    ctx.lineWidth = wall.cover ? 1.5 : 1;
-    ctx.strokeRect(wall.x + 0.5, wall.y + 0.5, wall.w - 1, wall.h - 1);
-    if (wall.cover) {
-      ctx.fillStyle = "rgba(255,255,255,0.08)";
-      ctx.fillRect(wall.x + 2, wall.y + 2, Math.max(0, wall.w - 4), 2);
-      ctx.strokeStyle = "rgba(255, 211, 90, 0.24)";
-      ctx.setLineDash([5, 6]);
-      ctx.strokeRect(wall.x - 3.5, wall.y - 3.5, wall.w + 7, wall.h + 7);
-      ctx.setLineDash([]);
-    }
+    drawStyledWall(wall, palette);
   }
 }
 
@@ -13249,14 +13343,16 @@ function drawPlayerHealthBar() {
 function drawPlayerModel() {
   const color = colorById(save.selectedColor).value;
   const kick = player.recoil;
-  const spriteKey = shapeById(save.selectedShape).sprite || "player_marine";
+  const spriteKey = operativeSpriteKey();
   const sprite = imageAsset(spriteKey);
 
   if (sprite) {
     ctx.save();
     ctx.shadowColor = color;
     ctx.shadowBlur = 8;
-    if (isHumanTownSprite(spriteKey)) {
+    if (isCraftpixOperativeSprite(spriteKey)) {
+      ctx.drawImage(sprite, -13, -25, 26, 44);
+    } else if (isHumanTownSprite(spriteKey)) {
       ctx.drawImage(sprite, -11, -20, 22, 38);
     } else {
       ctx.drawImage(sprite, -15, -15, 30, 30);
@@ -14221,7 +14317,7 @@ window.addEventListener("keydown", e => {
       if (!e.repeat) toggleVillageLayoutOption("gridSnap");
       return;
     }
-    if ((key === " " || key === "spacebar") && !e.repeat) {
+    if ((key === " " || key === "spacebar" || key === "space") && !e.repeat) {
       e.preventDefault();
       doVillageDash();
       return;
